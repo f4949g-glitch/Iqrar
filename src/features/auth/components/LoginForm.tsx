@@ -52,7 +52,7 @@ export function LoginForm({ onSignedIn }: LoginFormProps) {
               autoComplete="username"
               spellCheck={false}
               placeholder="name@example.com"
-              className="w-full rounded-lg border border-line px-3 py-2.5 text-right outline-none"
+              className="w-full rounded-lg border border-line bg-white px-3 py-2.5 text-right text-ink outline-none"
               style={{ direction: 'ltr' }}
             />
           </div>
@@ -70,7 +70,7 @@ export function LoginForm({ onSignedIn }: LoginFormProps) {
               autoComplete="current-password"
               spellCheck={false}
               placeholder="••••••••"
-              className="w-full rounded-lg border border-line px-3 py-2.5 text-right outline-none"
+              className="w-full rounded-lg border border-line bg-white px-3 py-2.5 text-right text-ink outline-none"
               style={{ direction: 'ltr' }}
             />
           </div>

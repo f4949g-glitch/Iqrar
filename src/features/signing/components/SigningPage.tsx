@@ -33,7 +33,7 @@ function FieldInput({ field, value, onChange }: { field: SigningSession['fields'
         <select
           value={(value as string) ?? ''}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-seal"
+          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-seal"
         >
           <option value="" disabled>
             اختر...
@@ -51,7 +51,7 @@ function FieldInput({ field, value, onChange }: { field: SigningSession['fields'
           value={(value as string) ?? ''}
           onChange={(e) => onChange(e.target.value)}
           rows={3}
-          className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-seal"
+          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-seal"
         />
       );
     case 'image':
@@ -75,7 +75,7 @@ function FieldInput({ field, value, onChange }: { field: SigningSession['fields'
           type={field.field_type === 'date' ? 'date' : field.field_type === 'time' ? 'time' : field.field_type === 'number' ? 'number' : 'text'}
           value={(value as string) ?? ''}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-lg border border-line px-3 py-2 text-sm outline-none focus:border-seal"
+          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-seal"
         />
       );
   }

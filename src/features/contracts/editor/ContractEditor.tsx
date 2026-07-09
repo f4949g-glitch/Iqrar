@@ -118,7 +118,7 @@ export function ContractEditor({ parties, content, onChange }: ContractEditorPro
 
         <div className="mx-2 h-6 w-px bg-line" />
 
-        <select value={mergeParty} onChange={(e) => setMergeParty(e.target.value)} className="rounded-lg border border-line px-2 py-1 text-xs">
+        <select value={mergeParty} onChange={(e) => setMergeParty(e.target.value)} className="rounded-lg border border-line bg-white px-2 py-1 text-xs text-ink">
           {parties.map((p) => (
             <option key={p.id} value={p.id}>
               {p.role_label} — {p.full_name || 'بلا اسم'}
@@ -145,14 +145,14 @@ export function ContractEditor({ parties, content, onChange }: ContractEditorPro
 
         <div className="mx-2 h-6 w-px bg-line" />
 
-        <select value={fillParty} onChange={(e) => setFillParty(e.target.value)} className="rounded-lg border border-line px-2 py-1 text-xs">
+        <select value={fillParty} onChange={(e) => setFillParty(e.target.value)} className="rounded-lg border border-line bg-white px-2 py-1 text-xs text-ink">
           {parties.map((p) => (
             <option key={p.id} value={p.id}>
               {p.role_label} — {p.full_name || 'بلا اسم'}
             </option>
           ))}
         </select>
-        <select value={fillType} onChange={(e) => setFillType(e.target.value as FieldType)} className="rounded-lg border border-line px-2 py-1 text-xs">
+        <select value={fillType} onChange={(e) => setFillType(e.target.value as FieldType)} className="rounded-lg border border-line bg-white px-2 py-1 text-xs text-ink">
           {FILLABLE_TYPES.map((t) => (
             <option key={t} value={t}>
               {FIELD_TYPE_LABELS[t]}

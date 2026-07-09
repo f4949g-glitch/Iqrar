@@ -268,7 +268,7 @@ export function PartiesStep({
                 <select
                   value={party.role_label}
                   onChange={(e) => updateParty(index, { role_label: e.target.value })}
-                  className="w-full rounded-lg border border-line px-3 py-2 text-ink outline-none focus:border-seal"
+                  className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
                 >
                   {PARTY_ROLE_OPTIONS.map((r) => (
                     <option key={r} value={r}>
