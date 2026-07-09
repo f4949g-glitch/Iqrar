@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/shared/ui/Button';
+import { getErrorMessage } from '@/shared/lib/errorMessage';
 import { sendContract } from '../../api/contractsApi';
 import { FIELD_TYPE_LABELS, type Contract, type ContractField, type ContractParty } from '../../types';
 
@@ -23,7 +24,7 @@ export function ReviewStep({ contract, parties, fields, onBack }: ReviewStepProp
       await sendContract(contract.id);
       navigate(`/contracts/${contract.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذّر إرسال العقد');
+      setError(getErrorMessage(err, 'تعذّر إرسال العقد'));
       setSubmitting(false);
     }
   };
