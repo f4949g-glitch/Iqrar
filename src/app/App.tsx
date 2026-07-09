@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { useState } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useSession, LoginForm, RegisterForm, ForcedPasswordChange } from '@/features/auth';
 import {
   ContractsListPage,
@@ -15,6 +16,7 @@ import { HomePage } from './HomePage';
 import { LandingPage } from './LandingPage';
 import { AuthGate } from './AuthGate';
 import { AdminGate } from './AdminGate';
+import { SplashScreen, shouldShowSplash, markSplashShown } from './SplashScreen';
 
 function LoadingScreen() {
   return (
@@ -66,6 +68,21 @@ function AppShell() {
 }
 
 export function App() {
+  const location = useLocation();
+  // لا نعرض الشاشة الترحيبية لروابط توقيع خارجية (يريد الطرف الوصول للمستند مباشرة).
+  const [showSplash, setShowSplash] = useState(() => shouldShowSplash() && !location.pathname.startsWith('/sign/'));
+
+  if (showSplash) {
+    return (
+      <SplashScreen
+        onDone={() => {
+          markSplashShown();
+          setShowSplash(false);
+        }}
+      />
+    );
+  }
+
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />

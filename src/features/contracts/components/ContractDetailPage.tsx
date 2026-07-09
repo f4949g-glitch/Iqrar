@@ -1,10 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Copy, Download, Printer } from 'lucide-react';
+import { Copy, Download, Plus, Printer, Trash2 } from 'lucide-react';
 import { StatusPill } from '@/shared/ui/StatusPill';
-import { getContractDetail } from '../api/contractsApi';
+import { Field } from '@/shared/ui/Field';
+import { Button } from '@/shared/ui/Button';
+import {
+  getContractDetail,
+  updateContractMeta,
+  addParty,
+  updateParty,
+  deleteParty,
+  sendContract,
+  type NewPartyInput,
+} from '../api/contractsApi';
 import { supabase } from '@/lib/supabase/client';
 import { renderContractHtml, renderPartiesHeaderHtml, escapeHtml, type JsonNode } from '../editor/renderContractHtml';
+import { getErrorMessage } from '@/shared/lib/errorMessage';
+import { CONTRACT_STATUS_LABEL, PARTY_ROLE_OPTIONS, type Contract, type ContractEvent, type ContractParty } from '../types';
 
 const PRINT_STYLES = `
   body { font-family: 'Tajawal', 'Arial', sans-serif; color: #000; padding: 32px; line-height: 1.8; }
@@ -14,7 +26,6 @@ const PRINT_STYLES = `
   th { background: #f0f0f0; }
   .fill-image { max-height: 70px; }
 `;
-import { CONTRACT_STATUS_LABEL, type Contract, type ContractEvent, type ContractParty } from '../types';
 
 const PARTY_STATUS_LABEL: Record<string, string> = {
   pending: 'بانتظار التوقيع',
@@ -28,6 +39,10 @@ function copyLink(token: string) {
   navigator.clipboard.writeText(url).catch(() => {});
 }
 
+function emptyDraftParty(orderIndex: number): NewPartyInput {
+  return { role_label: 'الطرف الأول', full_name: '', order_index: orderIndex };
+}
+
 export function ContractDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [contract, setContract] = useState<Contract | null>(null);
@@ -36,6 +51,10 @@ export function ContractDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
+  const [editTitle, setEditTitle] = useState('');
+  const [editDuration, setEditDuration] = useState('');
+  const [savingMeta, setSavingMeta] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -46,6 +65,8 @@ export function ContractDetailPage() {
       setContract(detail.contract);
       setParties(detail.parties);
       setEvents(detail.events);
+      setEditTitle(detail.contract.title);
+      setEditDuration(detail.contract.duration_days ? String(detail.contract.duration_days) : '');
       if (detail.contract.final_file_path) {
         const { data } = await supabase.storage.from('contracts').createSignedUrl(detail.contract.final_file_path, 3600);
         if (data) setDownloadUrl(data.signedUrl);
@@ -78,10 +99,70 @@ export function ContractDetailPage() {
     win.print();
   };
 
+  const saveMeta = async () => {
+    if (!contract) return;
+    setSavingMeta(true);
+    setError('');
+    try {
+      const updated = await updateContractMeta(contract.id, {
+        title: editTitle.trim(),
+        duration_days: editDuration ? Number(editDuration) : null,
+      });
+      setContract(updated);
+    } catch (err) {
+      setError(getErrorMessage(err, 'تعذّر حفظ التعديلات'));
+    } finally {
+      setSavingMeta(false);
+    }
+  };
+
+  const patchParty = async (partyId: string, patch: Partial<NewPartyInput>) => {
+    setParties((prev) => prev.map((p) => (p.id === partyId ? { ...p, ...patch } : p) as ContractParty));
+    try {
+      await updateParty(partyId, patch);
+    } catch (err) {
+      setError(getErrorMessage(err, 'تعذّر تحديث بيانات الطرف'));
+    }
+  };
+
+  const addDraftParty = async () => {
+    if (!contract) return;
+    try {
+      const created = await addParty(contract.id, emptyDraftParty(parties.length));
+      setParties((prev) => [...prev, created]);
+    } catch (err) {
+      setError(getErrorMessage(err, 'تعذّر إضافة طرف'));
+    }
+  };
+
+  const removeDraftParty = async (partyId: string) => {
+    try {
+      await deleteParty(partyId);
+      setParties((prev) => prev.filter((p) => p.id !== partyId));
+    } catch (err) {
+      setError(getErrorMessage(err, 'تعذّر حذف الطرف'));
+    }
+  };
+
+  const send = async () => {
+    if (!contract) return;
+    setSending(true);
+    setError('');
+    try {
+      await sendContract(contract.id);
+      await load();
+    } catch (err) {
+      setError(getErrorMessage(err, 'تعذّر إرسال العقد'));
+    } finally {
+      setSending(false);
+    }
+  };
+
   if (loading) return <p className="text-sm text-slate">جارِ التحميل...</p>;
-  if (error) return <p className="text-sm font-bold text-clay">{error}</p>;
+  if (error && !contract) return <p className="text-sm font-bold text-clay">{error}</p>;
   if (!contract) return null;
 
+  const isDraft = contract.status === 'draft';
   const info = CONTRACT_STATUS_LABEL[contract.status];
   const signedCount = parties.filter((p) => p.status === 'signed').length;
   const progress = parties.length > 0 ? Math.round((signedCount / parties.length) * 100) : 0;
@@ -117,17 +198,34 @@ export function ContractDetailPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-line bg-card p-5">
-        <div className="mb-2 flex items-center justify-between text-xs font-bold text-slate">
-          <span>نسبة الإنجاز</span>
-          <span>
-            {signedCount} / {parties.length}
-          </span>
+      {isDraft && (
+        <div className="rounded-xl border border-line bg-card p-5">
+          <h2 className="mb-3 font-display text-sm font-bold text-ink">تعديل العقد (مسودة)</h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="عنوان العقد" value={editTitle} onChange={setEditTitle} required />
+            <Field label="مدة التوثيق (أيام)" value={editDuration} onChange={setEditDuration} type="number" />
+          </div>
+          <div className="mt-3">
+            <Button variant="secondary" onClick={saveMeta} disabled={savingMeta}>
+              {savingMeta ? 'جارِ الحفظ...' : 'حفظ التعديلات'}
+            </Button>
+          </div>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-paper">
-          <div className="h-full rounded-full bg-sage transition-all" style={{ width: `${progress}%` }} />
+      )}
+
+      {!isDraft && (
+        <div className="rounded-xl border border-line bg-card p-5">
+          <div className="mb-2 flex items-center justify-between text-xs font-bold text-slate">
+            <span>نسبة الإنجاز</span>
+            <span>
+              {signedCount} / {parties.length}
+            </span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-paper">
+            <div className="h-full rounded-full bg-sage transition-all" style={{ width: `${progress}%` }} />
+          </div>
         </div>
-      </div>
+      )}
 
       {previewHtml && (
         <div className="rounded-xl border border-line bg-card p-5">
@@ -137,31 +235,80 @@ export function ContractDetailPage() {
       )}
 
       <div className="rounded-xl border border-line bg-card p-5">
-        <h2 className="mb-3 font-display text-sm font-bold text-ink">الأطراف وسجل التوقيعات</h2>
+        <h2 className="mb-3 font-display text-sm font-bold text-ink">الأطراف {!isDraft && 'وسجل التوقيعات'}</h2>
         <div className="space-y-3">
-          {parties.map((p) => (
-            <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line p-3">
-              <div>
-                <p className="text-sm font-bold text-ink">{p.full_name || 'بانتظار التحقق عبر نفاذ'}</p>
-                <p className="text-xs text-slate">
-                  {p.role_label} · {PARTY_STATUS_LABEL[p.status]}
-                  {p.verification_method === 'nafath' && p.nafath_verified_at && ' · وُثّق عبر نفاذ'}
-                  {p.signed_at && ` في ${new Date(p.signed_at).toLocaleString('ar-SA')}`}
-                </p>
+          {parties.map((p) =>
+            isDraft ? (
+              <div key={p.id} className="rounded-lg border border-line p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <select
+                    value={p.role_label}
+                    onChange={(e) => patchParty(p.id, { role_label: e.target.value })}
+                    className="rounded-lg border border-line bg-white px-2 py-1 text-xs text-ink outline-none focus:border-seal"
+                  >
+                    {PARTY_ROLE_OPTIONS.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={() => removeDraftParty(p.id)} className="text-clay">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <Field label="الاسم" value={p.full_name ?? ''} onChange={(v) => patchParty(p.id, { full_name: v })} />
+                  <Field label="رقم الهوية" value={p.national_id ?? ''} onChange={(v) => patchParty(p.id, { national_id: v })} />
+                  <Field label="البريد الإلكتروني" value={p.email ?? ''} onChange={(v) => patchParty(p.id, { email: v })} type="email" />
+                  <Field label="الجوال" value={p.phone ?? ''} onChange={(v) => patchParty(p.id, { phone: v })} />
+                </div>
               </div>
-              {p.status !== 'signed' && contract.status !== 'draft' && (
-                <button
-                  type="button"
-                  onClick={() => copyLink(p.token)}
-                  className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1 text-xs font-bold text-ink hover:bg-paper"
-                >
-                  <Copy size={12} /> نسخ رابط التوقيع
-                </button>
-              )}
-            </div>
-          ))}
+            ) : (
+              <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line p-3">
+                <div>
+                  <p className="text-sm font-bold text-ink">{p.full_name || 'بانتظار التحقق عبر نفاذ'}</p>
+                  <p className="text-xs text-slate">
+                    {p.role_label} · {PARTY_STATUS_LABEL[p.status]}
+                    {p.verification_method === 'nafath' && p.nafath_verified_at && ' · وُثّق عبر نفاذ'}
+                    {p.signed_at && ` في ${new Date(p.signed_at).toLocaleString('ar-SA')}`}
+                  </p>
+                </div>
+                {p.status !== 'signed' && (
+                  <button
+                    type="button"
+                    onClick={() => copyLink(p.token)}
+                    className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1 text-xs font-bold text-ink hover:bg-paper"
+                  >
+                    <Copy size={12} /> نسخ رابط التوقيع
+                  </button>
+                )}
+              </div>
+            ),
+          )}
         </div>
+        {isDraft && (
+          <div className="mt-3">
+            <Button variant="secondary" onClick={addDraftParty}>
+              <span className="flex items-center gap-1.5">
+                <Plus size={16} /> إضافة طرف
+              </span>
+            </Button>
+          </div>
+        )}
       </div>
+
+      {isDraft && (
+        <div className="rounded-xl border border-line bg-card p-5">
+          <p className="mb-3 text-xs text-slate">
+            يمكنك تعديل عنوان العقد ومدة توثيقه وبيانات الأطراف من هنا. تعديل محتوى العقد نفسه (النص أو مواضع الحقول) متاح فقط أثناء إنشائه في المعالج.
+          </p>
+          <Button onClick={send} disabled={sending}>
+            {sending ? 'جارِ الإرسال...' : 'إرسال للتوثيق'}
+          </Button>
+        </div>
+      )}
+
+      {error && contract && <p className="text-sm font-bold text-clay">{error}</p>}
 
       <div className="rounded-xl border border-line bg-card p-5">
         <h2 className="mb-3 font-display text-sm font-bold text-ink">سجل الأحداث</h2>
