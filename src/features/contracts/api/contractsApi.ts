@@ -42,6 +42,12 @@ export async function listPreviousContracts(): Promise<ContractListItem[]> {
   return withPartyCounts((data ?? []) as Contract[]);
 }
 
+export async function listRejectedContracts(): Promise<ContractListItem[]> {
+  const { data, error } = await supabase.from('contracts').select('*').eq('status', 'rejected').order('updated_at', { ascending: false });
+  if (error) throw error;
+  return withPartyCounts((data ?? []) as Contract[]);
+}
+
 export async function listContractsAwaitingMySignature(): Promise<ContractListItem[]> {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return [];

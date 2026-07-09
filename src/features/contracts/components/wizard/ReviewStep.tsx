@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Field } from '@/shared/ui/Field';
 import { Button } from '@/shared/ui/Button';
 import { getErrorMessage } from '@/shared/lib/errorMessage';
 import { sendContract } from '../../api/contractsApi';
+import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '../../api/pricingApi';
+import { previewDiscountCode, setContractDiscountCode, type DiscountPreview } from '../../api/discountCodesApi';
 import { FIELD_TYPE_LABELS, type Contract, type ContractField, type ContractParty } from '../../types';
 
 interface ReviewStepProps {
@@ -12,10 +15,41 @@ interface ReviewStepProps {
   onBack: () => void;
 }
 
-export function ReviewStep({ contract, parties, fields, onBack }: ReviewStepProps) {
+export function ReviewStep({ contract: initialContract, parties, fields, onBack }: ReviewStepProps) {
   const navigate = useNavigate();
+  const [contract, setContract] = useState(initialContract);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [pricing, setPricing] = useState<PricingSettings | null>(null);
+  const [discountCode, setDiscountCode] = useState('');
+  const [discountPreview, setDiscountPreview] = useState<DiscountPreview | null>(null);
+  const [checkingCode, setCheckingCode] = useState(false);
+
+  useEffect(() => {
+    fetchPricingSettings()
+      .then(setPricing)
+      .catch(() => setPricing(null));
+  }, []);
+
+  const invoice = pricing ? calculateInvoice(parties.length, pricing) : null;
+
+  const applyDiscountCode = async () => {
+    if (!discountCode.trim()) return;
+    setCheckingCode(true);
+    setDiscountPreview(null);
+    try {
+      const result = await previewDiscountCode(discountCode.trim(), parties.length);
+      setDiscountPreview(result);
+      if (result.discount_code_id) {
+        await setContractDiscountCode(contract.id, discountCode.trim());
+        setContract((prev) => ({ ...prev, discount_code_id: result.discount_code_id }));
+      }
+    } catch (err) {
+      setDiscountPreview({ discount_code_id: null, discount_percent: null, base_amount: 0, final_amount: 0, message: getErrorMessage(err, 'تعذّر التحقق من الكود') });
+    } finally {
+      setCheckingCode(false);
+    }
+  };
 
   const send = async () => {
     setSubmitting(true);
@@ -34,7 +68,43 @@ export function ReviewStep({ contract, parties, fields, onBack }: ReviewStepProp
       <div className="rounded-xl border border-line bg-card p-5">
         <h3 className="mb-1 font-display text-lg font-bold text-ink">{contract.title}</h3>
         {contract.duration_days && <p className="text-xs text-slate">مدة التوثيق: {contract.duration_days} يومًا</p>}
-        {contract.discount_code_id && <p className="mt-1 text-xs font-bold text-sage">سيُطبَّق كود الخصم على فاتورة هذا العقد عند الإرسال</p>}
+      </div>
+
+      <div className="rounded-xl border border-line bg-card p-5">
+        <h4 className="mb-3 font-display text-sm font-bold text-ink">الدفع والخصم</h4>
+        {invoice !== null && (
+          <p className="mb-3 text-sm font-bold text-seal">
+            {discountPreview?.discount_code_id ? (
+              <>
+                <span className="ms-1 line-through opacity-60">{invoice.toFixed(2)}</span>
+                <span className="mx-1">{discountPreview.final_amount.toFixed(2)} ريال (بعد خصم {discountPreview.discount_percent}%)</span>
+              </>
+            ) : (
+              <span>التكلفة المتوقعة: {invoice.toFixed(2)} ريال</span>
+            )}
+          </p>
+        )}
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <Field
+              label="كود الخصم (اختياري)"
+              value={discountCode}
+              onChange={(v) => {
+                setDiscountCode(v);
+                setDiscountPreview(null);
+              }}
+            />
+          </div>
+          <Button variant="secondary" onClick={applyDiscountCode} disabled={checkingCode || !discountCode.trim()}>
+            {checkingCode ? 'جارِ التحقق...' : 'تطبيق'}
+          </Button>
+        </div>
+        {discountPreview && (
+          <p className={`mt-2 text-xs font-bold ${discountPreview.discount_code_id ? 'text-sage' : 'text-clay'}`}>
+            {discountPreview.discount_code_id ? `تم تطبيق الكود: خصم ${discountPreview.discount_percent}%` : discountPreview.message}
+          </p>
+        )}
+        <p className="mt-2 text-xs text-slate">سيُخصم مبلغ الفاتورة النهائي من رصيدك عند الإرسال.</p>
       </div>
 
       <div className="rounded-xl border border-line bg-card p-5">

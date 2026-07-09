@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Document, Page } from 'react-pdf';
-import { CheckCircle2, FileSignature } from 'lucide-react';
+import { CheckCircle2, FileSignature, XCircle } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { SignaturePad } from '@/shared/ui/SignaturePad';
-import { fetchSigningSession, submitSignature, type SigningSession } from '../api/signingApi';
+import { fetchSigningSession, submitSignature, rejectSignature, type SigningSession } from '../api/signingApi';
 import { renderContractHtml, renderPartiesHeaderHtml, type JsonNode } from '@/features/contracts/editor/renderContractHtml';
 import '@/lib/pdf/setupWorker';
 
@@ -89,6 +89,10 @@ export function SigningPage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ completed: boolean } | null>(null);
+  const [rejected, setRejected] = useState(false);
+  const [showRejectForm, setShowRejectForm] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejecting, setRejecting] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -127,6 +131,20 @@ export function SigningPage() {
     }
   };
 
+  const reject = async () => {
+    if (!token) return;
+    setRejecting(true);
+    setError('');
+    try {
+      await rejectSignature(token, rejectReason.trim());
+      setRejected(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'تعذّر إرسال الرفض');
+    } finally {
+      setRejecting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-paper">
@@ -146,6 +164,18 @@ export function SigningPage() {
   }
 
   if (!session) return null;
+
+  if (rejected || session.party.status === 'rejected') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-paper p-4" dir="rtl">
+        <div className="max-w-sm rounded-2xl bg-card p-8 text-center shadow-xl">
+          <XCircle size={40} className="mx-auto mb-3 text-clay" />
+          <h2 className="mb-2 font-display text-lg font-bold text-ink">تم تسجيل رفضك للعقد</h2>
+          <p className="text-sm text-slate">أُبلغ منشئ العقد بقرارك.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (result || session.party.status === 'signed') {
     return (
@@ -247,9 +277,34 @@ export function SigningPage() {
 
         {error && <p className="text-sm font-bold text-clay">{error}</p>}
 
-        <Button onClick={submit} disabled={submitting} className="w-full py-3">
-          {submitting ? 'جارِ الإرسال...' : 'الموافقة وإتمام التوثيق'}
-        </Button>
+        {showRejectForm ? (
+          <div className="rounded-xl border border-clay/30 bg-clayLight p-4">
+            <label className="mb-1.5 block text-xs font-bold text-clay">سبب الرفض (اختياري)</label>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={3}
+              className="mb-3 w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-clay"
+            />
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => setShowRejectForm(false)} disabled={rejecting} className="flex-1">
+                تراجع
+              </Button>
+              <Button variant="danger" onClick={reject} disabled={rejecting} className="flex-1">
+                {rejecting ? 'جارِ الإرسال...' : 'تأكيد الرفض'}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setShowRejectForm(true)} disabled={submitting} className="flex-1 py-3">
+              رفض العقد
+            </Button>
+            <Button onClick={submit} disabled={submitting} className="flex-[2] py-3">
+              {submitting ? 'جارِ الإرسال...' : 'الموافقة وإتمام التوثيق'}
+            </Button>
+          </div>
+        )}
       </main>
     </div>
   );

@@ -1,23 +1,24 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { FileText, Percent, Plus, ShieldCheck, TrendingUp } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { FileText, Plus, ShieldCheck, TrendingUp } from 'lucide-react';
 import { StatusPill } from '@/shared/ui/StatusPill';
 import { Button } from '@/shared/ui/Button';
-import { useSession } from '@/features/auth';
 import {
   listActiveContracts,
   listContractsAwaitingMySignature,
   listPreviousContracts,
+  listRejectedContracts,
   type ContractListItem,
 } from '../api/contractsApi';
 import { CONTRACT_STATUS_LABEL } from '../types';
 
-type Tab = 'new' | 'previous' | 'awaiting';
+type Tab = 'new' | 'previous' | 'awaiting' | 'rejected';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'new', label: 'عقود جديدة' },
   { key: 'previous', label: 'عقود سابقة' },
-  { key: 'awaiting', label: 'عقود تتطلب التوثيق' },
+  { key: 'awaiting', label: 'طلبات الموافقة' },
+  { key: 'rejected', label: 'عقود مرفوضة' },
 ];
 
 function ContractCard({ contract }: { contract: ContractListItem }) {
@@ -60,9 +61,14 @@ function StatCard({ icon: Icon, label, value, accent }: StatCardProps) {
   );
 }
 
+function isTab(value: string | null): value is Tab {
+  return value === 'new' || value === 'previous' || value === 'awaiting' || value === 'rejected';
+}
+
 export function ContractsListPage() {
-  const { profile } = useSession();
-  const [tab, setTab] = useState<Tab>('new');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab');
+  const [tab, setTab] = useState<Tab>(isTab(initialTab) ? initialTab : 'new');
   const [contracts, setContracts] = useState<ContractListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -77,7 +83,9 @@ export function ContractsListPage() {
           ? await listActiveContracts()
           : activeTab === 'previous'
             ? await listPreviousContracts()
-            : await listContractsAwaitingMySignature();
+            : activeTab === 'rejected'
+              ? await listRejectedContracts()
+              : await listContractsAwaitingMySignature();
       setContracts(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'تعذّر تحميل العقود');
@@ -104,6 +112,11 @@ export function ContractsListPage() {
       .catch(() => setStats(null));
   }, []);
 
+  const chooseTab = (next: Tab) => {
+    setTab(next);
+    setSearchParams(next === 'new' ? {} : { tab: next });
+  };
+
   const completionRate = stats && stats.totalParties > 0 ? Math.round((stats.signedParties / stats.totalParties) * 100) : 0;
 
   return (
@@ -123,7 +136,7 @@ export function ContractsListPage() {
             <button
               key={t.key}
               type="button"
-              onClick={() => setTab(t.key)}
+              onClick={() => chooseTab(t.key)}
               className={`shrink-0 rounded-md px-3.5 py-2 text-xs font-bold transition sm:px-4 sm:text-sm ${
                 tab === t.key ? 'bg-seal text-white' : 'text-slate hover:bg-paper'
               }`}
@@ -132,24 +145,13 @@ export function ContractsListPage() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          {profile?.role === 'admin' && (
-            <Link to="/app/contracts/discounts" className="flex-1 sm:flex-none">
-              <Button variant="secondary" className="w-full">
-                <span className="flex items-center justify-center gap-1.5">
-                  <Percent size={16} /> أكواد الخصم
-                </span>
-              </Button>
-            </Link>
-          )}
-          <Link to="/app/contracts/new" className="flex-1 sm:flex-none">
-            <Button className="w-full">
-              <span className="flex items-center justify-center gap-1.5">
-                <Plus size={16} /> عقد جديد
-              </span>
-            </Button>
-          </Link>
-        </div>
+        <Link to="/app/contracts/new">
+          <Button className="w-full">
+            <span className="flex items-center justify-center gap-1.5">
+              <Plus size={16} /> عقد جديد
+            </span>
+          </Button>
+        </Link>
       </div>
 
       {loading && <p className="text-sm text-slate">جارِ التحميل...</p>}

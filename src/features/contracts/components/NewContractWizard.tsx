@@ -7,7 +7,6 @@ import { FieldsStep } from './wizard/FieldsStep';
 import { EditorStep } from './wizard/EditorStep';
 import { ReviewStep } from './wizard/ReviewStep';
 import { addParty, createDraftContract, getOriginalPdfUrl, updateContractMeta, updateParty, uploadOriginalPdf } from '../api/contractsApi';
-import { setContractDiscountCode } from '../api/discountCodesApi';
 import type { Contract, ContractField, ContractParty, DocumentType } from '../types';
 
 type Step = 'parties' | 'method' | 'upload' | 'fields' | 'editor' | 'review';
@@ -32,7 +31,6 @@ export function NewContractWizard() {
   const [companyName, setCompanyName] = useState('');
   const [companyCrNumber, setCompanyCrNumber] = useState('');
   const [draftParties, setDraftParties] = useState<DraftParty[]>([emptyParty()]);
-  const [pendingDiscountCode, setPendingDiscountCode] = useState<string | null>(null);
   const [contract, setContract] = useState<Contract | null>(null);
   const [parties, setParties] = useState<ContractParty[]>([]);
   const [file, setFile] = useState<File | null>(null);
@@ -50,8 +48,7 @@ export function NewContractWizard() {
     return created;
   };
 
-  const goToMethod = (validDiscountCode: string | null) => {
-    setPendingDiscountCode(validDiscountCode);
+  const goToMethod = () => {
     setStep('method');
   };
 
@@ -69,9 +66,6 @@ export function NewContractWizard() {
         company_name: companyName.trim() || null,
         company_cr_number: companyCrNumber.trim() || null,
       });
-      if (pendingDiscountCode) {
-        await setContractDiscountCode(created.id, pendingDiscountCode);
-      }
       const createdParties: ContractParty[] = [];
       for (let i = 0; i < draftParties.length; i++) {
         const p = draftParties[i];

@@ -30,9 +30,17 @@ export async function fetchSigningSession(token: string): Promise<SigningSession
 export async function submitSignature(token: string, values: Record<string, unknown>): Promise<{ completed: boolean }> {
   const { data, error } = await supabase.functions.invoke<{ success: boolean; completed: boolean } | { error: string }>(
     'submit-signature',
-    { body: { token, values } },
+    { body: { token, values, action: 'sign' } },
   );
   if (error) throw new Error(error.message);
   if (data && 'error' in data) throw new Error(data.error);
   return data as { completed: boolean };
+}
+
+export async function rejectSignature(token: string, reason: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke<{ success: boolean } | { error: string }>('submit-signature', {
+    body: { token, action: 'reject', reason },
+  });
+  if (error) throw new Error(error.message);
+  if (data && 'error' in data) throw new Error(data.error);
 }

@@ -45,6 +45,8 @@ Deno.serve(async (req: Request) => {
 
   const token = String(body.token ?? '').trim();
   const values = (body.values ?? {}) as Record<string, unknown>;
+  const action = body.action === 'reject' ? 'reject' : 'sign';
+  const reason = String(body.reason ?? '').trim();
   if (!token) return jsonResponse({ error: 'رابط غير صالح' }, 400);
 
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
@@ -57,6 +59,21 @@ Deno.serve(async (req: Request) => {
   if (contractError || !contract) return jsonResponse({ error: 'العقد غير موجود' }, 404);
   if (!['pending', 'partially_completed'].includes(contract.status)) {
     return jsonResponse({ error: 'هذا العقد لم يعد قابلًا للتوقيع' }, 400);
+  }
+
+  if (action === 'reject') {
+    await admin.from('contract_parties').update({ status: 'rejected' }).eq('id', party.id);
+    await admin
+      .from('contracts')
+      .update({ status: 'rejected', updated_at: new Date().toISOString() })
+      .eq('id', contract.id);
+    await admin.from('contract_events').insert({
+      contract_id: contract.id,
+      party_id: party.id,
+      event_type: 'party_rejected',
+      message: reason ? `رفض ${party.full_name} العقد: ${reason}` : `رفض ${party.full_name} العقد`,
+    });
+    return jsonResponse({ success: true });
   }
 
   const { data: fields, error: fieldsError } = await admin.from('contract_fields').select('*').eq('party_id', party.id);

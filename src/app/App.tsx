@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { useSession, LoginForm, RegisterForm, ForcedPasswordChange } from '@/features/auth';
+import { useSession, LoginForm, RegisterForm, ForcedPasswordChange, ProfilePage, SettingsPage } from '@/features/auth';
 import {
   ContractsListPage,
   NewContractWizard,
@@ -17,6 +17,8 @@ import { HomePage } from './HomePage';
 import { LandingPage } from './LandingPage';
 import { AuthGate } from './AuthGate';
 import { AdminGate } from './AdminGate';
+import { TermsPage } from './TermsPage';
+import { ContactPage } from './ContactPage';
 import { SplashScreen, shouldShowSplash, markSplashShown } from './SplashScreen';
 
 function LoadingScreen() {
@@ -60,6 +62,9 @@ function AppShell() {
         <Route path="/contracts/new" element={profile ? <NewContractWizard /> : <AuthGate />} />
         <Route path="/contracts/:id" element={profile ? <ContractDetailPage /> : <AuthGate />} />
         <Route path="/balance" element={profile ? <BalancePage /> : <AuthGate />} />
+        <Route path="/profile" element={profile ? <ProfilePage profile={profile} /> : <AuthGate />} />
+        <Route path="/settings" element={profile ? <SettingsPage /> : <AuthGate />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route path="/contracts/discounts" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <DiscountCodesPage /> : <AdminGate />} />
         <Route path="/contracts/credit-codes" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <CreditCodesPage /> : <AdminGate />} />
         <Route path="/contracts/pricing" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <PricingSettingsPage /> : <AdminGate />} />
@@ -93,6 +98,7 @@ export function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/sign/:token" element={<SigningPage />} />
       <Route path="/verify" element={<VerifyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
       <Route path="/app/*" element={<AppShell />} />
     </Routes>
   );
