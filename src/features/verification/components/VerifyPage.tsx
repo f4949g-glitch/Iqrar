@@ -4,7 +4,7 @@ import { CheckCircle2, FileSignature, ShieldCheck } from 'lucide-react';
 import { Field } from '@/shared/ui/Field';
 import { Button } from '@/shared/ui/Button';
 import { verifyDocument, type VerifyResult } from '../api/verifyApi';
-import { DOCUMENT_TYPE_LABELS } from '@/features/contracts';
+import { DOCUMENT_TYPE_LABELS } from '@/features/contracts/types';
 
 const PARTY_STATUS_LABEL: Record<string, string> = {
   pending: 'بانتظار التوقيع',
