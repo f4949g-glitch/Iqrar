@@ -121,3 +121,24 @@ body {
   color: var(--color-slate);
   font-style: italic;
 }
+.verification-footer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  color: #000;
+}
+.verification-qr svg {
+  width: 90px;
+  height: 90px;
+}
+.verification-info p {
+  margin: 2px 0;
+  font-size: 0.8rem;
+}
+.verification-hint {
+  color: var(--color-slate);
+}

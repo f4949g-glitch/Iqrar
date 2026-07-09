@@ -11,6 +11,7 @@ import {
   BalancePage,
 } from '@/features/contracts';
 import { SigningPage } from '@/features/signing';
+import { VerifyPage } from '@/features/verification/components/VerifyPage';
 import { Layout } from './Layout';
 import { HomePage } from './HomePage';
 import { LandingPage } from './LandingPage';
@@ -70,7 +71,9 @@ function AppShell() {
 export function App() {
   const location = useLocation();
   // لا نعرض الشاشة الترحيبية لروابط توقيع خارجية (يريد الطرف الوصول للمستند مباشرة).
-  const [showSplash, setShowSplash] = useState(() => shouldShowSplash() && !location.pathname.startsWith('/sign/'));
+  const [showSplash, setShowSplash] = useState(
+    () => shouldShowSplash() && !location.pathname.startsWith('/sign/') && !location.pathname.startsWith('/verify'),
+  );
 
   if (showSplash) {
     return (
@@ -89,6 +92,7 @@ export function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/sign/:token" element={<SigningPage />} />
+      <Route path="/verify" element={<VerifyPage />} />
       <Route path="/app/*" element={<AppShell />} />
     </Routes>
   );

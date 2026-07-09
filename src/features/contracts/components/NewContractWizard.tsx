@@ -8,7 +8,7 @@ import { EditorStep } from './wizard/EditorStep';
 import { ReviewStep } from './wizard/ReviewStep';
 import { addParty, createDraftContract, getOriginalPdfUrl, updateContractMeta, updateParty, uploadOriginalPdf } from '../api/contractsApi';
 import { setContractDiscountCode } from '../api/discountCodesApi';
-import type { Contract, ContractField, ContractParty } from '../types';
+import type { Contract, ContractField, ContractParty, DocumentType } from '../types';
 
 type Step = 'parties' | 'method' | 'upload' | 'fields' | 'editor' | 'review';
 
@@ -28,6 +28,7 @@ export function NewContractWizard() {
   const [method, setMethod] = useState<'pdf' | 'editor' | null>(null);
   const [title, setTitle] = useState('');
   const [durationDays, setDurationDays] = useState('');
+  const [documentType, setDocumentType] = useState<DocumentType>('contract');
   const [companyName, setCompanyName] = useState('');
   const [companyCrNumber, setCompanyCrNumber] = useState('');
   const [draftParties, setDraftParties] = useState<DraftParty[]>([emptyParty()]);
@@ -64,6 +65,7 @@ export function NewContractWizard() {
         title: title.trim(),
         duration_days: durationDays ? Number(durationDays) : null,
         source_type: chosen,
+        document_type: documentType,
         company_name: companyName.trim() || null,
         company_cr_number: companyCrNumber.trim() || null,
       });
@@ -152,6 +154,8 @@ export function NewContractWizard() {
           onTitleChange={setTitle}
           durationDays={durationDays}
           onDurationChange={setDurationDays}
+          documentType={documentType}
+          onDocumentTypeChange={setDocumentType}
           companyName={companyName}
           onCompanyNameChange={setCompanyName}
           companyCrNumber={companyCrNumber}

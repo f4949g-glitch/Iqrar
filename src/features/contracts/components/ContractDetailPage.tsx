@@ -25,6 +25,9 @@ const PRINT_STYLES = `
   th, td { border: 1px solid #999; padding: 6px 10px; text-align: right; color: #000; }
   th { background: #f0f0f0; }
   .fill-image { max-height: 70px; }
+  .verification-footer { display: flex; align-items: center; gap: 16px; margin-top: 24px; padding: 12px 16px; border: 1px solid #999; border-radius: 12px; }
+  .verification-qr svg { width: 90px; height: 90px; }
+  .verification-info p { margin: 2px 0; font-size: 12px; }
 `;
 
 const PARTY_STATUS_LABEL: Record<string, string> = {
@@ -83,7 +86,9 @@ export function ContractDetailPage() {
   }, [load]);
 
   const previewHtml = useMemo(() => {
-    if (!contract || contract.source_type !== 'editor' || !contract.body_json) return '';
+    if (!contract || contract.source_type !== 'editor') return '';
+    if (contract.status === 'completed' && contract.final_html) return contract.final_html;
+    if (!contract.body_json) return '';
     return renderPartiesHeaderHtml(parties) + renderContractHtml(contract.body_json as JsonNode, parties);
   }, [contract, parties]);
 
@@ -177,6 +182,11 @@ export function ContractDetailPage() {
             {contract.expires_at && ` · ينتهي في ${new Date(contract.expires_at).toLocaleDateString('ar-SA')}`}
             {contract.invoice_amount !== null && ` · الفاتورة: ${contract.invoice_amount.toFixed(2)} ريال`}
           </p>
+          {contract.verification_number && (
+            <p className="mt-1 text-xs font-bold text-seal">
+              رقم التوثيق: <span dir="ltr">{contract.verification_number}</span>
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <StatusPill label={info.label} bg={info.bg} fg={info.fg} />

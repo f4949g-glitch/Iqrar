@@ -97,6 +97,7 @@ export async function updateContractMeta(
     source_type?: 'pdf' | 'editor';
     company_name?: string | null;
     company_cr_number?: string | null;
+    document_type?: 'contract' | 'power_of_attorney';
   },
 ): Promise<Contract> {
   const { data, error } = await supabase

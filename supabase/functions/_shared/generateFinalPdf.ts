@@ -12,6 +12,12 @@ export interface FieldToRender {
 
 const IMAGE_FIELD_TYPES = new Set(['signature', 'image', 'logo', 'stamp']);
 
+export interface VerificationStamp {
+  number: string;
+  dateLabel: string;
+  qrPngBytes: Uint8Array;
+}
+
 // يدمج قيم الحقول المعبّأة فوق نسخة PDF الأصلية، ويُرجع بايتات النسخة النهائية.
 // الإحداثيات (pos_x/pos_y/width/height) نِسَب مئوية من أبعاد الصفحة، متوافقة بين
 // محرر وضع الحقول في الواجهة وهذا التوليد لأن كليهما يحسبها كنسبة من حجم الصفحة.
@@ -19,6 +25,7 @@ export async function generateFinalPdf(
   originalBytes: Uint8Array,
   fields: FieldToRender[],
   fetchImage: (path: string) => Promise<Uint8Array>,
+  verificationStamp?: VerificationStamp,
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(originalBytes);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -67,6 +74,34 @@ export async function generateFinalPdf(
       color: rgb(0, 0, 0),
       maxWidth: boxWidth - 4,
     });
+  }
+
+  if (verificationStamp) {
+    const lastPage = pages[pages.length - 1];
+    const qrSize = Math.min(70, lastPage.getWidth() * 0.12);
+    const margin = 24;
+    try {
+      // ملاحظة: خطوط PDF القياسية (Helvetica) لا تدعم ترميز الأحرف العربية في pdf-lib
+      // (WinAnsi فقط)، لذا يُستخدم تنويه لاتيني/رقمي هنا لتفادي رمي استثناء عند الحفظ.
+      const qrImage = await pdfDoc.embedPng(verificationStamp.qrPngBytes);
+      lastPage.drawImage(qrImage, { x: margin, y: margin, width: qrSize, height: qrSize });
+      lastPage.drawText(`Verification No: ${verificationStamp.number}`, {
+        x: margin + qrSize + 8,
+        y: margin + qrSize - 12,
+        size: 9,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      lastPage.drawText(`Date: ${verificationStamp.dateLabel}`, {
+        x: margin + qrSize + 8,
+        y: margin + qrSize - 26,
+        size: 9,
+        font,
+        color: rgb(0, 0, 0),
+      });
+    } catch (err) {
+      console.error('تعذّر إضافة شريط التوثيق للمستند', err);
+    }
   }
 
   return pdfDoc.save();

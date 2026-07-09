@@ -1,26 +1,26 @@
 import { Link } from 'react-router-dom';
-import { FileSignature, ShieldCheck, Users, Zap, FileText, Lock } from 'lucide-react';
+import { FileSignature, ShieldCheck, Users, Zap, FileText, Lock, ScanLine, PenTool, ListChecks } from 'lucide-react';
 
 const FEATURES = [
   {
     icon: FileText,
-    title: 'إنشاء العقود بسهولة',
-    desc: 'ابدأ من محرر غني بحقول ديناميكية، أو ارفع ملف PDF/Word جاهزًا وحدّد مواضع الحقول بنفسك.',
+    title: 'توثيق العقود',
+    desc: 'أنشئ عقودك من محرر غني بحقول ديناميكية، أو ارفع ملف PDF/Word جاهزًا وحدّد مواضع الحقول بنفسك.',
+  },
+  {
+    icon: ListChecks,
+    title: 'تتبع العقود',
+    desc: 'تابع حالة كل عقد وطرف لحظة بلحظة — بانتظار، تم التوقيع، أو اكتمل التوثيق بالكامل.',
   },
   {
     icon: Users,
     title: 'أطراف متعددون',
-    desc: 'أضف أي عدد من الأطراف، حدد أدوارهم، وتابع حالة كل طرف حتى اكتمال التوثيق.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'توثيق موثوق عبر نفاذ',
-    desc: 'تحقق من هوية أطراف العقد عبر منصة نفاذ الوطنية، أو بتوقيع إلكتروني عادي حسب الحاجة.',
+    desc: 'أضف أي عدد من الأطراف، أفرادًا أو منشآت، وحدد أدوارهم حتى اكتمال التوثيق.',
   },
   {
     icon: Lock,
     title: 'أمان وخصوصية',
-    desc: 'بياناتك ومستنداتك محمية بصلاحيات دقيقة، وكل عقد مُوثّق برمز تحقق فريد.',
+    desc: 'بياناتك ومستنداتك محمية بصلاحيات دقيقة، وكل عقد مُوثّق برقم توثيق فريد.',
   },
   {
     icon: Zap,
@@ -28,9 +28,22 @@ const FEATURES = [
     desc: 'أرسل العقد لأطرافه برابط فريد للتوقيع الإلكتروني دون تعقيد أو تنزيل برامج.',
   },
   {
-    icon: FileSignature,
+    icon: ScanLine,
     title: 'مستند نهائي معتمد',
-    desc: 'احصل على نسخة نهائية موقّعة برمز QR وصفحة تحقق رسمية من صحة التوثيق.',
+    desc: 'احصل على نسخة نهائية موقّعة برقم توثيق ورمز QR يُمكن مسحه للتأكد من صحة الوثيقة.',
+  },
+];
+
+const VERIFICATION_TYPES = [
+  {
+    icon: ShieldCheck,
+    title: 'توقيع عبر نفاذ',
+    desc: 'تحقق رسمي من هوية الطرف عبر منصة نفاذ الوطنية، مناسب للعقود التي تتطلب أعلى درجات التوثيق.',
+  },
+  {
+    icon: PenTool,
+    title: 'توقيع إلكتروني',
+    desc: 'توقيع إلكتروني مباشر بخط اليد داخل المتصفح، مناسب للإقرارات والاتفاقيات الأسرع والأبسط.',
   },
 ];
 
@@ -45,6 +58,9 @@ function Nav() {
           <span className="font-display text-lg font-extrabold text-ink">إقرار</span>
         </div>
         <div className="flex items-center gap-2">
+          <Link to="/verify" className="hidden items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold text-ink hover:bg-paper sm:flex">
+            <ShieldCheck size={16} /> التحقق من وثيقة
+          </Link>
           <Link to="/login" className="rounded-full px-4 py-2 text-sm font-bold text-ink hover:bg-paper">
             تسجيل الدخول
           </Link>
@@ -85,6 +101,24 @@ export function LandingPage() {
               استمرار كضيف
             </Link>
           </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 py-16 md:px-8">
+        <div className="mx-auto mb-10 max-w-2xl text-center">
+          <h2 className="mb-3 font-display text-2xl font-extrabold text-ink md:text-3xl">أنواع التوثيق</h2>
+          <p className="text-base leading-relaxed text-slate">اختر طريقة التوثيق المناسبة لكل طرف في عقدك حسب مستوى التوثيق المطلوب.</p>
+        </div>
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          {VERIFICATION_TYPES.map(({ icon: Icon, title, desc }) => (
+            <div key={title} className="rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:shadow-md">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-sealLight">
+                <Icon size={22} className="text-seal" />
+              </div>
+              <h3 className="mb-1.5 font-display text-base font-bold text-ink">{title}</h3>
+              <p className="text-sm leading-relaxed text-slate">{desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 

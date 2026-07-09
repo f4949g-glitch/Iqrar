@@ -13,6 +13,7 @@ import {
   type SignatureFieldLike,
   type JsonNode,
 } from '../_shared/renderContractHtml.ts';
+import { generateVerificationNumber, generateQrPngBytes, renderVerificationFooterHtml } from '../_shared/verification.ts';
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -107,6 +108,12 @@ async function finalizeContract(admin: ReturnType<typeof createClient>, contract
   const { data: contract } = await admin.from('contracts').select('*').eq('id', contractId).single();
   if (!contract) return;
 
+  const verificationNumber = await generateVerificationNumber(async (candidate) => {
+    const { data } = await admin.from('contracts').select('id').eq('verification_number', candidate).maybeSingle();
+    return Boolean(data);
+  });
+  contract.verification_number = verificationNumber;
+
   if (contract.source_type === 'editor') {
     await finalizeEditorContract(admin, contract);
   } else {
@@ -149,18 +156,38 @@ async function finalizePdfContract(admin: ReturnType<typeof createClient>, contr
     value: f.value,
   }));
 
-  const finalBytes = await generateFinalPdf(originalBytes, fieldsToRender, async (path) => {
-    const { data } = await admin.storage.from('contracts').download(path);
-    if (!data) throw new Error(`تعذّر تحميل ${path}`);
-    return new Uint8Array(await data.arrayBuffer());
-  });
+  const completedAt = new Date().toISOString();
+  const verificationStamp = contract.verification_number
+    ? {
+        number: contract.verification_number,
+        dateLabel: completedAt.slice(0, 10),
+        qrPngBytes: await generateQrPngBytes(contract.verification_number),
+      }
+    : undefined;
+
+  const finalBytes = await generateFinalPdf(
+    originalBytes,
+    fieldsToRender,
+    async (path) => {
+      const { data } = await admin.storage.from('contracts').download(path);
+      if (!data) throw new Error(`تعذّر تحميل ${path}`);
+      return new Uint8Array(await data.arrayBuffer());
+    },
+    verificationStamp,
+  );
 
   const finalPath = `${contract.id}/final.pdf`;
   await admin.storage.from('contracts').upload(finalPath, finalBytes, { upsert: true, contentType: 'application/pdf' });
 
   await admin
     .from('contracts')
-    .update({ status: 'completed', final_file_path: finalPath, completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .update({
+      status: 'completed',
+      final_file_path: finalPath,
+      verification_number: contract.verification_number,
+      completed_at: completedAt,
+      updated_at: completedAt,
+    })
     .eq('id', contract.id);
 }
 
@@ -190,14 +217,26 @@ async function finalizeEditorContract(admin: ReturnType<typeof createClient>, co
     }
   }
 
+  const completedAt = new Date().toISOString();
+  const verificationFooter = contract.verification_number
+    ? await renderVerificationFooterHtml(contract.verification_number, completedAt)
+    : '';
+
   const html =
     `<h1 class="contract-title">${escapeHtml(String(contract.title ?? ''))}</h1>` +
     renderPartiesHeaderHtml(parties ?? []) +
     renderContractHtml(contract.body_json as JsonNode, parties ?? [], fillValues) +
-    renderSignatureBlockHtml(unanchoredFields, parties ?? []);
+    renderSignatureBlockHtml(unanchoredFields, parties ?? []) +
+    verificationFooter;
 
   await admin
     .from('contracts')
-    .update({ status: 'completed', final_html: html, completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .update({
+      status: 'completed',
+      final_html: html,
+      verification_number: contract.verification_number,
+      completed_at: completedAt,
+      updated_at: completedAt,
+    })
     .eq('id', contract.id);
 }

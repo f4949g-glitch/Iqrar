@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { FileSignature, ShieldCheck, PenLine } from 'lucide-react';
 
 const SESSION_KEY = 'iqrar-splash-shown';
-const DURATION_MS = 3000;
+const DURATION_MS = 5000;
 
 export function SplashScreen({ onDone }: { onDone: () => void }) {
   const [visible, setVisible] = useState(true);
@@ -22,15 +22,15 @@ export function SplashScreen({ onDone }: { onDone: () => void }) {
     >
       <div className="relative flex flex-col items-center px-4 text-center">
         <div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center">
-          <ShieldCheck size={64} className="absolute -left-16 top-2 animate-[iqrar-float_3s_ease-in-out_infinite] text-seal/20 sm:-left-28" />
-          <PenLine size={56} className="absolute -right-14 bottom-4 animate-[iqrar-float_3s_ease-in-out_infinite_0.6s] text-seal/20 sm:-right-24" />
+          <ShieldCheck size={88} className="absolute -left-20 top-0 animate-[iqrar-float_3s_ease-in-out_infinite] text-seal/20 sm:-left-36" />
+          <PenLine size={76} className="absolute -right-16 bottom-0 animate-[iqrar-float_3s_ease-in-out_infinite_0.6s] text-seal/20 sm:-right-32" />
         </div>
 
-        <div className="mb-6 flex h-20 w-20 animate-[iqrar-pop_0.6s_ease-out] items-center justify-center rounded-3xl bg-seal shadow-xl">
-          <FileSignature size={38} className="text-white" />
+        <div className="mb-8 flex h-28 w-28 animate-[iqrar-pop_0.6s_ease-out] items-center justify-center rounded-[2rem] bg-seal shadow-2xl sm:h-32 sm:w-32">
+          <FileSignature size={56} className="text-white sm:size-16" />
         </div>
-        <h1 className="mb-2 animate-[iqrar-rise_0.6s_ease-out_0.15s_both] font-display text-3xl font-extrabold text-ink sm:text-4xl">منصة إقرار</h1>
-        <p className="animate-[iqrar-rise_0.6s_ease-out_0.35s_both] text-base font-bold text-seal sm:text-lg">
+        <h1 className="mb-4 animate-[iqrar-rise_0.6s_ease-out_0.15s_both] font-display text-5xl font-extrabold text-ink sm:text-7xl">منصة إقرار</h1>
+        <p className="animate-[iqrar-rise_0.6s_ease-out_0.35s_both] text-xl font-bold text-seal sm:text-3xl">
           حلّك الأمثل لتوثيق عقودك
         </p>
       </div>

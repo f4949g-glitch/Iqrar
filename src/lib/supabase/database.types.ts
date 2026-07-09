@@ -181,6 +181,7 @@ export type Database = {
           created_at: string;
           created_by: string;
           discount_code_id: string | null;
+          document_type: string;
           duration_days: number | null;
           expires_at: string | null;
           final_file_path: string | null;
@@ -194,6 +195,7 @@ export type Database = {
           status: string;
           title: string;
           updated_at: string;
+          verification_number: string | null;
         };
         Insert: {
           body_json?: Json | null;
@@ -204,6 +206,7 @@ export type Database = {
           created_at?: string;
           created_by: string;
           discount_code_id?: string | null;
+          document_type?: string;
           duration_days?: number | null;
           expires_at?: string | null;
           final_file_path?: string | null;
@@ -217,6 +220,7 @@ export type Database = {
           status?: string;
           title: string;
           updated_at?: string;
+          verification_number?: string | null;
         };
         Update: {
           body_json?: Json | null;
@@ -227,6 +231,7 @@ export type Database = {
           created_at?: string;
           created_by?: string;
           discount_code_id?: string | null;
+          document_type?: string;
           duration_days?: number | null;
           expires_at?: string | null;
           final_file_path?: string | null;
@@ -240,6 +245,7 @@ export type Database = {
           status?: string;
           title?: string;
           updated_at?: string;
+          verification_number?: string | null;
         };
         Relationships: [];
       };
@@ -447,6 +453,19 @@ export type Database = {
       redeem_credit_code: {
         Args: { p_code: string };
         Returns: number;
+      };
+      verify_document: {
+        Args: { p_verification_number: string; p_national_id_1: string; p_national_id_2?: string; p_completed_date?: string };
+        Returns: {
+          title: string;
+          document_type: string;
+          verification_number: string;
+          completed_at: string;
+          party_full_name: string | null;
+          party_role_label: string;
+          party_status: string;
+          party_signed_at: string | null;
+        }[];
       };
       preview_discount_code: {
         Args: { p_code: string; p_party_count: number };

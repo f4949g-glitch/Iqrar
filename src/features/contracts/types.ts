@@ -25,11 +25,20 @@ export type FieldType =
   | 'textarea'
   | 'file';
 
+export type DocumentType = 'contract' | 'power_of_attorney';
+
+export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
+  contract: 'عقد',
+  power_of_attorney: 'تفويض',
+};
+
 export interface Contract {
   id: string;
   title: string;
   status: ContractStatus;
   source_type: 'pdf' | 'editor' | 'docx';
+  document_type: DocumentType;
+  verification_number: string | null;
   original_file_path: string | null;
   final_file_path: string | null;
   body_json: unknown;

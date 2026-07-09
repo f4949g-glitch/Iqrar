@@ -6,7 +6,7 @@ import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '..
 import { previewDiscountCode, type DiscountPreview } from '../../api/discountCodesApi';
 import { addParty as addPartyApi } from '../../api/contractsApi';
 import { initiateNafathVerification, checkNafathStatus } from '../../api/nafathApi';
-import { PARTY_ROLE_OPTIONS, type PartyType, type VerificationMethod } from '../../types';
+import { PARTY_ROLE_OPTIONS, DOCUMENT_TYPE_LABELS, type DocumentType, type PartyType, type VerificationMethod } from '../../types';
 import type { Contract } from '../../types';
 
 export interface DraftParty {
@@ -55,6 +55,8 @@ interface PartiesStepProps {
   onTitleChange: (v: string) => void;
   durationDays: string;
   onDurationChange: (v: string) => void;
+  documentType: DocumentType;
+  onDocumentTypeChange: (v: DocumentType) => void;
   companyName: string;
   onCompanyNameChange: (v: string) => void;
   companyCrNumber: string;
@@ -70,6 +72,8 @@ export function PartiesStep({
   onTitleChange,
   durationDays,
   onDurationChange,
+  documentType,
+  onDocumentTypeChange,
   companyName,
   onCompanyNameChange,
   companyCrNumber,
@@ -213,6 +217,20 @@ export function PartiesStep({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="عنوان العقد" value={title} onChange={onTitleChange} required />
         <Field label="مدة توثيق العقد (أيام)" value={durationDays} onChange={onDurationChange} type="number" placeholder="مثال: 30" />
+        <label className="block text-sm">
+          <span className="mb-1.5 block text-xs font-bold text-slate">نوع الوثيقة</span>
+          <select
+            value={documentType}
+            onChange={(e) => onDocumentTypeChange(e.target.value as DocumentType)}
+            className="w-full rounded-lg border border-line bg-white px-3 py-2.5 text-ink outline-none focus:border-seal"
+          >
+            {Object.entries(DOCUMENT_TYPE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <div className="rounded-xl border border-line bg-card p-4">
