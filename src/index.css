@@ -6,52 +6,56 @@
   /* لا يوجد مبدّل وضع داكن فعلي بعد؛ نمنع المتصفح من عكس ألوان حقول الإدخال
      تلقائيًا حسب إعداد نظام التشغيل حتى لا يظهر نص فاتح داخل حقل أبيض. */
   color-scheme: light;
-  --color-ink: #1b2838;
-  --color-ink2: #243349;
-  --color-paper: #f7f5f1;
+  /* هوية بصرية مطابقة لمنصة إقرار (www.iqrar.sa): كحلي/أزرق أساسي، بلا درجات وردية. */
+  --color-ink: #131b2e;
+  --color-ink2: #1f2b45;
+  --color-paper: #f4f6fc;
   --color-card: #ffffff;
-  --color-slate: #5b6b82;
-  --color-seal: #c9922b;
-  --color-seal-light: #f5e8ce;
-  --color-sage: #4c7a6b;
-  --color-sage-light: #e4eeea;
-  --color-clay: #b5533c;
-  --color-clay-light: #f5e4df;
-  --color-line: #e5e1d6;
-  --scrollbar-thumb: #d8d3c4;
+  --color-slate: #5b6478;
+  --color-seal: #2955d8;
+  --color-seal-light: #e6ecfb;
+  --color-sage: #1f7a5c;
+  --color-sage-light: #e2f3ec;
+  --color-clay: #c23b3b;
+  --color-clay-light: #fbe6e6;
+  --color-line: #e2e6f2;
+  --scrollbar-thumb: #cdd5ea;
+  --gradient-hero: linear-gradient(135deg, #eaf0fd 0%, #dce6fb 55%, #cfdcfa 100%);
 }
 
 :root[data-theme='dark'] {
-  --color-ink: #e9e5da;
-  --color-ink2: #cfd6e2;
-  --color-paper: #141a24;
-  --color-card: #1c2430;
-  --color-slate: #8b97a9;
-  --color-seal: #dcab5c;
-  --color-seal-light: #3a2e18;
-  --color-sage: #8fc0aa;
-  --color-sage-light: #1c2d27;
+  --color-ink: #e9ecf5;
+  --color-ink2: #cdd6ea;
+  --color-paper: #10141f;
+  --color-card: #181e2e;
+  --color-slate: #8e97ad;
+  --color-seal: #6b8ef2;
+  --color-seal-light: #1e2a4a;
+  --color-sage: #7fcaab;
+  --color-sage-light: #17291f;
   --color-clay: #e2917a;
   --color-clay-light: #3a201a;
   --color-line: #2b3444;
   --scrollbar-thumb: #333d4d;
+  --gradient-hero: linear-gradient(135deg, #182238 0%, #131b2e 100%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --color-ink: #e9e5da;
-    --color-ink2: #cfd6e2;
-    --color-paper: #141a24;
-    --color-card: #1c2430;
-    --color-slate: #8b97a9;
-    --color-seal: #dcab5c;
-    --color-seal-light: #3a2e18;
-    --color-sage: #8fc0aa;
-    --color-sage-light: #1c2d27;
+    --color-ink: #e9ecf5;
+    --color-ink2: #cdd6ea;
+    --color-paper: #10141f;
+    --color-card: #181e2e;
+    --color-slate: #8e97ad;
+    --color-seal: #6b8ef2;
+    --color-seal-light: #1e2a4a;
+    --color-sage: #7fcaab;
+    --color-sage-light: #17291f;
     --color-clay: #e2917a;
     --color-clay-light: #3a201a;
     --color-line: #2b3444;
     --scrollbar-thumb: #333d4d;
+    --gradient-hero: linear-gradient(135deg, #182238 0%, #131b2e 100%);
   }
 }
 

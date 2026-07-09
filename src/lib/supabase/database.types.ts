@@ -306,26 +306,38 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string;
+          date_of_birth: string | null;
           email: string;
           full_name: string | null;
           id: string;
           must_change_password: boolean;
+          national_id: string | null;
+          nationality: string | null;
+          phone: string | null;
           role: string;
         };
         Insert: {
           created_at?: string;
+          date_of_birth?: string | null;
           email: string;
           full_name?: string | null;
           id: string;
           must_change_password?: boolean;
+          national_id?: string | null;
+          nationality?: string | null;
+          phone?: string | null;
           role?: string;
         };
         Update: {
           created_at?: string;
+          date_of_birth?: string | null;
           email?: string;
           full_name?: string | null;
           id?: string;
           must_change_password?: boolean;
+          national_id?: string | null;
+          nationality?: string | null;
+          phone?: string | null;
           role?: string;
         };
         Relationships: [];
@@ -335,6 +347,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      login_email_for_national_id: {
+        Args: { p_national_id: string };
+        Returns: string;
+      };
       preview_discount_code: {
         Args: { p_code: string; p_party_count: number };
         Returns: {

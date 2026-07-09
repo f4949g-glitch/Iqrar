@@ -1,0 +1,77 @@
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { corsHeaders } from '../_shared/cors.ts';
+
+function jsonResponse(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+  });
+}
+
+function normalizePhone(phone: string): string {
+  return phone.trim().replace(/\s|-/g, '');
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const admin = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return jsonResponse({ error: 'بيانات غير صالحة' }, 400);
+  }
+
+  const phone = normalizePhone(String(body.phone ?? ''));
+  const code = String(body.code ?? '').trim();
+  const fullName = String(body.full_name ?? '').trim();
+  const nationalId = String(body.national_id ?? '').trim();
+  const nationality = String(body.nationality ?? '').trim();
+  const dateOfBirth = String(body.date_of_birth ?? '').trim();
+  const email = String(body.email ?? '').trim().toLowerCase();
+  const password = String(body.password ?? '');
+
+  if (!fullName || !nationalId || !email || !password || !code) {
+    return jsonResponse({ error: 'جميع الحقول مطلوبة' }, 400);
+  }
+  if (password.length < 8) return jsonResponse({ error: 'يجب ألا تقل كلمة المرور عن 8 أحرف' }, 400);
+
+  const { data: otp } = await admin.schema('private').from('registration_otps').select('*').eq('phone', phone).maybeSingle();
+  if (!otp) return jsonResponse({ error: 'لم يتم طلب رمز تحقق لهذا الرقم' }, 400);
+  if (new Date(otp.expires_at as string).getTime() < Date.now()) {
+    return jsonResponse({ error: 'انتهت صلاحية رمز التحقق، يرجى طلب رمز جديد' }, 400);
+  }
+  if (otp.attempts >= 5) return jsonResponse({ error: 'تجاوزت عدد المحاولات المسموح، اطلب رمزًا جديدًا' }, 429);
+
+  if (otp.code !== code) {
+    await admin.schema('private').from('registration_otps').update({ attempts: (otp.attempts as number) + 1 }).eq('phone', phone);
+    return jsonResponse({ error: 'رمز التحقق غير صحيح' }, 400);
+  }
+
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: fullName },
+  });
+  if (createError || !created?.user) {
+    return jsonResponse({ error: createError?.message ?? 'تعذّر إنشاء الحساب' }, 500);
+  }
+
+  const { error: profileError } = await admin
+    .from('profiles')
+    .update({ full_name: fullName, national_id: nationalId, nationality: nationality || null, date_of_birth: dateOfBirth || null, phone })
+    .eq('id', created.user.id);
+  if (profileError) {
+    return jsonResponse({ error: 'أُنشئ الحساب لكن تعذّر حفظ بيانات الهوية: ' + profileError.message }, 500);
+  }
+
+  await admin.schema('private').from('registration_otps').delete().eq('phone', phone);
+
+  return jsonResponse({ ok: true });
+});

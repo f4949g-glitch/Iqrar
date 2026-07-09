@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { FileSignature, LogOut } from 'lucide-react';
 import { signOut, type Profile } from '@/features/auth';
 
-export function Layout({ profile, children }: { profile: Profile; children: ReactNode }) {
+export function Layout({ profile, children }: { profile: Profile | null; children: ReactNode }) {
   const location = useLocation();
 
   const handleLogout = async () => {
@@ -15,25 +15,38 @@ export function Layout({ profile, children }: { profile: Profile; children: Reac
     <div className="min-h-screen bg-paper" dir="rtl">
       <header className="border-b border-line bg-card">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-8">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/app" className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-seal">
               <FileSignature size={18} className="text-white" />
             </div>
             <span className="font-display text-lg font-extrabold text-ink">إقرار</span>
           </Link>
           <div className="flex items-center gap-4">
-            <span className="hidden text-sm text-slate sm:inline">{profile.email}</span>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-bold text-clay hover:bg-clayLight"
-            >
-              <LogOut size={16} />
-              خروج
-            </button>
+            {profile ? (
+              <>
+                <span className="hidden text-sm text-slate sm:inline">{profile.email}</span>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-bold text-clay hover:bg-clayLight"
+                >
+                  <LogOut size={16} />
+                  خروج
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="rounded-full px-4 py-1.5 text-sm font-bold text-ink hover:bg-paper">
+                  تسجيل الدخول
+                </Link>
+                <Link to="/register" className="rounded-full bg-seal px-4 py-1.5 text-sm font-bold text-white hover:opacity-90">
+                  إنشاء حساب
+                </Link>
+              </>
+            )}
           </div>
         </div>
-        {location.pathname.startsWith('/contracts') && (
+        {location.pathname.startsWith('/app/contracts') && (
           <div className="mx-auto max-w-6xl px-4 md:px-8">
             <h1 className="pb-3 font-display text-sm font-bold text-slate">توثيق العقود</h1>
           </div>

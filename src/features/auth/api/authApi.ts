@@ -1,6 +1,61 @@
 import { supabase } from '@/lib/supabase/client';
 import type { Profile } from '../types';
 
+// supabase-js لا يُدرج نص الخطأ التفصيلي القادم من جسم استجابة Edge Function ضمن
+// error.message تلقائيًا لأخطاء FunctionsHttpError؛ نستخرجه يدويًا لعرض الرسالة العربية الفعلية.
+async function invokeRegistration<T>(name: string, body: object): Promise<T> {
+  const { data, error } = await supabase.functions.invoke<T & { error?: string }>(name, { body });
+  if (error) {
+    const context = (error as { context?: Response }).context;
+    if (context) {
+      try {
+        const parsed = await context.clone().json();
+        if (parsed?.error) throw new Error(parsed.error);
+      } catch {
+        // تجاهل فشل التحليل والانتقال إلى الرسالة العامة أدناه
+      }
+    }
+    throw new Error(error.message);
+  }
+  if (data && (data as { error?: string }).error) throw new Error((data as { error: string }).error);
+  return data as T;
+}
+
+export interface RequestOtpPayload {
+  phone: string;
+  national_id: string;
+  email: string;
+}
+
+export async function requestRegistrationOtp(payload: RequestOtpPayload) {
+  return invokeRegistration<{ ok: boolean; sms_configured: boolean; dev_code?: string }>('register-request-otp', payload);
+}
+
+export interface VerifyOtpPayload {
+  phone: string;
+  code: string;
+  full_name: string;
+  national_id: string;
+  nationality: string;
+  date_of_birth: string;
+  email: string;
+  password: string;
+}
+
+export async function verifyRegistrationOtp(payload: VerifyOtpPayload) {
+  return invokeRegistration<{ ok: boolean }>('register-verify-otp', payload);
+}
+
+export async function signInWithNationalId(nationalId: string, password: string) {
+  const { data: email, error: lookupError } = await supabase.rpc('login_email_for_national_id', {
+    p_national_id: nationalId.trim(),
+  });
+  if (lookupError || !email) throw new Error('رقم الهوية أو كلمة المرور غير صحيحة');
+
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+  if (signInError) throw new Error('رقم الهوية أو كلمة المرور غير صحيحة');
+}
+
 export async function fetchCurrentProfile(): Promise<Profile | null> {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return null;

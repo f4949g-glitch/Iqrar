@@ -8,7 +8,7 @@ export function HomePage() {
       <p className="mb-8 text-sm text-slate">اختر خدمة للبدء</p>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Link
-          to="/contracts"
+          to="/app/contracts"
           className="flex flex-col items-start gap-3 rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:shadow-md"
         >
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sealLight">

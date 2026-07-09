@@ -22,7 +22,7 @@ export function ReviewStep({ contract, parties, fields, onBack }: ReviewStepProp
     setError('');
     try {
       await sendContract(contract.id);
-      navigate(`/contracts/${contract.id}`);
+      navigate(`/app/contracts/${contract.id}`);
     } catch (err) {
       setError(getErrorMessage(err, 'تعذّر إرسال العقد'));
       setSubmitting(false);

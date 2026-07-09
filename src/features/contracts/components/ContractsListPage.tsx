@@ -23,7 +23,7 @@ function ContractCard({ contract }: { contract: ContractListItem }) {
   const info = CONTRACT_STATUS_LABEL[contract.status];
   return (
     <Link
-      to={`/contracts/${contract.id}`}
+      to={`/app/contracts/${contract.id}`}
       className="flex items-center justify-between rounded-xl border border-line bg-card p-4 shadow-sm transition hover:shadow-md"
     >
       <div>
@@ -83,14 +83,14 @@ export function ContractsListPage() {
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <Link to="/contracts/discounts">
+          <Link to="/app/contracts/discounts">
             <Button variant="secondary">
               <span className="flex items-center gap-1.5">
                 <Percent size={16} /> أكواد الخصم
               </span>
             </Button>
           </Link>
-          <Link to="/contracts/new">
+          <Link to="/app/contracts/new">
             <Button>
               <span className="flex items-center gap-1.5">
                 <Plus size={16} /> عقد جديد

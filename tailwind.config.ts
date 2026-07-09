@@ -18,6 +18,9 @@ export default {
         clayLight: 'var(--color-clay-light)',
         line: 'var(--color-line)',
       },
+      backgroundImage: {
+        hero: 'var(--gradient-hero)',
+      },
       fontFamily: {
         display: ['Cairo', 'sans-serif'],
         sans: ['Tajawal', 'sans-serif'],
