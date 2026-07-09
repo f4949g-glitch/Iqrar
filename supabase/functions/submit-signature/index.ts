@@ -4,7 +4,15 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/email.ts';
 import { sendSms } from '../_shared/sms.ts';
 import { generateFinalPdf, type FieldToRender } from '../_shared/generateFinalPdf.ts';
-import { renderContractHtml, type FillValue, type JsonNode } from '../_shared/renderContractHtml.ts';
+import {
+  renderContractHtml,
+  renderPartiesHeaderHtml,
+  renderSignatureBlockHtml,
+  escapeHtml,
+  type FillValue,
+  type SignatureFieldLike,
+  type JsonNode,
+} from '../_shared/renderContractHtml.ts';
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -161,24 +169,32 @@ async function finalizeEditorContract(admin: ReturnType<typeof createClient>, co
   if (!contract.body_json) return;
 
   const [{ data: parties }, { data: allFields }] = await Promise.all([
-    admin.from('contract_parties').select('id, role_label, full_name, national_id, email, phone').eq('contract_id', contract.id),
+    admin.from('contract_parties').select('id, role_label, full_name, national_id, email, phone, verification_method').eq('contract_id', contract.id),
     admin.from('contract_fields').select('*').eq('contract_id', contract.id),
   ]);
 
   const fillValues: Record<string, FillValue> = {};
+  const unanchoredFields: SignatureFieldLike[] = [];
   for (const f of allFields ?? []) {
-    if (!f.anchor_id) continue;
     const isImage = ['signature', 'image', 'logo', 'stamp'].includes(f.field_type);
+    let resolvedImageUrl: string | undefined;
     if (isImage && f.value && typeof f.value === 'object' && 'path' in (f.value as Record<string, unknown>)) {
       const path = (f.value as { path: string }).path;
       const { data: signed } = await admin.storage.from('contracts').createSignedUrl(path, 60 * 60 * 24 * 365);
-      fillValues[f.anchor_id] = { fieldType: f.field_type, value: f.value, resolvedImageUrl: signed?.signedUrl };
+      resolvedImageUrl = signed?.signedUrl;
+    }
+    if (f.anchor_id) {
+      fillValues[f.anchor_id] = { fieldType: f.field_type, value: f.value, resolvedImageUrl };
     } else {
-      fillValues[f.anchor_id] = { fieldType: f.field_type, value: f.value };
+      unanchoredFields.push({ party_id: f.party_id, field_type: f.field_type, label: f.label, value: f.value, resolvedImageUrl });
     }
   }
 
-  const html = renderContractHtml(contract.body_json as JsonNode, parties ?? [], fillValues);
+  const html =
+    `<h1 class="contract-title">${escapeHtml(String(contract.title ?? ''))}</h1>` +
+    renderPartiesHeaderHtml(parties ?? []) +
+    renderContractHtml(contract.body_json as JsonNode, parties ?? [], fillValues) +
+    renderSignatureBlockHtml(unanchoredFields, parties ?? []);
 
   await admin
     .from('contracts')

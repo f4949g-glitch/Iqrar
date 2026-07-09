@@ -16,11 +16,12 @@ export interface PartyLike {
   national_id: string | null;
   email: string | null;
   phone: string | null;
+  verification_method?: string;
 }
 
 type MergeKey = 'full_name' | 'role_label' | 'national_id' | 'email' | 'phone';
 
-function escapeHtml(s: string): string {
+export function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
@@ -110,4 +111,56 @@ export function renderContractHtml(doc: JsonNode, parties: PartyLike[], fillValu
   }
 
   return renderNode(doc);
+}
+
+const VERIFICATION_LABEL: Record<string, string> = {
+  nafath: 'تم التحقق من الهوية عبر خدمة نفاذ الحكومية',
+  manual: 'تم التوقيع إلكترونيًا عبر منصة إقرار',
+};
+
+// جدول تعريفي بأطراف العقد يُدرَج في بداية المستند النهائي (اسم/هوية/جوال/صفة لكل طرف)،
+// بصرف النظر عمّا إذا أدرج كاتب العقد حقول دمج مطابقة يدويًا داخل النص.
+export function renderPartiesHeaderHtml(parties: PartyLike[]): string {
+  if (parties.length === 0) return '';
+  const rows = parties
+    .map(
+      (p) =>
+        `<tr><td>${escapeHtml(p.full_name || '—')}</td><td>${escapeHtml(p.national_id || '—')}</td><td>${escapeHtml(p.phone || '—')}</td><td>${escapeHtml(p.role_label)}</td></tr>`,
+    )
+    .join('');
+  return `<div class="parties-header"><h3>أطراف العقد</h3><table class="parties-table"><thead><tr><th>الاسم</th><th>رقم الهوية</th><th>الجوال</th><th>الصفة</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+export interface SignatureFieldLike {
+  party_id: string;
+  field_type: string;
+  label: string;
+  value: unknown;
+  resolvedImageUrl?: string;
+}
+
+// يُلحَق بنهاية المستند النهائي: كل حقل لم يُدرَج له موضع صريح داخل النص (كحقل التوقيع
+// المُنشأ تلقائيًا لكل طرف) — كي لا يُفقَد التوقيع من المستند النهائي لمجرد أن كاتب
+// العقد لم يضع مرساة "حقل تعبئة" يدويًا في مكانه من النص.
+export function renderSignatureBlockHtml(fields: SignatureFieldLike[], parties: PartyLike[]): string {
+  if (fields.length === 0) return '';
+  const partyById = new Map(parties.map((p) => [p.id, p]));
+  const rows = fields
+    .map((f) => {
+      const party = partyById.get(f.party_id);
+      const name = escapeHtml(party?.full_name || '—');
+      const role = escapeHtml(party?.role_label ?? '');
+      const method = party ? (VERIFICATION_LABEL[(party as unknown as { verification_method?: string }).verification_method ?? 'manual'] ?? VERIFICATION_LABEL.manual) : '';
+      let valueHtml: string;
+      if (f.resolvedImageUrl) {
+        valueHtml = `<img class="fill-image" src="${f.resolvedImageUrl}" alt="${escapeHtml(f.label)}" style="max-height:70px" />`;
+      } else if (f.value == null || f.value === '') {
+        valueHtml = '—';
+      } else {
+        valueHtml = escapeHtml(String(f.value));
+      }
+      return `<tr><td>${name}</td><td>${role}</td><td>${escapeHtml(f.label)}</td><td>${valueHtml}</td><td>${escapeHtml(method)}</td></tr>`;
+    })
+    .join('');
+  return `<div class="signatures-section"><h3>توقيعات الأطراف</h3><table class="signatures-table"><thead><tr><th>الاسم</th><th>الصفة</th><th>الحقل</th><th>القيمة</th><th>طريقة التوثيق</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }

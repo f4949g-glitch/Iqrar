@@ -5,7 +5,7 @@ import { CheckCircle2, FileSignature } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { SignaturePad } from '@/shared/ui/SignaturePad';
 import { fetchSigningSession, submitSignature, type SigningSession } from '../api/signingApi';
-import { renderContractHtml, type JsonNode } from '@/features/contracts/editor/renderContractHtml';
+import { renderContractHtml, renderPartiesHeaderHtml, type JsonNode } from '@/features/contracts/editor/renderContractHtml';
 import '@/lib/pdf/setupWorker';
 
 function fileToDataUrl(file: File): Promise<string> {
@@ -194,7 +194,9 @@ export function SigningPage() {
           <div className="rounded-xl border border-line bg-card p-6">
             <div
               className="prose max-w-none text-sm text-ink"
-              dangerouslySetInnerHTML={{ __html: renderContractHtml(session.contract.body_json as JsonNode, session.all_parties) }}
+              dangerouslySetInnerHTML={{
+                __html: renderPartiesHeaderHtml(session.all_parties) + renderContractHtml(session.contract.body_json as JsonNode, session.all_parties),
+              }}
             />
           </div>
         )}

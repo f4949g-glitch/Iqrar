@@ -4,7 +4,16 @@ import { Copy, Download, Printer } from 'lucide-react';
 import { StatusPill } from '@/shared/ui/StatusPill';
 import { getContractDetail } from '../api/contractsApi';
 import { supabase } from '@/lib/supabase/client';
-import { renderContractHtml, type JsonNode } from '../editor/renderContractHtml';
+import { renderContractHtml, renderPartiesHeaderHtml, escapeHtml, type JsonNode } from '../editor/renderContractHtml';
+
+const PRINT_STYLES = `
+  body { font-family: 'Tajawal', 'Arial', sans-serif; color: #000; padding: 32px; line-height: 1.8; }
+  h1.contract-title { font-size: 22px; margin-bottom: 16px; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 13px; }
+  th, td { border: 1px solid #999; padding: 6px 10px; text-align: right; color: #000; }
+  th { background: #f0f0f0; }
+  .fill-image { max-height: 70px; }
+`;
 import { CONTRACT_STATUS_LABEL, type Contract, type ContractEvent, type ContractParty } from '../types';
 
 const PARTY_STATUS_LABEL: Record<string, string> = {
@@ -54,14 +63,16 @@ export function ContractDetailPage() {
 
   const previewHtml = useMemo(() => {
     if (!contract || contract.source_type !== 'editor' || !contract.body_json) return '';
-    return renderContractHtml(contract.body_json as JsonNode, parties);
+    return renderPartiesHeaderHtml(parties) + renderContractHtml(contract.body_json as JsonNode, parties);
   }, [contract, parties]);
 
   const printFinal = () => {
     if (!contract?.final_html) return;
     const win = window.open('', '_blank');
     if (!win) return;
-    win.document.write(`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${contract.title}</title></head><body>${contract.final_html}</body></html>`);
+    win.document.write(
+      `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${escapeHtml(contract.title)}</title><style>${PRINT_STYLES}</style></head><body>${contract.final_html}</body></html>`,
+    );
     win.document.close();
     win.focus();
     win.print();

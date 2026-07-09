@@ -85,3 +85,39 @@ body {
   background: var(--color-paper);
   transition: background-color 0.15s ease;
 }
+
+/* محتوى العقد المُولَّد (renderContractHtml) وجداول أطراف العقد/التوقيعات المُلحَقة —
+   نص أسود صريح دومًا (لا يتبع --color-ink) لأنه محتوى مستند رسمي يُطبع/يُنزَّل. */
+.prose,
+.parties-header,
+.signatures-section {
+  color: #000;
+}
+.parties-table,
+.signatures-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 0.85rem;
+}
+.parties-table th,
+.parties-table td,
+.signatures-table th,
+.signatures-table td {
+  border: 1px solid var(--color-line);
+  padding: 6px 10px;
+  text-align: right;
+  color: #000;
+}
+.parties-table th,
+.signatures-table th {
+  background: var(--color-paper);
+  font-weight: 700;
+}
+.fill-image {
+  max-height: 70px;
+}
+.fill-placeholder {
+  color: var(--color-slate);
+  font-style: italic;
+}

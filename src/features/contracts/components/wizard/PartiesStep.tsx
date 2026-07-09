@@ -303,38 +303,41 @@ export function PartiesStep({
 
             {party.verification_method === 'nafath' && (
               <div className="mt-3 rounded-lg bg-paper p-3">
-                {party.nafathState === 'idle' && (
-                  <Button variant="secondary" onClick={() => startNafathVerification(index)}>
-                    <span className="flex items-center gap-1.5">
-                      <ShieldCheck size={14} /> تحقق عبر نفاذ
-                    </span>
-                  </Button>
-                )}
-                {party.nafathState === 'initiating' && <p className="text-xs text-slate">جارِ إرسال طلب التحقق...</p>}
-                {party.nafathState === 'waiting' && (
-                  <div className="space-y-2">
-                    {party.randomCode && (
-                      <p className="text-sm font-bold text-ink">
-                        افتح تطبيق نفاذ ووافق على الرمز: <span className="text-seal">{party.randomCode}</span>
-                      </p>
+                {party.nafathState === 'idle' && party.nafathMessage === 'تم التوثيق عبر نفاذ' ? (
+                  <p className="text-xs font-bold text-sage">✓ تم التوثيق عبر نفاذ</p>
+                ) : (
+                  <>
+                    {party.nafathState === 'idle' && (
+                      <Button variant="secondary" onClick={() => startNafathVerification(index)}>
+                        <span className="flex items-center gap-1.5">
+                          <ShieldCheck size={14} /> تحقق عبر نفاذ
+                        </span>
+                      </Button>
                     )}
-                    <Button variant="secondary" onClick={() => pollNafathStatus(index)}>
-                      تحقق من الحالة
-                    </Button>
-                  </div>
-                )}
-                {party.nafathState === 'checking' && <p className="text-xs text-slate">جارِ التحقق من الحالة...</p>}
-                {party.nafathState === 'not_configured' && <p className="text-xs font-bold text-clay">{party.nafathMessage}</p>}
-                {party.nafathState === 'error' && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-bold text-clay">{party.nafathMessage}</p>
-                    <Button variant="secondary" onClick={() => startNafathVerification(index)}>
-                      إعادة المحاولة
-                    </Button>
-                  </div>
-                )}
-                {party.nafathMessage === 'تم التوثيق عبر نفاذ' && (
-                  <p className="text-xs font-bold text-sage">✓ تم التوثيق عبر نفاذ{party.partyId ? '' : ''}</p>
+                    {party.nafathState === 'initiating' && <p className="text-xs text-slate">جارِ إرسال طلب التحقق...</p>}
+                    {party.nafathState === 'waiting' && (
+                      <div className="space-y-2">
+                        {party.randomCode && (
+                          <p className="text-sm font-bold text-ink">
+                            افتح تطبيق نفاذ ووافق على الرمز: <span className="text-seal">{party.randomCode}</span>
+                          </p>
+                        )}
+                        <Button variant="secondary" onClick={() => pollNafathStatus(index)}>
+                          تحقق من الحالة
+                        </Button>
+                      </div>
+                    )}
+                    {party.nafathState === 'checking' && <p className="text-xs text-slate">جارِ التحقق من الحالة...</p>}
+                    {party.nafathState === 'not_configured' && <p className="text-xs font-bold text-clay">{party.nafathMessage}</p>}
+                    {party.nafathState === 'error' && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-bold text-clay">{party.nafathMessage}</p>
+                        <Button variant="secondary" onClick={() => startNafathVerification(index)}>
+                          إعادة المحاولة
+                        </Button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}

@@ -58,6 +58,21 @@ export function EditorStep({ contractId, parties, body, onBodyChange, fields, on
         }
       }
 
+      // نضمن وجود حقل توقيع لكل طرف حتى لو لم يُدرج الكاتب حقل تعبئة توقيع يدويًا
+      // في النص، وإلا يصل الطرف لصفحة التوقيع دون أي وسيلة لتوثيق موافقته.
+      for (const party of parties) {
+        const hasSignature = nextFields.some((f) => f.party_id === party.id && f.field_type === 'signature');
+        if (!hasSignature) {
+          const created = await addField(contractId, {
+            party_id: party.id,
+            field_type: 'signature',
+            label: 'التوقيع الإلكتروني',
+            required: true,
+          });
+          nextFields.push(created);
+        }
+      }
+
       onFieldsChange(nextFields);
       onNext();
     } catch (err) {

@@ -52,7 +52,7 @@ export async function generateFinalPdf(
     if (field.field_type === 'checkbox') {
       if (field.value === true) {
         const size = Math.min(boxWidth, boxHeight);
-        page.drawText('X', { x: boxX, y: boxYFromBottom, size: size * 0.9, font, color: rgb(0.1, 0.16, 0.22) });
+        page.drawText('X', { x: boxX, y: boxYFromBottom, size: size * 0.9, font, color: rgb(0, 0, 0) });
       }
       continue;
     }
@@ -64,7 +64,7 @@ export async function generateFinalPdf(
       y: boxYFromBottom + boxHeight * 0.25,
       size: fontSize,
       font,
-      color: rgb(0.1, 0.16, 0.22),
+      color: rgb(0, 0, 0),
       maxWidth: boxWidth - 4,
     });
   }
