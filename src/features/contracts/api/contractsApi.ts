@@ -91,7 +91,13 @@ export async function saveContractBody(contractId: string, bodyJson: unknown): P
 
 export async function updateContractMeta(
   contractId: string,
-  patch: { title?: string; duration_days?: number | null; source_type?: 'pdf' | 'editor' },
+  patch: {
+    title?: string;
+    duration_days?: number | null;
+    source_type?: 'pdf' | 'editor';
+    company_name?: string | null;
+    company_cr_number?: string | null;
+  },
 ): Promise<Contract> {
   const { data, error } = await supabase
     .from('contracts')
@@ -141,11 +147,16 @@ export interface NewPartyInput {
   role_label: string;
   full_name?: string;
   national_id?: string;
+  nationality?: string;
+  address?: string;
   email?: string;
   phone?: string;
   order_index: number;
   verification_method?: 'manual' | 'nafath';
   date_of_birth?: string;
+  party_type?: 'individual' | 'entity';
+  entity_name?: string;
+  entity_cr_number?: string;
 }
 
 export async function addParty(contractId: string, input: NewPartyInput): Promise<ContractParty> {

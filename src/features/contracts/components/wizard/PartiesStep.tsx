@@ -1,20 +1,25 @@
 import { useEffect, useState } from 'react';
-import { Plus, ShieldCheck, Trash2 } from 'lucide-react';
+import { Building2, Plus, ShieldCheck, Trash2, User } from 'lucide-react';
 import { Field } from '@/shared/ui/Field';
 import { Button } from '@/shared/ui/Button';
 import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '../../api/pricingApi';
 import { previewDiscountCode, type DiscountPreview } from '../../api/discountCodesApi';
 import { addParty as addPartyApi } from '../../api/contractsApi';
 import { initiateNafathVerification, checkNafathStatus } from '../../api/nafathApi';
-import { PARTY_ROLE_OPTIONS, type VerificationMethod } from '../../types';
+import { PARTY_ROLE_OPTIONS, type PartyType, type VerificationMethod } from '../../types';
 import type { Contract } from '../../types';
 
 export interface DraftParty {
   partyId?: string;
+  party_type: PartyType;
+  entity_name: string;
+  entity_cr_number: string;
   role_label: string;
   custom_role: string;
   full_name: string;
   national_id: string;
+  nationality: string;
+  address: string;
   email: string;
   phone: string;
   verification_method: VerificationMethod;
@@ -26,10 +31,15 @@ export interface DraftParty {
 
 function emptyParty(): DraftParty {
   return {
+    party_type: 'individual',
+    entity_name: '',
+    entity_cr_number: '',
     role_label: 'الطرف الأول',
     custom_role: '',
     full_name: '',
     national_id: '',
+    nationality: '',
+    address: '',
     email: '',
     phone: '',
     verification_method: 'manual',
@@ -45,6 +55,10 @@ interface PartiesStepProps {
   onTitleChange: (v: string) => void;
   durationDays: string;
   onDurationChange: (v: string) => void;
+  companyName: string;
+  onCompanyNameChange: (v: string) => void;
+  companyCrNumber: string;
+  onCompanyCrNumberChange: (v: string) => void;
   parties: DraftParty[];
   onPartiesChange: (parties: DraftParty[]) => void;
   ensureContract: () => Promise<Contract>;
@@ -56,6 +70,10 @@ export function PartiesStep({
   onTitleChange,
   durationDays,
   onDurationChange,
+  companyName,
+  onCompanyNameChange,
+  companyCrNumber,
+  onCompanyCrNumberChange,
   parties,
   onPartiesChange,
   ensureContract,
@@ -66,6 +84,7 @@ export function PartiesStep({
   const [discountCode, setDiscountCode] = useState('');
   const [discountPreview, setDiscountPreview] = useState<DiscountPreview | null>(null);
   const [checkingCode, setCheckingCode] = useState(false);
+  const [showCompany, setShowCompany] = useState(Boolean(companyName || companyCrNumber));
 
   useEffect(() => {
     fetchPricingSettings()
@@ -151,8 +170,12 @@ export function PartiesStep({
       return;
     }
     for (const p of parties) {
+      if (p.party_type === 'entity' && !p.entity_name.trim()) {
+        setError('اسم المنشأة مطلوب لكل طرف من نوع منشأة');
+        return;
+      }
       if (!p.full_name.trim()) {
-        setError('اسم كل طرف مطلوب (أكمل التحقق عبر نفاذ أو أدخله يدويًا)');
+        setError(p.party_type === 'entity' ? 'اسم ممثل المنشأة مطلوب' : 'اسم كل طرف مطلوب (أكمل التحقق عبر نفاذ أو أدخله يدويًا)');
         return;
       }
       if (p.role_label === 'أخرى' && !p.custom_role.trim()) {
@@ -190,6 +213,19 @@ export function PartiesStep({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="عنوان العقد" value={title} onChange={onTitleChange} required />
         <Field label="مدة توثيق العقد (أيام)" value={durationDays} onChange={onDurationChange} type="number" placeholder="مثال: 30" />
+      </div>
+
+      <div className="rounded-xl border border-line bg-card p-4">
+        {!showCompany ? (
+          <button type="button" onClick={() => setShowCompany(true)} className="text-sm font-bold text-seal">
+            + إرفاق بيانات منشأة صادرة عنها العقد (اختياري)
+          </button>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="اسم المنشأة (اختياري)" value={companyName} onChange={onCompanyNameChange} />
+            <Field label="رقم السجل التجاري (اختياري)" value={companyCrNumber} onChange={onCompanyCrNumberChange} />
+          </div>
+        )}
       </div>
 
       {invoice !== null && (
@@ -242,6 +278,38 @@ export function PartiesStep({
             <div className="mb-3 flex gap-1.5 rounded-lg bg-paper p-1">
               <button
                 type="button"
+                onClick={() => updateParty(index, { party_type: 'individual' })}
+                className={`flex-1 rounded-md py-1.5 text-xs font-bold transition ${
+                  party.party_type === 'individual' ? 'bg-card text-ink shadow-sm' : 'text-slate'
+                }`}
+              >
+                <span className="flex items-center justify-center gap-1">
+                  <User size={13} /> فرد
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => updateParty(index, { party_type: 'entity' })}
+                className={`flex-1 rounded-md py-1.5 text-xs font-bold transition ${
+                  party.party_type === 'entity' ? 'bg-card text-ink shadow-sm' : 'text-slate'
+                }`}
+              >
+                <span className="flex items-center justify-center gap-1">
+                  <Building2 size={13} /> منشأة
+                </span>
+              </button>
+            </div>
+
+            {party.party_type === 'entity' && (
+              <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label="اسم المنشأة" value={party.entity_name} onChange={(v) => updateParty(index, { entity_name: v })} required />
+                <Field label="رقم السجل التجاري" value={party.entity_cr_number} onChange={(v) => updateParty(index, { entity_cr_number: v })} />
+              </div>
+            )}
+
+            <div className="mb-3 flex gap-1.5 rounded-lg bg-paper p-1">
+              <button
+                type="button"
                 onClick={() => updateParty(index, { verification_method: 'manual' })}
                 className={`flex-1 rounded-md py-1.5 text-xs font-bold transition ${
                   party.verification_method === 'manual' ? 'bg-card text-ink shadow-sm' : 'text-slate'
@@ -264,7 +332,7 @@ export function PartiesStep({
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block text-sm">
-                <span className="mb-1 block font-bold text-ink">صفة الطرف</span>
+                <span className="mb-1 block font-bold text-ink">{party.party_type === 'entity' ? 'صفة ممثل المنشأة' : 'صفة الطرف'}</span>
                 <select
                   value={party.role_label}
                   onChange={(e) => updateParty(index, { role_label: e.target.value })}
@@ -289,7 +357,13 @@ export function PartiesStep({
               )}
 
               <Field
-                label={party.verification_method === 'nafath' ? 'الاسم (يُملأ تلقائيًا بعد التحقق، أو أدخله مؤقتًا)' : 'الاسم'}
+                label={
+                  party.party_type === 'entity'
+                    ? 'اسم الممثل'
+                    : party.verification_method === 'nafath'
+                      ? 'الاسم (يُملأ تلقائيًا بعد التحقق، أو أدخله مؤقتًا)'
+                      : 'الاسم'
+                }
                 value={party.full_name}
                 onChange={(v) => updateParty(index, { full_name: v })}
                 required
@@ -297,6 +371,8 @@ export function PartiesStep({
               {party.verification_method === 'manual' && (
                 <Field label="رقم الهوية أو الإقامة" value={party.national_id} onChange={(v) => updateParty(index, { national_id: v })} />
               )}
+              <Field label="الجنسية" value={party.nationality} onChange={(v) => updateParty(index, { nationality: v })} />
+              <Field label="العنوان" value={party.address} onChange={(v) => updateParty(index, { address: v })} />
               <Field label="البريد الإلكتروني" value={party.email} onChange={(v) => updateParty(index, { email: v })} type="email" />
               <Field label="رقم الجوال" value={party.phone} onChange={(v) => updateParty(index, { phone: v })} />
             </div>

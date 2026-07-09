@@ -1,11 +1,20 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useSession, LoginForm, RegisterForm, ForcedPasswordChange } from '@/features/auth';
-import { ContractsListPage, NewContractWizard, ContractDetailPage, DiscountCodesPage } from '@/features/contracts';
+import {
+  ContractsListPage,
+  NewContractWizard,
+  ContractDetailPage,
+  DiscountCodesPage,
+  CreditCodesPage,
+  PricingSettingsPage,
+  BalancePage,
+} from '@/features/contracts';
 import { SigningPage } from '@/features/signing';
 import { Layout } from './Layout';
 import { HomePage } from './HomePage';
 import { LandingPage } from './LandingPage';
 import { AuthGate } from './AuthGate';
+import { AdminGate } from './AdminGate';
 
 function LoadingScreen() {
   return (
@@ -46,8 +55,11 @@ function AppShell() {
         <Route path="/" element={<HomePage />} />
         <Route path="/contracts" element={profile ? <ContractsListPage /> : <AuthGate />} />
         <Route path="/contracts/new" element={profile ? <NewContractWizard /> : <AuthGate />} />
-        <Route path="/contracts/discounts" element={profile ? <DiscountCodesPage /> : <AuthGate />} />
         <Route path="/contracts/:id" element={profile ? <ContractDetailPage /> : <AuthGate />} />
+        <Route path="/balance" element={profile ? <BalancePage /> : <AuthGate />} />
+        <Route path="/contracts/discounts" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <DiscountCodesPage /> : <AdminGate />} />
+        <Route path="/contracts/credit-codes" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <CreditCodesPage /> : <AdminGate />} />
+        <Route path="/contracts/pricing" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <PricingSettingsPage /> : <AdminGate />} />
       </Routes>
     </Layout>
   );

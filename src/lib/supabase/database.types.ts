@@ -92,10 +92,13 @@ export type Database = {
       };
       contract_parties: {
         Row: {
+          address: string | null;
           contract_id: string;
           created_at: string;
           date_of_birth: string | null;
           email: string | null;
+          entity_cr_number: string | null;
+          entity_name: string | null;
           full_name: string | null;
           id: string;
           nafath_random_code: string | null;
@@ -103,7 +106,9 @@ export type Database = {
           nafath_trans_id: string | null;
           nafath_verified_at: string | null;
           national_id: string | null;
+          nationality: string | null;
           order_index: number;
+          party_type: string;
           phone: string | null;
           role_label: string;
           signed_at: string | null;
@@ -113,10 +118,13 @@ export type Database = {
           verification_method: string;
         };
         Insert: {
+          address?: string | null;
           contract_id: string;
           created_at?: string;
           date_of_birth?: string | null;
           email?: string | null;
+          entity_cr_number?: string | null;
+          entity_name?: string | null;
           full_name?: string | null;
           id?: string;
           nafath_random_code?: string | null;
@@ -124,7 +132,9 @@ export type Database = {
           nafath_trans_id?: string | null;
           nafath_verified_at?: string | null;
           national_id?: string | null;
+          nationality?: string | null;
           order_index?: number;
+          party_type?: string;
           phone?: string | null;
           role_label: string;
           signed_at?: string | null;
@@ -134,10 +144,13 @@ export type Database = {
           verification_method?: string;
         };
         Update: {
+          address?: string | null;
           contract_id?: string;
           created_at?: string;
           date_of_birth?: string | null;
           email?: string | null;
+          entity_cr_number?: string | null;
+          entity_name?: string | null;
           full_name?: string | null;
           id?: string;
           nafath_random_code?: string | null;
@@ -145,7 +158,9 @@ export type Database = {
           nafath_trans_id?: string | null;
           nafath_verified_at?: string | null;
           national_id?: string | null;
+          nationality?: string | null;
           order_index?: number;
+          party_type?: string;
           phone?: string | null;
           role_label?: string;
           signed_at?: string | null;
@@ -159,6 +174,9 @@ export type Database = {
       contracts: {
         Row: {
           body_json: Json | null;
+          company_cr_number: string | null;
+          company_logo_path: string | null;
+          company_name: string | null;
           completed_at: string | null;
           created_at: string;
           created_by: string;
@@ -179,6 +197,9 @@ export type Database = {
         };
         Insert: {
           body_json?: Json | null;
+          company_cr_number?: string | null;
+          company_logo_path?: string | null;
+          company_name?: string | null;
           completed_at?: string | null;
           created_at?: string;
           created_by: string;
@@ -199,6 +220,9 @@ export type Database = {
         };
         Update: {
           body_json?: Json | null;
+          company_cr_number?: string | null;
+          company_logo_path?: string | null;
+          company_name?: string | null;
           completed_at?: string | null;
           created_at?: string;
           created_by?: string;
@@ -216,6 +240,63 @@ export type Database = {
           status?: string;
           title?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      credit_codes: {
+        Row: {
+          amount: number;
+          code: string;
+          created_at: string;
+          created_by: string;
+          id: string;
+          is_active: boolean;
+          max_uses: number | null;
+          uses_count: number;
+        };
+        Insert: {
+          amount: number;
+          code: string;
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          is_active?: boolean;
+          max_uses?: number | null;
+          uses_count?: number;
+        };
+        Update: {
+          amount?: number;
+          code?: string;
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          is_active?: boolean;
+          max_uses?: number | null;
+          uses_count?: number;
+        };
+        Relationships: [];
+      };
+      credit_code_redemptions: {
+        Row: {
+          amount: number;
+          created_at: string;
+          credit_code_id: string;
+          id: string;
+          redeemed_by: string;
+        };
+        Insert: {
+          amount: number;
+          created_at?: string;
+          credit_code_id: string;
+          id?: string;
+          redeemed_by: string;
+        };
+        Update: {
+          amount?: number;
+          created_at?: string;
+          credit_code_id?: string;
+          id?: string;
+          redeemed_by?: string;
         };
         Relationships: [];
       };
@@ -284,21 +365,30 @@ export type Database = {
       };
       pricing_settings: {
         Row: {
+          base_amount: number;
+          extra_party_fee: number;
           id: number;
           minimum_invoice: number;
           price_per_party: number;
+          tax_percent: number;
           updated_at: string;
         };
         Insert: {
+          base_amount?: number;
+          extra_party_fee?: number;
           id?: number;
           minimum_invoice?: number;
           price_per_party?: number;
+          tax_percent?: number;
           updated_at?: string;
         };
         Update: {
+          base_amount?: number;
+          extra_party_fee?: number;
           id?: number;
           minimum_invoice?: number;
           price_per_party?: number;
+          tax_percent?: number;
           updated_at?: string;
         };
         Relationships: [];
@@ -306,6 +396,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string;
+          credit_balance: number;
           date_of_birth: string | null;
           email: string;
           full_name: string | null;
@@ -318,6 +409,7 @@ export type Database = {
         };
         Insert: {
           created_at?: string;
+          credit_balance?: number;
           date_of_birth?: string | null;
           email: string;
           full_name?: string | null;
@@ -330,6 +422,7 @@ export type Database = {
         };
         Update: {
           created_at?: string;
+          credit_balance?: number;
           date_of_birth?: string | null;
           email?: string;
           full_name?: string | null;
@@ -350,6 +443,10 @@ export type Database = {
       login_email_for_national_id: {
         Args: { p_national_id: string };
         Returns: string;
+      };
+      redeem_credit_code: {
+        Args: { p_code: string };
+        Returns: number;
       };
       preview_discount_code: {
         Args: { p_code: string; p_party_count: number };

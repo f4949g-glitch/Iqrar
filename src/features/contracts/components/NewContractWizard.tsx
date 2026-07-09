@@ -28,6 +28,8 @@ export function NewContractWizard() {
   const [method, setMethod] = useState<'pdf' | 'editor' | null>(null);
   const [title, setTitle] = useState('');
   const [durationDays, setDurationDays] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [companyCrNumber, setCompanyCrNumber] = useState('');
   const [draftParties, setDraftParties] = useState<DraftParty[]>([emptyParty()]);
   const [pendingDiscountCode, setPendingDiscountCode] = useState<string | null>(null);
   const [contract, setContract] = useState<Contract | null>(null);
@@ -62,6 +64,8 @@ export function NewContractWizard() {
         title: title.trim(),
         duration_days: durationDays ? Number(durationDays) : null,
         source_type: chosen,
+        company_name: companyName.trim() || null,
+        company_cr_number: companyCrNumber.trim() || null,
       });
       if (pendingDiscountCode) {
         await setContractDiscountCode(created.id, pendingDiscountCode);
@@ -74,11 +78,16 @@ export function NewContractWizard() {
           role_label: role,
           full_name: p.full_name.trim() || undefined,
           national_id: p.national_id.trim() || undefined,
+          nationality: p.nationality.trim() || undefined,
+          address: p.address.trim() || undefined,
           email: p.email.trim() || undefined,
           phone: p.phone.trim() || undefined,
           order_index: i,
           verification_method: p.verification_method,
           date_of_birth: p.date_of_birth || undefined,
+          party_type: p.party_type,
+          entity_name: p.party_type === 'entity' ? p.entity_name.trim() || undefined : undefined,
+          entity_cr_number: p.party_type === 'entity' ? p.entity_cr_number.trim() || undefined : undefined,
         };
         const party = p.partyId ? await updateParty(p.partyId, payload) : await addParty(created.id, payload);
         createdParties.push(party);
@@ -143,6 +152,10 @@ export function NewContractWizard() {
           onTitleChange={setTitle}
           durationDays={durationDays}
           onDurationChange={setDurationDays}
+          companyName={companyName}
+          onCompanyNameChange={setCompanyName}
+          companyCrNumber={companyCrNumber}
+          onCompanyCrNumberChange={setCompanyCrNumber}
           parties={draftParties}
           onPartiesChange={setDraftParties}
           ensureContract={ensureContract}

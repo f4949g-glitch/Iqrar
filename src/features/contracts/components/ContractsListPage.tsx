@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { FileText, Percent, Plus, ShieldCheck, TrendingUp } from 'lucide-react';
 import { StatusPill } from '@/shared/ui/StatusPill';
 import { Button } from '@/shared/ui/Button';
+import { useSession } from '@/features/auth';
 import {
   listActiveContracts,
   listContractsAwaitingMySignature,
@@ -60,6 +61,7 @@ function StatCard({ icon: Icon, label, value, accent }: StatCardProps) {
 }
 
 export function ContractsListPage() {
+  const { profile } = useSession();
   const [tab, setTab] = useState<Tab>('new');
   const [contracts, setContracts] = useState<ContractListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,13 +133,15 @@ export function ContractsListPage() {
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <Link to="/app/contracts/discounts" className="flex-1 sm:flex-none">
-            <Button variant="secondary" className="w-full">
-              <span className="flex items-center justify-center gap-1.5">
-                <Percent size={16} /> أكواد الخصم
-              </span>
-            </Button>
-          </Link>
+          {profile?.role === 'admin' && (
+            <Link to="/app/contracts/discounts" className="flex-1 sm:flex-none">
+              <Button variant="secondary" className="w-full">
+                <span className="flex items-center justify-center gap-1.5">
+                  <Percent size={16} /> أكواد الخصم
+                </span>
+              </Button>
+            </Link>
+          )}
           <Link to="/app/contracts/new" className="flex-1 sm:flex-none">
             <Button className="w-full">
               <span className="flex items-center justify-center gap-1.5">

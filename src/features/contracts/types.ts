@@ -39,6 +39,9 @@ export interface Contract {
   expires_at: string | null;
   discount_code_id: string | null;
   invoice_amount: number | null;
+  company_name: string | null;
+  company_cr_number: string | null;
+  company_logo_path: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -48,6 +51,12 @@ export interface Contract {
 
 export type VerificationMethod = 'manual' | 'nafath';
 export type NafathStatus = 'pending' | 'completed' | 'rejected' | 'expired';
+export type PartyType = 'individual' | 'entity';
+
+export const PARTY_TYPE_LABELS: Record<PartyType, string> = {
+  individual: 'فرد',
+  entity: 'منشأة',
+};
 
 export interface ContractParty {
   id: string;
@@ -69,6 +78,11 @@ export interface ContractParty {
   nafath_random_code: string | null;
   nafath_status: NafathStatus | null;
   nafath_verified_at: string | null;
+  party_type: PartyType;
+  entity_name: string | null;
+  entity_cr_number: string | null;
+  nationality: string | null;
+  address: string | null;
 }
 
 export interface ContractField {
