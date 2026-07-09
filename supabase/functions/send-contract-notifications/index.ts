@@ -1,0 +1,68 @@
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { corsHeaders } from '../_shared/cors.ts';
+import { sendEmail } from '../_shared/email.ts';
+
+function jsonResponse(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+  });
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+
+  const authHeader = req.headers.get('Authorization') ?? '';
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+  const admin = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+
+  const callerClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } });
+  const {
+    data: { user: callerUser },
+  } = await callerClient.auth.getUser();
+  if (!callerUser) return jsonResponse({ error: 'غير مصرَّح: يلزم تسجيل الدخول' }, 401);
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return jsonResponse({ error: 'بيانات غير صالحة' }, 400);
+  }
+
+  const contractId = String(body.contract_id ?? '');
+  if (!contractId) return jsonResponse({ error: 'contract_id مطلوب' }, 400);
+
+  const { data: contract, error: contractError } = await admin.from('contracts').select('id, title, created_by').eq('id', contractId).single();
+  if (contractError || !contract) return jsonResponse({ error: 'العقد غير موجود' }, 404);
+  if (contract.created_by !== callerUser.id) {
+    const { data: profile } = await admin.from('profiles').select('role').eq('id', callerUser.id).maybeSingle();
+    if (profile?.role !== 'admin') return jsonResponse({ error: 'غير مصرَّح' }, 403);
+  }
+
+  const { data: creatorProfile } = await admin.from('profiles').select('full_name, email').eq('id', contract.created_by).maybeSingle();
+  const creatorName = creatorProfile?.full_name || creatorProfile?.email || 'منشئ العقد';
+
+  const { data: parties, error: partiesError } = await admin.from('contract_parties').select('*').eq('contract_id', contractId);
+  if (partiesError) return jsonResponse({ error: 'تعذّر تحميل أطراف العقد' }, 500);
+
+  const origin = req.headers.get('origin') ?? Deno.env.get('APP_ORIGIN') ?? '';
+  let sent = 0;
+
+  for (const party of parties ?? []) {
+    if (!party.email) continue;
+    const link = `${origin}/sign/${party.token}`;
+    await sendEmail(
+      party.email,
+      'لديك طلب توثيق جديد',
+      `<p>مرحباً ${party.full_name}،</p>
+       <p>لديك طلب توثيق جديد من (${creatorName})، يرجى الدخول إلى المنصة للاطلاع على العقد "${contract.title}" واستكمال إجراءات التوثيق.</p>
+       <p><a href="${link}">اضغط هنا لمراجعة العقد والتوقيع</a></p>`,
+    );
+    sent += 1;
+  }
+
+  return jsonResponse({ success: true, sent });
+});

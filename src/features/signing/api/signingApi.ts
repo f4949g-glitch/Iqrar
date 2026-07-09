@@ -1,0 +1,28 @@
+import { supabase } from '@/lib/supabase/client';
+import type { ContractField } from '@/features/contracts';
+
+export interface SigningSession {
+  contract: { id: string; title: string; status: string; page_count: number };
+  party: { id: string; role_label: string; full_name: string; status: string };
+  fields: ContractField[];
+  pdf_url: string | null;
+}
+
+export async function fetchSigningSession(token: string): Promise<SigningSession> {
+  const { data, error } = await supabase.functions.invoke<SigningSession | { error: string }>('get-signing-session', {
+    body: { token },
+  });
+  if (error) throw new Error(error.message);
+  if (data && 'error' in data) throw new Error(data.error);
+  return data as SigningSession;
+}
+
+export async function submitSignature(token: string, values: Record<string, unknown>): Promise<{ completed: boolean }> {
+  const { data, error } = await supabase.functions.invoke<{ success: boolean; completed: boolean } | { error: string }>(
+    'submit-signature',
+    { body: { token, values } },
+  );
+  if (error) throw new Error(error.message);
+  if (data && 'error' in data) throw new Error(data.error);
+  return data as { completed: boolean };
+}
