@@ -1,43 +1,58 @@
 import { useState } from 'react';
+import type { JSONContent } from '@tiptap/react';
 import { PartiesStep, emptyParty, type DraftParty } from './wizard/PartiesStep';
+import { MethodStep } from './wizard/MethodStep';
 import { UploadStep } from './wizard/UploadStep';
 import { FieldsStep } from './wizard/FieldsStep';
+import { EditorStep } from './wizard/EditorStep';
 import { ReviewStep } from './wizard/ReviewStep';
 import { addParty, createDraftContract, getOriginalPdfUrl, uploadOriginalPdf } from '../api/contractsApi';
 import { setContractDiscountCode } from '../api/discountCodesApi';
 import type { Contract, ContractField, ContractParty } from '../types';
 
-type Step = 'parties' | 'upload' | 'fields' | 'review';
+type Step = 'parties' | 'method' | 'upload' | 'fields' | 'editor' | 'review';
 
-const STEP_ORDER: Step[] = ['parties', 'upload', 'fields', 'review'];
+const STEP_ORDER_PDF: Step[] = ['parties', 'method', 'upload', 'fields', 'review'];
+const STEP_ORDER_EDITOR: Step[] = ['parties', 'method', 'editor', 'review'];
 const STEP_LABELS: Record<Step, string> = {
   parties: 'بيانات الأطراف',
+  method: 'طريقة الإنشاء',
   upload: 'رفع المستند',
   fields: 'الحقول',
+  editor: 'محتوى العقد',
   review: 'المراجعة والإرسال',
 };
 
 export function NewContractWizard() {
   const [step, setStep] = useState<Step>('parties');
+  const [method, setMethod] = useState<'pdf' | 'editor' | null>(null);
   const [title, setTitle] = useState('');
   const [durationDays, setDurationDays] = useState('');
   const [draftParties, setDraftParties] = useState<DraftParty[]>([emptyParty()]);
+  const [pendingDiscountCode, setPendingDiscountCode] = useState<string | null>(null);
   const [contract, setContract] = useState<Contract | null>(null);
   const [parties, setParties] = useState<ContractParty[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [pageCount, setPageCount] = useState(0);
   const [pdfUrl, setPdfUrl] = useState('');
+  const [body, setBody] = useState<JSONContent | null>(null);
   const [fields, setFields] = useState<ContractField[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const goToUpload = async (validDiscountCode: string | null) => {
+  const goToMethod = (validDiscountCode: string | null) => {
+    setPendingDiscountCode(validDiscountCode);
+    setStep('method');
+  };
+
+  const selectMethod = async (chosen: 'pdf' | 'editor') => {
+    setMethod(chosen);
     setBusy(true);
     setError('');
     try {
-      const created = await createDraftContract(title.trim(), durationDays ? Number(durationDays) : null);
-      if (validDiscountCode) {
-        await setContractDiscountCode(created.id, validDiscountCode);
+      const created = await createDraftContract(title.trim(), durationDays ? Number(durationDays) : null, chosen);
+      if (pendingDiscountCode) {
+        await setContractDiscountCode(created.id, pendingDiscountCode);
       }
       const createdParties: ContractParty[] = [];
       for (let i = 0; i < draftParties.length; i++) {
@@ -55,7 +70,7 @@ export function NewContractWizard() {
       }
       setContract(created);
       setParties(createdParties);
-      setStep('upload');
+      setStep(chosen === 'editor' ? 'editor' : 'upload');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'تعذّر إنشاء العقد');
     } finally {
@@ -80,14 +95,15 @@ export function NewContractWizard() {
     }
   };
 
-  const stepIndex = STEP_ORDER.indexOf(step);
+  const stepOrder = method === 'editor' ? STEP_ORDER_EDITOR : STEP_ORDER_PDF;
+  const stepIndex = stepOrder.indexOf(step);
 
   return (
     <div>
       <h1 className="mb-6 font-display text-2xl font-extrabold text-ink">عقد جديد</h1>
 
       <div className="mb-8 flex items-center gap-2">
-        {STEP_ORDER.map((s, i) => (
+        {stepOrder.map((s, i) => (
           <div key={s} className="flex flex-1 items-center gap-2">
             <div
               className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
@@ -99,7 +115,7 @@ export function NewContractWizard() {
             <span className={`hidden text-xs font-bold sm:inline ${i <= stepIndex ? 'text-ink' : 'text-slate'}`}>
               {STEP_LABELS[s]}
             </span>
-            {i < STEP_ORDER.length - 1 && <div className="h-px flex-1 bg-line" />}
+            {i < stepOrder.length - 1 && <div className="h-px flex-1 bg-line" />}
           </div>
         ))}
       </div>
@@ -114,9 +130,11 @@ export function NewContractWizard() {
           onDurationChange={setDurationDays}
           parties={draftParties}
           onPartiesChange={setDraftParties}
-          onNext={goToUpload}
+          onNext={goToMethod}
         />
       )}
+
+      {step === 'method' && <MethodStep onSelect={selectMethod} onBack={() => setStep('parties')} />}
 
       {step === 'upload' && contract && (
         <UploadStep
@@ -125,7 +143,7 @@ export function NewContractWizard() {
             setFile(f);
             setPageCount(pages);
           }}
-          onBack={() => setStep('parties')}
+          onBack={() => setStep('method')}
           onNext={goToFields}
         />
       )}
@@ -143,8 +161,21 @@ export function NewContractWizard() {
         />
       )}
 
+      {step === 'editor' && contract && (
+        <EditorStep
+          contractId={contract.id}
+          parties={parties}
+          body={body}
+          onBodyChange={setBody}
+          fields={fields}
+          onFieldsChange={setFields}
+          onBack={() => setStep('method')}
+          onNext={() => setStep('review')}
+        />
+      )}
+
       {step === 'review' && contract && (
-        <ReviewStep contract={contract} parties={parties} fields={fields} onBack={() => setStep('fields')} />
+        <ReviewStep contract={contract} parties={parties} fields={fields} onBack={() => setStep(method === 'editor' ? 'editor' : 'fields')} />
       )}
 
       {busy && <p className="mt-4 text-sm text-slate">جارِ المعالجة...</p>}

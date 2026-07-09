@@ -91,8 +91,8 @@ export function FieldsStep({ contractId, pdfUrl, pageCount, parties, fields, onF
     const container = (e.currentTarget as HTMLElement).parentElement;
     if (!container) return;
     const rect = container.getBoundingClientRect();
-    const fieldXPx = (field.pos_x / 100) * rect.width;
-    const fieldYPx = (field.pos_y / 100) * rect.height;
+    const fieldXPx = ((field.pos_x ?? 0) / 100) * rect.width;
+    const fieldYPx = ((field.pos_y ?? 0) / 100) * rect.height;
     setDragging({ id: field.id, offsetX: e.clientX - rect.left - fieldXPx, offsetY: e.clientY - rect.top - fieldYPx });
   };
 
@@ -106,7 +106,11 @@ export function FieldsStep({ contractId, pdfUrl, pageCount, parties, fields, onF
     onFieldsChange(
       fields.map((f) =>
         f.id === dragging.id
-          ? { ...f, pos_x: Math.max(0, Math.min(100 - f.width, xPct)), pos_y: Math.max(0, Math.min(100 - f.height, yPct)) }
+          ? {
+              ...f,
+              pos_x: Math.max(0, Math.min(100 - (f.width ?? 0), xPct)),
+              pos_y: Math.max(0, Math.min(100 - (f.height ?? 0), yPct)),
+            }
           : f,
       ),
     );
@@ -118,7 +122,7 @@ export function FieldsStep({ contractId, pdfUrl, pageCount, parties, fields, onF
     setDragging(null);
     if (!field) return;
     try {
-      await updateField(field.id, { pos_x: field.pos_x, pos_y: field.pos_y });
+      await updateField(field.id, { pos_x: field.pos_x ?? 0, pos_y: field.pos_y ?? 0 });
     } catch {
       // تجاهل فشل حفظ الموضع النهائي؛ يبقى الحقل كما هو محليًا حتى إعادة تحميل الصفحة
     }

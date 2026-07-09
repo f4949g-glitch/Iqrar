@@ -55,7 +55,8 @@ export function ReviewStep({ contract, parties, fields, onBack }: ReviewStepProp
             const party = parties.find((p) => p.id === f.party_id);
             return (
               <li key={f.id}>
-                صفحة {f.page_number} — {FIELD_TYPE_LABELS[f.field_type]} ({party?.full_name ?? '—'})
+                {f.page_number ? `صفحة ${f.page_number} — ` : ''}
+                {FIELD_TYPE_LABELS[f.field_type]} ({party?.full_name ?? '—'})
               </li>
             );
           })}

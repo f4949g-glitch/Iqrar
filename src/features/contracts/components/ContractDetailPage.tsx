@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Copy, Download } from 'lucide-react';
+import { Copy, Download, Printer } from 'lucide-react';
 import { StatusPill } from '@/shared/ui/StatusPill';
 import { getContractDetail } from '../api/contractsApi';
 import { supabase } from '@/lib/supabase/client';
+import { renderContractHtml, type JsonNode } from '../editor/renderContractHtml';
 import { CONTRACT_STATUS_LABEL, type Contract, type ContractEvent, type ContractParty } from '../types';
 
 const PARTY_STATUS_LABEL: Record<string, string> = {
@@ -51,6 +52,21 @@ export function ContractDetailPage() {
     load();
   }, [load]);
 
+  const previewHtml = useMemo(() => {
+    if (!contract || contract.source_type !== 'editor' || !contract.body_json) return '';
+    return renderContractHtml(contract.body_json as JsonNode, parties);
+  }, [contract, parties]);
+
+  const printFinal = () => {
+    if (!contract?.final_html) return;
+    const win = window.open('', '_blank');
+    if (!win) return;
+    win.document.write(`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${contract.title}</title></head><body>${contract.final_html}</body></html>`);
+    win.document.close();
+    win.focus();
+    win.print();
+  };
+
   if (loading) return <p className="text-sm text-slate">جارِ التحميل...</p>;
   if (error) return <p className="text-sm font-bold text-clay">{error}</p>;
   if (!contract) return null;
@@ -82,6 +98,11 @@ export function ContractDetailPage() {
               <Download size={14} /> تحميل النسخة النهائية
             </a>
           )}
+          {contract.final_html && (
+            <button type="button" onClick={printFinal} className="flex items-center gap-1.5 rounded-lg bg-sage px-3 py-1.5 text-sm font-bold text-white">
+              <Printer size={14} /> طباعة/تنزيل PDF
+            </button>
+          )}
         </div>
       </div>
 
@@ -96,6 +117,13 @@ export function ContractDetailPage() {
           <div className="h-full rounded-full bg-sage transition-all" style={{ width: `${progress}%` }} />
         </div>
       </div>
+
+      {previewHtml && (
+        <div className="rounded-xl border border-line bg-card p-5">
+          <h2 className="mb-3 font-display text-sm font-bold text-ink">معاينة محتوى العقد</h2>
+          <div className="prose max-w-none text-sm text-ink" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+        </div>
+      )}
 
       <div className="rounded-xl border border-line bg-card p-5">
         <h2 className="mb-3 font-display text-sm font-bold text-ink">الأطراف وسجل التوقيعات</h2>

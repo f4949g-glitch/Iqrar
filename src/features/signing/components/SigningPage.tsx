@@ -5,6 +5,7 @@ import { CheckCircle2, FileSignature } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { SignaturePad } from '@/shared/ui/SignaturePad';
 import { fetchSigningSession, submitSignature, type SigningSession } from '../api/signingApi';
+import { renderContractHtml, type JsonNode } from '@/features/contracts/editor/renderContractHtml';
 import '@/lib/pdf/setupWorker';
 
 function fileToDataUrl(file: File): Promise<string> {
@@ -189,6 +190,15 @@ export function SigningPage() {
       </header>
 
       <main className="mx-auto max-w-3xl space-y-6 p-4">
+        {session.contract.source_type === 'editor' && Boolean(session.contract.body_json) && session.all_parties && (
+          <div className="rounded-xl border border-line bg-card p-6">
+            <div
+              className="prose max-w-none text-sm text-ink"
+              dangerouslySetInnerHTML={{ __html: renderContractHtml(session.contract.body_json as JsonNode, session.all_parties) }}
+            />
+          </div>
+        )}
+
         {session.pdf_url && (
           <div className="flex justify-center overflow-auto rounded-xl border border-line bg-[#525659] p-4">
             <Document file={session.pdf_url} loading={<p className="p-10 text-sm text-white">جارِ تحميل المستند...</p>}>

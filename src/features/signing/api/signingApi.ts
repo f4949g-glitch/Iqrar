@@ -1,11 +1,21 @@
 import { supabase } from '@/lib/supabase/client';
 import type { ContractField } from '@/features/contracts';
 
+export interface SigningPartyData {
+  id: string;
+  role_label: string;
+  full_name: string;
+  national_id: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
 export interface SigningSession {
-  contract: { id: string; title: string; status: string; page_count: number };
+  contract: { id: string; title: string; status: string; page_count: number; source_type: string; body_json: unknown };
   party: { id: string; role_label: string; full_name: string; status: string };
   fields: ContractField[];
   pdf_url: string | null;
+  all_parties: SigningPartyData[] | null;
 }
 
 export async function fetchSigningSession(token: string): Promise<SigningSession> {

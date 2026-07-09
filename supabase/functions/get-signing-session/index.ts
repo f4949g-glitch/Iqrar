@@ -35,7 +35,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: contract, error: contractError } = await admin
     .from('contracts')
-    .select('id, title, status, page_count, original_file_path')
+    .select('id, title, status, page_count, original_file_path, source_type, body_json')
     .eq('id', party.contract_id)
     .single();
 
@@ -62,10 +62,27 @@ Deno.serve(async (req: Request) => {
     pdfUrl = signed?.signedUrl ?? null;
   }
 
+  let allParties: unknown[] | null = null;
+  if (contract.source_type === 'editor') {
+    const { data } = await admin
+      .from('contract_parties')
+      .select('id, role_label, full_name, national_id, email, phone')
+      .eq('contract_id', contract.id);
+    allParties = data ?? [];
+  }
+
   return jsonResponse({
-    contract: { id: contract.id, title: contract.title, status: contract.status, page_count: contract.page_count },
+    contract: {
+      id: contract.id,
+      title: contract.title,
+      status: contract.status,
+      page_count: contract.page_count,
+      source_type: contract.source_type,
+      body_json: contract.source_type === 'editor' ? contract.body_json : null,
+    },
     party: { id: party.id, role_label: party.role_label, full_name: party.full_name, status: party.status },
     fields,
     pdf_url: pdfUrl,
+    all_parties: allParties,
   });
 });

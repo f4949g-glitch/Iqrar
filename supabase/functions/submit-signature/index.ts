@@ -4,6 +4,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/email.ts';
 import { sendSms } from '../_shared/sms.ts';
 import { generateFinalPdf, type FieldToRender } from '../_shared/generateFinalPdf.ts';
+import { renderContractHtml, type FillValue, type JsonNode } from '../_shared/renderContractHtml.ts';
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -96,9 +97,36 @@ Deno.serve(async (req: Request) => {
 
 async function finalizeContract(admin: ReturnType<typeof createClient>, contractId: string) {
   const { data: contract } = await admin.from('contracts').select('*').eq('id', contractId).single();
-  if (!contract?.original_file_path) return;
+  if (!contract) return;
 
-  const { data: allFields } = await admin.from('contract_fields').select('*').eq('contract_id', contractId);
+  if (contract.source_type === 'editor') {
+    await finalizeEditorContract(admin, contract);
+  } else {
+    await finalizePdfContract(admin, contract);
+  }
+
+  await admin.from('contract_events').insert({ contract_id: contractId, event_type: 'completed', message: 'تم توثيق العقد بنجاح واكتمل توقيع جميع الأطراف' });
+
+  const { data: parties } = await admin.from('contract_parties').select('full_name, email, phone').eq('contract_id', contractId);
+  for (const p of parties ?? []) {
+    if (p.email) {
+      await sendEmail(
+        p.email,
+        'اكتمل توثيق العقد',
+        `<p>مرحبًا ${p.full_name}،</p><p>نفيدكم بأنه تم توثيق العقد "${contract.title}" بنجاح عبر منصة إقرار لخدمات الأعمال.</p>`,
+      );
+    }
+    if (p.phone) {
+      await sendSms(p.phone, 'نفيدكم بأنه تم توثيق العقد بنجاح عبر منصة إقرار لخدمات الأعمال.');
+    }
+  }
+}
+
+// deno-lint-ignore no-explicit-any
+async function finalizePdfContract(admin: ReturnType<typeof createClient>, contract: any) {
+  if (!contract.original_file_path) return;
+
+  const { data: allFields } = await admin.from('contract_fields').select('*').eq('contract_id', contract.id);
   const { data: originalFile } = await admin.storage.from('contracts').download(contract.original_file_path);
   if (!originalFile) return;
 
@@ -119,27 +147,41 @@ async function finalizeContract(admin: ReturnType<typeof createClient>, contract
     return new Uint8Array(await data.arrayBuffer());
   });
 
-  const finalPath = `${contractId}/final.pdf`;
+  const finalPath = `${contract.id}/final.pdf`;
   await admin.storage.from('contracts').upload(finalPath, finalBytes, { upsert: true, contentType: 'application/pdf' });
 
   await admin
     .from('contracts')
     .update({ status: 'completed', final_file_path: finalPath, completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-    .eq('id', contractId);
+    .eq('id', contract.id);
+}
 
-  await admin.from('contract_events').insert({ contract_id: contractId, event_type: 'completed', message: 'تم توثيق العقد بنجاح واكتمل توقيع جميع الأطراف' });
+// deno-lint-ignore no-explicit-any
+async function finalizeEditorContract(admin: ReturnType<typeof createClient>, contract: any) {
+  if (!contract.body_json) return;
 
-  const { data: parties } = await admin.from('contract_parties').select('full_name, email, phone').eq('contract_id', contractId);
-  for (const p of parties ?? []) {
-    if (p.email) {
-      await sendEmail(
-        p.email,
-        'اكتمل توثيق العقد',
-        `<p>مرحبًا ${p.full_name}،</p><p>نفيدكم بأنه تم توثيق العقد "${contract.title}" بنجاح عبر منصة إقرار لخدمات الأعمال.</p>`,
-      );
-    }
-    if (p.phone) {
-      await sendSms(p.phone, 'نفيدكم بأنه تم توثيق العقد بنجاح عبر منصة إقرار لخدمات الأعمال.');
+  const [{ data: parties }, { data: allFields }] = await Promise.all([
+    admin.from('contract_parties').select('id, role_label, full_name, national_id, email, phone').eq('contract_id', contract.id),
+    admin.from('contract_fields').select('*').eq('contract_id', contract.id),
+  ]);
+
+  const fillValues: Record<string, FillValue> = {};
+  for (const f of allFields ?? []) {
+    if (!f.anchor_id) continue;
+    const isImage = ['signature', 'image', 'logo', 'stamp'].includes(f.field_type);
+    if (isImage && f.value && typeof f.value === 'object' && 'path' in (f.value as Record<string, unknown>)) {
+      const path = (f.value as { path: string }).path;
+      const { data: signed } = await admin.storage.from('contracts').createSignedUrl(path, 60 * 60 * 24 * 365);
+      fillValues[f.anchor_id] = { fieldType: f.field_type, value: f.value, resolvedImageUrl: signed?.signedUrl };
+    } else {
+      fillValues[f.anchor_id] = { fieldType: f.field_type, value: f.value };
     }
   }
+
+  const html = renderContractHtml(contract.body_json as JsonNode, parties ?? [], fillValues);
+
+  await admin
+    .from('contracts')
+    .update({ status: 'completed', final_html: html, completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', contract.id);
 }

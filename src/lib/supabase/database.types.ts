@@ -35,55 +35,58 @@ export type Database = {
       };
       contract_fields: {
         Row: {
+          anchor_id: string | null;
           contract_id: string;
           created_at: string;
           field_type: string;
           filled_at: string | null;
-          height: number;
+          height: number | null;
           id: string;
           label: string;
           options: Json | null;
-          page_number: number;
+          page_number: number | null;
           party_id: string;
-          pos_x: number;
-          pos_y: number;
+          pos_x: number | null;
+          pos_y: number | null;
           required: boolean;
           value: Json | null;
-          width: number;
+          width: number | null;
         };
         Insert: {
+          anchor_id?: string | null;
           contract_id: string;
           created_at?: string;
           field_type: string;
           filled_at?: string | null;
-          height: number;
+          height?: number | null;
           id?: string;
           label: string;
           options?: Json | null;
-          page_number?: number;
+          page_number?: number | null;
           party_id: string;
-          pos_x: number;
-          pos_y: number;
+          pos_x?: number | null;
+          pos_y?: number | null;
           required?: boolean;
           value?: Json | null;
-          width: number;
+          width?: number | null;
         };
         Update: {
+          anchor_id?: string | null;
           contract_id?: string;
           created_at?: string;
           field_type?: string;
           filled_at?: string | null;
-          height?: number;
+          height?: number | null;
           id?: string;
           label?: string;
           options?: Json | null;
-          page_number?: number;
+          page_number?: number | null;
           party_id?: string;
-          pos_x?: number;
-          pos_y?: number;
+          pos_x?: number | null;
+          pos_y?: number | null;
           required?: boolean;
           value?: Json | null;
-          width?: number;
+          width?: number | null;
         };
         Relationships: [];
       };
@@ -137,6 +140,7 @@ export type Database = {
       };
       contracts: {
         Row: {
+          body_json: Json | null;
           completed_at: string | null;
           created_at: string;
           created_by: string;
@@ -144,6 +148,7 @@ export type Database = {
           duration_days: number | null;
           expires_at: string | null;
           final_file_path: string | null;
+          final_html: string | null;
           id: string;
           invoice_amount: number | null;
           original_file_path: string | null;
@@ -155,6 +160,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          body_json?: Json | null;
           completed_at?: string | null;
           created_at?: string;
           created_by: string;
@@ -162,6 +168,7 @@ export type Database = {
           duration_days?: number | null;
           expires_at?: string | null;
           final_file_path?: string | null;
+          final_html?: string | null;
           id?: string;
           invoice_amount?: number | null;
           original_file_path?: string | null;
@@ -173,6 +180,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          body_json?: Json | null;
           completed_at?: string | null;
           created_at?: string;
           created_by?: string;
@@ -180,6 +188,7 @@ export type Database = {
           duration_days?: number | null;
           expires_at?: string | null;
           final_file_path?: string | null;
+          final_html?: string | null;
           id?: string;
           invoice_amount?: number | null;
           original_file_path?: string | null;

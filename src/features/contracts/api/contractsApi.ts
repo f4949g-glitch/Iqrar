@@ -61,13 +61,28 @@ export async function listContractsAwaitingMySignature(): Promise<ContractListIt
   return withPartyCounts((data ?? []) as Contract[]);
 }
 
-export async function createDraftContract(title: string, durationDays: number | null): Promise<Contract> {
+export async function createDraftContract(
+  title: string,
+  durationDays: number | null,
+  sourceType: 'pdf' | 'editor' = 'pdf',
+): Promise<Contract> {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) throw new Error('غير مسجّل الدخول');
 
   const { data, error } = await supabase
     .from('contracts')
-    .insert({ title, duration_days: durationDays, created_by: userData.user.id })
+    .insert({ title, duration_days: durationDays, created_by: userData.user.id, source_type: sourceType })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Contract;
+}
+
+export async function saveContractBody(contractId: string, bodyJson: unknown): Promise<Contract> {
+  const { data, error } = await supabase
+    .from('contracts')
+    .update({ body_json: bodyJson as never, updated_at: new Date().toISOString() })
+    .eq('id', contractId)
     .select()
     .single();
   if (error) throw error;
@@ -142,11 +157,12 @@ export interface NewFieldInput {
   party_id: string;
   field_type: FieldType;
   label: string;
-  page_number: number;
-  pos_x: number;
-  pos_y: number;
-  width: number;
-  height: number;
+  page_number?: number;
+  pos_x?: number;
+  pos_y?: number;
+  width?: number;
+  height?: number;
+  anchor_id?: string;
   required: boolean;
   options?: string[] | null;
 }
