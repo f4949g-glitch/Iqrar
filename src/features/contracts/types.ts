@@ -35,6 +35,8 @@ export interface Contract {
   page_count: number;
   duration_days: number | null;
   expires_at: string | null;
+  discount_code_id: string | null;
+  invoice_amount: number | null;
   created_by: string;
   created_at: string;
   updated_at: string;

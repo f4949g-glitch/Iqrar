@@ -1,6 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
 import { useSession, LoginForm, ForcedPasswordChange } from '@/features/auth';
-import { ContractsListPage, NewContractWizard, ContractDetailPage } from '@/features/contracts';
+import { ContractsListPage, NewContractWizard, ContractDetailPage, DiscountCodesPage } from '@/features/contracts';
 import { SigningPage } from '@/features/signing';
 import { Layout } from './Layout';
 import { HomePage } from './HomePage';
@@ -30,6 +30,7 @@ function AuthenticatedGate() {
         <Route path="/" element={<HomePage />} />
         <Route path="/contracts" element={<ContractsListPage />} />
         <Route path="/contracts/new" element={<NewContractWizard />} />
+        <Route path="/contracts/discounts" element={<DiscountCodesPage />} />
         <Route path="/contracts/:id" element={<ContractDetailPage />} />
       </Routes>
     </Layout>

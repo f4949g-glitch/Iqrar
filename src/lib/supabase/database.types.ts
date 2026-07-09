@@ -140,10 +140,12 @@ export type Database = {
           completed_at: string | null;
           created_at: string;
           created_by: string;
+          discount_code_id: string | null;
           duration_days: number | null;
           expires_at: string | null;
           final_file_path: string | null;
           id: string;
+          invoice_amount: number | null;
           original_file_path: string | null;
           page_count: number;
           sent_at: string | null;
@@ -156,10 +158,12 @@ export type Database = {
           completed_at?: string | null;
           created_at?: string;
           created_by: string;
+          discount_code_id?: string | null;
           duration_days?: number | null;
           expires_at?: string | null;
           final_file_path?: string | null;
           id?: string;
+          invoice_amount?: number | null;
           original_file_path?: string | null;
           page_count?: number;
           sent_at?: string | null;
@@ -172,10 +176,12 @@ export type Database = {
           completed_at?: string | null;
           created_at?: string;
           created_by?: string;
+          discount_code_id?: string | null;
           duration_days?: number | null;
           expires_at?: string | null;
           final_file_path?: string | null;
           id?: string;
+          invoice_amount?: number | null;
           original_file_path?: string | null;
           page_count?: number;
           sent_at?: string | null;
@@ -183,6 +189,69 @@ export type Database = {
           status?: string;
           title?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      discount_code_uses: {
+        Row: {
+          contract_id: string;
+          created_at: string;
+          discount_code_id: string;
+          id: string;
+          used_by: string;
+        };
+        Insert: {
+          contract_id: string;
+          created_at?: string;
+          discount_code_id: string;
+          id?: string;
+          used_by: string;
+        };
+        Update: {
+          contract_id?: string;
+          created_at?: string;
+          discount_code_id?: string;
+          id?: string;
+          used_by?: string;
+        };
+        Relationships: [];
+      };
+      discount_codes: {
+        Row: {
+          code: string;
+          created_at: string;
+          created_by: string;
+          discount_percent: number;
+          ends_at: string | null;
+          id: string;
+          is_active: boolean;
+          max_uses: number | null;
+          max_uses_per_user: number | null;
+          starts_at: string | null;
+        };
+        Insert: {
+          code: string;
+          created_at?: string;
+          created_by: string;
+          discount_percent: number;
+          ends_at?: string | null;
+          id?: string;
+          is_active?: boolean;
+          max_uses?: number | null;
+          max_uses_per_user?: number | null;
+          starts_at?: string | null;
+        };
+        Update: {
+          code?: string;
+          created_at?: string;
+          created_by?: string;
+          discount_percent?: number;
+          ends_at?: string | null;
+          id?: string;
+          is_active?: boolean;
+          max_uses?: number | null;
+          max_uses_per_user?: number | null;
+          starts_at?: string | null;
         };
         Relationships: [];
       };
@@ -239,8 +308,22 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      preview_discount_code: {
+        Args: { p_code: string; p_party_count: number };
+        Returns: {
+          base_amount: number;
+          discount_code_id: string | null;
+          discount_percent: number | null;
+          final_amount: number;
+          message: string | null;
+        }[];
+      };
       send_contract: {
         Args: { p_contract_id: string };
+        Returns: Database['public']['Tables']['contracts']['Row'];
+      };
+      set_contract_discount_code: {
+        Args: { p_code: string; p_contract_id: string };
         Returns: Database['public']['Tables']['contracts']['Row'];
       };
     };

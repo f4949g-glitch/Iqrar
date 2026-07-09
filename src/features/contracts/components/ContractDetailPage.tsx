@@ -67,6 +67,7 @@ export function ContractDetailPage() {
           <p className="mt-1 text-xs text-slate">
             أُنشئ في {new Date(contract.created_at).toLocaleString('ar-SA')}
             {contract.expires_at && ` · ينتهي في ${new Date(contract.expires_at).toLocaleDateString('ar-SA')}`}
+            {contract.invoice_amount !== null && ` · الفاتورة: ${contract.invoice_amount.toFixed(2)} ريال`}
           </p>
         </div>
         <div className="flex items-center gap-3">

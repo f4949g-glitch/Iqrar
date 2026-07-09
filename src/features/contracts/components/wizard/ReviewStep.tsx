@@ -33,6 +33,7 @@ export function ReviewStep({ contract, parties, fields, onBack }: ReviewStepProp
       <div className="rounded-xl border border-line bg-card p-5">
         <h3 className="mb-1 font-display text-lg font-bold text-ink">{contract.title}</h3>
         {contract.duration_days && <p className="text-xs text-slate">مدة التوثيق: {contract.duration_days} يومًا</p>}
+        {contract.discount_code_id && <p className="mt-1 text-xs font-bold text-sage">سيُطبَّق كود الخصم على فاتورة هذا العقد عند الإرسال</p>}
       </div>
 
       <div className="rounded-xl border border-line bg-card p-5">

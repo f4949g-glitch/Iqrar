@@ -3,6 +3,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { Field } from '@/shared/ui/Field';
 import { Button } from '@/shared/ui/Button';
 import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '../../api/pricingApi';
+import { previewDiscountCode, type DiscountPreview } from '../../api/discountCodesApi';
 import { PARTY_ROLE_OPTIONS } from '../../types';
 
 export interface DraftParty {
@@ -25,7 +26,7 @@ interface PartiesStepProps {
   onDurationChange: (v: string) => void;
   parties: DraftParty[];
   onPartiesChange: (parties: DraftParty[]) => void;
-  onNext: () => void;
+  onNext: (validDiscountCode: string | null) => void;
 }
 
 export function PartiesStep({
@@ -39,6 +40,9 @@ export function PartiesStep({
 }: PartiesStepProps) {
   const [pricing, setPricing] = useState<PricingSettings | null>(null);
   const [error, setError] = useState('');
+  const [discountCode, setDiscountCode] = useState('');
+  const [discountPreview, setDiscountPreview] = useState<DiscountPreview | null>(null);
+  const [checkingCode, setCheckingCode] = useState(false);
 
   useEffect(() => {
     fetchPricingSettings()
@@ -74,7 +78,27 @@ export function PartiesStep({
         return;
       }
     }
-    onNext();
+    if (discountCode.trim() && (!discountPreview || discountPreview.discount_code_id === null)) {
+      setError('كود الخصم المُدخل غير صالح — تحقّق منه أو أزله قبل المتابعة');
+      return;
+    }
+    onNext(discountPreview?.discount_code_id ? discountCode.trim() : null);
+  };
+
+  const checkDiscountCode = async () => {
+    if (!discountCode.trim()) {
+      setDiscountPreview(null);
+      return;
+    }
+    setCheckingCode(true);
+    try {
+      const result = await previewDiscountCode(discountCode.trim(), parties.length);
+      setDiscountPreview(result);
+    } catch {
+      setDiscountPreview({ discount_code_id: null, discount_percent: null, base_amount: 0, final_amount: 0, message: 'تعذّر التحقق من الكود' });
+    } finally {
+      setCheckingCode(false);
+    }
   };
 
   const invoice = pricing ? calculateInvoice(parties.length, pricing) : null;
@@ -88,8 +112,37 @@ export function PartiesStep({
 
       {invoice !== null && (
         <div className="rounded-lg bg-sealLight p-3 text-sm font-bold text-seal">
-          الرسوم المتوقعة لعدد الأطراف الحالي ({parties.length}): {invoice.toFixed(2)} ريال
+          الرسوم المتوقعة لعدد الأطراف الحالي ({parties.length}):{' '}
+          {discountPreview?.discount_code_id ? (
+            <>
+              <span className="ms-1 line-through opacity-60">{invoice.toFixed(2)}</span>
+              <span className="mx-1">{discountPreview.final_amount.toFixed(2)} ريال (بعد خصم {discountPreview.discount_percent}%)</span>
+            </>
+          ) : (
+            <span>{invoice.toFixed(2)} ريال</span>
+          )}
         </div>
+      )}
+
+      <div className="flex items-end gap-2">
+        <div className="flex-1">
+          <Field
+            label="كود الخصم (اختياري)"
+            value={discountCode}
+            onChange={(v) => {
+              setDiscountCode(v);
+              setDiscountPreview(null);
+            }}
+          />
+        </div>
+        <Button variant="secondary" onClick={checkDiscountCode} disabled={checkingCode || !discountCode.trim()}>
+          {checkingCode ? 'جارِ التحقق...' : 'تحقّق'}
+        </Button>
+      </div>
+      {discountPreview && (
+        <p className={`text-xs font-bold ${discountPreview.discount_code_id ? 'text-sage' : 'text-clay'}`}>
+          {discountPreview.discount_code_id ? `كود صالح: خصم ${discountPreview.discount_percent}%` : discountPreview.message}
+        </p>
       )}
 
       <div className="space-y-4">

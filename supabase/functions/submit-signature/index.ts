@@ -2,6 +2,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/email.ts';
+import { sendSms } from '../_shared/sms.ts';
 import { generateFinalPdf, type FieldToRender } from '../_shared/generateFinalPdf.ts';
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
@@ -128,13 +129,17 @@ async function finalizeContract(admin: ReturnType<typeof createClient>, contract
 
   await admin.from('contract_events').insert({ contract_id: contractId, event_type: 'completed', message: 'تم توثيق العقد بنجاح واكتمل توقيع جميع الأطراف' });
 
-  const { data: parties } = await admin.from('contract_parties').select('full_name, email').eq('contract_id', contractId);
+  const { data: parties } = await admin.from('contract_parties').select('full_name, email, phone').eq('contract_id', contractId);
   for (const p of parties ?? []) {
-    if (!p.email) continue;
-    await sendEmail(
-      p.email,
-      'اكتمل توثيق العقد',
-      `<p>مرحبًا ${p.full_name}،</p><p>نفيدكم بأنه تم توثيق العقد "${contract.title}" بنجاح عبر منصة إقرار لخدمات الأعمال.</p>`,
-    );
+    if (p.email) {
+      await sendEmail(
+        p.email,
+        'اكتمل توثيق العقد',
+        `<p>مرحبًا ${p.full_name}،</p><p>نفيدكم بأنه تم توثيق العقد "${contract.title}" بنجاح عبر منصة إقرار لخدمات الأعمال.</p>`,
+      );
+    }
+    if (p.phone) {
+      await sendSms(p.phone, 'نفيدكم بأنه تم توثيق العقد بنجاح عبر منصة إقرار لخدمات الأعمال.');
+    }
   }
 }

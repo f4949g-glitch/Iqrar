@@ -2,6 +2,8 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/email.ts';
+import { sendSms } from '../_shared/sms.ts';
+import { ensurePartyAccount } from '../_shared/ensurePartyAccount.ts';
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -52,16 +54,27 @@ Deno.serve(async (req: Request) => {
   let sent = 0;
 
   for (const party of parties ?? []) {
-    if (!party.email) continue;
     const link = `${origin}/sign/${party.token}`;
-    await sendEmail(
-      party.email,
-      'لديك طلب توثيق جديد',
-      `<p>مرحباً ${party.full_name}،</p>
-       <p>لديك طلب توثيق جديد من (${creatorName})، يرجى الدخول إلى المنصة للاطلاع على العقد "${contract.title}" واستكمال إجراءات التوثيق.</p>
-       <p><a href="${link}">اضغط هنا لمراجعة العقد والتوقيع</a></p>`,
-    );
-    sent += 1;
+    const account = await ensurePartyAccount(admin, party);
+
+    const accountBlock = account.created
+      ? `<p>كما تم إنشاء حساب لك على المنصة لمتابعة عقودك لاحقًا: <br/>البريد: ${party.email}<br/>كلمة المرور المؤقتة: ${account.tempPassword}</p>`
+      : '';
+
+    if (party.email) {
+      await sendEmail(
+        party.email,
+        'لديك طلب توثيق جديد',
+        `<p>مرحباً ${party.full_name}،</p>
+         <p>لديك طلب توثيق جديد من (${creatorName})، يرجى الدخول إلى المنصة للاطلاع على العقد "${contract.title}" واستكمال إجراءات التوثيق.</p>
+         <p><a href="${link}">اضغط هنا لمراجعة العقد والتوقيع</a></p>
+         ${accountBlock}`,
+      );
+      sent += 1;
+    }
+    if (party.phone) {
+      await sendSms(party.phone, `لديك طلب توثيق جديد من (${creatorName}) عبر منصة إقرار. رابط العقد: ${link}`);
+    }
   }
 
   return jsonResponse({ success: true, sent });

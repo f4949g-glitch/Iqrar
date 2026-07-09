@@ -4,6 +4,7 @@ import { UploadStep } from './wizard/UploadStep';
 import { FieldsStep } from './wizard/FieldsStep';
 import { ReviewStep } from './wizard/ReviewStep';
 import { addParty, createDraftContract, getOriginalPdfUrl, uploadOriginalPdf } from '../api/contractsApi';
+import { setContractDiscountCode } from '../api/discountCodesApi';
 import type { Contract, ContractField, ContractParty } from '../types';
 
 type Step = 'parties' | 'upload' | 'fields' | 'review';
@@ -30,11 +31,14 @@ export function NewContractWizard() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const goToUpload = async () => {
+  const goToUpload = async (validDiscountCode: string | null) => {
     setBusy(true);
     setError('');
     try {
       const created = await createDraftContract(title.trim(), durationDays ? Number(durationDays) : null);
+      if (validDiscountCode) {
+        await setContractDiscountCode(created.id, validDiscountCode);
+      }
       const createdParties: ContractParty[] = [];
       for (let i = 0; i < draftParties.length; i++) {
         const p = draftParties[i];

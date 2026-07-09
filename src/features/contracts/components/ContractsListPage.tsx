@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Percent, Plus } from 'lucide-react';
 import { StatusPill } from '@/shared/ui/StatusPill';
 import { Button } from '@/shared/ui/Button';
 import {
@@ -82,13 +82,22 @@ export function ContractsListPage() {
             </button>
           ))}
         </div>
-        <Link to="/contracts/new">
-          <Button>
-            <span className="flex items-center gap-1.5">
-              <Plus size={16} /> عقد جديد
-            </span>
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link to="/contracts/discounts">
+            <Button variant="secondary">
+              <span className="flex items-center gap-1.5">
+                <Percent size={16} /> أكواد الخصم
+              </span>
+            </Button>
+          </Link>
+          <Link to="/contracts/new">
+            <Button>
+              <span className="flex items-center gap-1.5">
+                <Plus size={16} /> عقد جديد
+              </span>
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {loading && <p className="text-sm text-slate">جارِ التحميل...</p>}
