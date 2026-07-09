@@ -94,9 +94,14 @@ export type Database = {
         Row: {
           contract_id: string;
           created_at: string;
+          date_of_birth: string | null;
           email: string | null;
-          full_name: string;
+          full_name: string | null;
           id: string;
+          nafath_random_code: string | null;
+          nafath_status: string | null;
+          nafath_trans_id: string | null;
+          nafath_verified_at: string | null;
           national_id: string | null;
           order_index: number;
           phone: string | null;
@@ -105,13 +110,19 @@ export type Database = {
           status: string;
           token: string;
           user_id: string | null;
+          verification_method: string;
         };
         Insert: {
           contract_id: string;
           created_at?: string;
+          date_of_birth?: string | null;
           email?: string | null;
-          full_name: string;
+          full_name?: string | null;
           id?: string;
+          nafath_random_code?: string | null;
+          nafath_status?: string | null;
+          nafath_trans_id?: string | null;
+          nafath_verified_at?: string | null;
           national_id?: string | null;
           order_index?: number;
           phone?: string | null;
@@ -120,13 +131,19 @@ export type Database = {
           status?: string;
           token?: string;
           user_id?: string | null;
+          verification_method?: string;
         };
         Update: {
           contract_id?: string;
           created_at?: string;
+          date_of_birth?: string | null;
           email?: string | null;
-          full_name?: string;
+          full_name?: string | null;
           id?: string;
+          nafath_random_code?: string | null;
+          nafath_status?: string | null;
+          nafath_trans_id?: string | null;
+          nafath_verified_at?: string | null;
           national_id?: string | null;
           order_index?: number;
           phone?: string | null;
@@ -135,6 +152,7 @@ export type Database = {
           status?: string;
           token?: string;
           user_id?: string | null;
+          verification_method?: string;
         };
         Relationships: [];
       };

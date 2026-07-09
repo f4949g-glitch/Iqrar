@@ -6,7 +6,7 @@ import { UploadStep } from './wizard/UploadStep';
 import { FieldsStep } from './wizard/FieldsStep';
 import { EditorStep } from './wizard/EditorStep';
 import { ReviewStep } from './wizard/ReviewStep';
-import { addParty, createDraftContract, getOriginalPdfUrl, uploadOriginalPdf } from '../api/contractsApi';
+import { addParty, createDraftContract, getOriginalPdfUrl, updateContractMeta, updateParty, uploadOriginalPdf } from '../api/contractsApi';
 import { setContractDiscountCode } from '../api/discountCodesApi';
 import type { Contract, ContractField, ContractParty } from '../types';
 
@@ -40,6 +40,13 @@ export function NewContractWizard() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const ensureContract = async (): Promise<Contract> => {
+    if (contract) return contract;
+    const created = await createDraftContract(title.trim() || 'عقد جديد', durationDays ? Number(durationDays) : null);
+    setContract(created);
+    return created;
+  };
+
   const goToMethod = (validDiscountCode: string | null) => {
     setPendingDiscountCode(validDiscountCode);
     setStep('method');
@@ -50,7 +57,12 @@ export function NewContractWizard() {
     setBusy(true);
     setError('');
     try {
-      const created = await createDraftContract(title.trim(), durationDays ? Number(durationDays) : null, chosen);
+      const base = await ensureContract();
+      const created = await updateContractMeta(base.id, {
+        title: title.trim(),
+        duration_days: durationDays ? Number(durationDays) : null,
+        source_type: chosen,
+      });
       if (pendingDiscountCode) {
         await setContractDiscountCode(created.id, pendingDiscountCode);
       }
@@ -58,14 +70,17 @@ export function NewContractWizard() {
       for (let i = 0; i < draftParties.length; i++) {
         const p = draftParties[i];
         const role = p.role_label === 'أخرى' ? p.custom_role.trim() : p.role_label;
-        const party = await addParty(created.id, {
+        const payload = {
           role_label: role,
-          full_name: p.full_name.trim(),
+          full_name: p.full_name.trim() || undefined,
           national_id: p.national_id.trim() || undefined,
           email: p.email.trim() || undefined,
           phone: p.phone.trim() || undefined,
           order_index: i,
-        });
+          verification_method: p.verification_method,
+          date_of_birth: p.date_of_birth || undefined,
+        };
+        const party = p.partyId ? await updateParty(p.partyId, payload) : await addParty(created.id, payload);
         createdParties.push(party);
       }
       setContract(created);
@@ -130,6 +145,7 @@ export function NewContractWizard() {
           onDurationChange={setDurationDays}
           parties={draftParties}
           onPartiesChange={setDraftParties}
+          ensureContract={ensureContract}
           onNext={goToMethod}
         />
       )}

@@ -1,22 +1,43 @@
 import { useEffect, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import { Field } from '@/shared/ui/Field';
 import { Button } from '@/shared/ui/Button';
 import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '../../api/pricingApi';
 import { previewDiscountCode, type DiscountPreview } from '../../api/discountCodesApi';
-import { PARTY_ROLE_OPTIONS } from '../../types';
+import { addParty as addPartyApi } from '../../api/contractsApi';
+import { initiateNafathVerification, checkNafathStatus } from '../../api/nafathApi';
+import { PARTY_ROLE_OPTIONS, type VerificationMethod } from '../../types';
+import type { Contract } from '../../types';
 
 export interface DraftParty {
+  partyId?: string;
   role_label: string;
   custom_role: string;
   full_name: string;
   national_id: string;
   email: string;
   phone: string;
+  verification_method: VerificationMethod;
+  date_of_birth: string;
+  nafathState: 'idle' | 'initiating' | 'waiting' | 'checking' | 'not_configured' | 'error';
+  nafathMessage: string;
+  randomCode: string;
 }
 
 function emptyParty(): DraftParty {
-  return { role_label: 'الطرف الأول', custom_role: '', full_name: '', national_id: '', email: '', phone: '' };
+  return {
+    role_label: 'الطرف الأول',
+    custom_role: '',
+    full_name: '',
+    national_id: '',
+    email: '',
+    phone: '',
+    verification_method: 'manual',
+    date_of_birth: '',
+    nafathState: 'idle',
+    nafathMessage: '',
+    randomCode: '',
+  };
 }
 
 interface PartiesStepProps {
@@ -26,6 +47,7 @@ interface PartiesStepProps {
   onDurationChange: (v: string) => void;
   parties: DraftParty[];
   onPartiesChange: (parties: DraftParty[]) => void;
+  ensureContract: () => Promise<Contract>;
   onNext: (validDiscountCode: string | null) => void;
 }
 
@@ -36,6 +58,7 @@ export function PartiesStep({
   onDurationChange,
   parties,
   onPartiesChange,
+  ensureContract,
   onNext,
 }: PartiesStepProps) {
   const [pricing, setPricing] = useState<PricingSettings | null>(null);
@@ -58,6 +81,65 @@ export function PartiesStep({
   const addParty = () => onPartiesChange([...parties, emptyParty()]);
   const removeParty = (index: number) => onPartiesChange(parties.filter((_, i) => i !== index));
 
+  const startNafathVerification = async (index: number) => {
+    const party = parties[index];
+    if (!party.national_id.trim() || !party.date_of_birth) {
+      updateParty(index, { nafathState: 'error', nafathMessage: 'أدخل رقم الهوية وتاريخ الميلاد أولًا' });
+      return;
+    }
+    updateParty(index, { nafathState: 'initiating', nafathMessage: '' });
+    try {
+      const contract = await ensureContract();
+      let partyId = party.partyId;
+      if (!partyId) {
+        const role = party.role_label === 'أخرى' ? party.custom_role.trim() : party.role_label;
+        const created = await addPartyApi(contract.id, {
+          role_label: role || 'طرف',
+          national_id: party.national_id.trim(),
+          date_of_birth: party.date_of_birth,
+          email: party.email.trim() || undefined,
+          phone: party.phone.trim() || undefined,
+          order_index: index,
+          verification_method: 'nafath',
+        });
+        partyId = created.id;
+        updateParty(index, { partyId });
+      }
+      const result = await initiateNafathVerification(partyId);
+      if (!result.configured) {
+        updateParty(index, { nafathState: 'not_configured', nafathMessage: result.message ?? 'التحقق عبر نفاذ غير مُفعَّل بعد' });
+        return;
+      }
+      if (result.error) {
+        updateParty(index, { nafathState: 'error', nafathMessage: result.error });
+        return;
+      }
+      updateParty(index, { nafathState: 'waiting', randomCode: result.random_code ?? '' });
+    } catch (err) {
+      updateParty(index, { nafathState: 'error', nafathMessage: err instanceof Error ? err.message : 'تعذّر بدء التحقق' });
+    }
+  };
+
+  const pollNafathStatus = async (index: number) => {
+    const party = parties[index];
+    if (!party.partyId) return;
+    updateParty(index, { nafathState: 'checking' });
+    try {
+      const result = await checkNafathStatus(party.partyId);
+      if (!result.configured) {
+        updateParty(index, { nafathState: 'not_configured', nafathMessage: result.message ?? '' });
+        return;
+      }
+      if (result.status === 'completed' && result.full_name) {
+        updateParty(index, { full_name: result.full_name, nafathState: 'idle', nafathMessage: 'تم التوثيق عبر نفاذ' });
+      } else {
+        updateParty(index, { nafathState: 'waiting', nafathMessage: 'بانتظار الموافقة عبر تطبيق نفاذ...' });
+      }
+    } catch (err) {
+      updateParty(index, { nafathState: 'error', nafathMessage: err instanceof Error ? err.message : 'تعذّر التحقق من الحالة' });
+    }
+  };
+
   const submit = () => {
     setError('');
     if (!title.trim()) {
@@ -70,7 +152,7 @@ export function PartiesStep({
     }
     for (const p of parties) {
       if (!p.full_name.trim()) {
-        setError('اسم كل طرف مطلوب');
+        setError('اسم كل طرف مطلوب (أكمل التحقق عبر نفاذ أو أدخله يدويًا)');
         return;
       }
       if (p.role_label === 'أخرى' && !p.custom_role.trim()) {
@@ -156,6 +238,30 @@ export function PartiesStep({
                 </button>
               )}
             </div>
+
+            <div className="mb-3 flex gap-1.5 rounded-lg bg-paper p-1">
+              <button
+                type="button"
+                onClick={() => updateParty(index, { verification_method: 'manual' })}
+                className={`flex-1 rounded-md py-1.5 text-xs font-bold transition ${
+                  party.verification_method === 'manual' ? 'bg-card text-ink shadow-sm' : 'text-slate'
+                }`}
+              >
+                إدخال يدوي
+              </button>
+              <button
+                type="button"
+                onClick={() => updateParty(index, { verification_method: 'nafath' })}
+                className={`flex-1 rounded-md py-1.5 text-xs font-bold transition ${
+                  party.verification_method === 'nafath' ? 'bg-card text-ink shadow-sm' : 'text-slate'
+                }`}
+              >
+                <span className="flex items-center justify-center gap-1">
+                  <ShieldCheck size={13} /> تحقق عبر نفاذ
+                </span>
+              </button>
+            </div>
+
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block text-sm">
                 <span className="mb-1 block font-bold text-ink">صفة الطرف</span>
@@ -174,11 +280,64 @@ export function PartiesStep({
               {party.role_label === 'أخرى' && (
                 <Field label="مسمّى الصفة" value={party.custom_role} onChange={(v) => updateParty(index, { custom_role: v })} required />
               )}
-              <Field label="الاسم" value={party.full_name} onChange={(v) => updateParty(index, { full_name: v })} required />
-              <Field label="رقم الهوية أو الإقامة" value={party.national_id} onChange={(v) => updateParty(index, { national_id: v })} />
+
+              {party.verification_method === 'nafath' && (
+                <>
+                  <Field label="رقم الهوية أو الإقامة (10 أرقام)" value={party.national_id} onChange={(v) => updateParty(index, { national_id: v })} required />
+                  <Field label="تاريخ الميلاد" value={party.date_of_birth} onChange={(v) => updateParty(index, { date_of_birth: v })} type="date" required />
+                </>
+              )}
+
+              <Field
+                label={party.verification_method === 'nafath' ? 'الاسم (يُملأ تلقائيًا بعد التحقق، أو أدخله مؤقتًا)' : 'الاسم'}
+                value={party.full_name}
+                onChange={(v) => updateParty(index, { full_name: v })}
+                required
+              />
+              {party.verification_method === 'manual' && (
+                <Field label="رقم الهوية أو الإقامة" value={party.national_id} onChange={(v) => updateParty(index, { national_id: v })} />
+              )}
               <Field label="البريد الإلكتروني" value={party.email} onChange={(v) => updateParty(index, { email: v })} type="email" />
               <Field label="رقم الجوال" value={party.phone} onChange={(v) => updateParty(index, { phone: v })} />
             </div>
+
+            {party.verification_method === 'nafath' && (
+              <div className="mt-3 rounded-lg bg-paper p-3">
+                {party.nafathState === 'idle' && (
+                  <Button variant="secondary" onClick={() => startNafathVerification(index)}>
+                    <span className="flex items-center gap-1.5">
+                      <ShieldCheck size={14} /> تحقق عبر نفاذ
+                    </span>
+                  </Button>
+                )}
+                {party.nafathState === 'initiating' && <p className="text-xs text-slate">جارِ إرسال طلب التحقق...</p>}
+                {party.nafathState === 'waiting' && (
+                  <div className="space-y-2">
+                    {party.randomCode && (
+                      <p className="text-sm font-bold text-ink">
+                        افتح تطبيق نفاذ ووافق على الرمز: <span className="text-seal">{party.randomCode}</span>
+                      </p>
+                    )}
+                    <Button variant="secondary" onClick={() => pollNafathStatus(index)}>
+                      تحقق من الحالة
+                    </Button>
+                  </div>
+                )}
+                {party.nafathState === 'checking' && <p className="text-xs text-slate">جارِ التحقق من الحالة...</p>}
+                {party.nafathState === 'not_configured' && <p className="text-xs font-bold text-clay">{party.nafathMessage}</p>}
+                {party.nafathState === 'error' && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-clay">{party.nafathMessage}</p>
+                    <Button variant="secondary" onClick={() => startNafathVerification(index)}>
+                      إعادة المحاولة
+                    </Button>
+                  </div>
+                )}
+                {party.nafathMessage === 'تم التوثيق عبر نفاذ' && (
+                  <p className="text-xs font-bold text-sage">✓ تم التوثيق عبر نفاذ{party.partyId ? '' : ''}</p>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -192,7 +351,7 @@ export function PartiesStep({
       {error && <p className="text-sm font-bold text-clay">{error}</p>}
 
       <div className="flex justify-end">
-        <Button onClick={submit}>التالي: رفع المستند</Button>
+        <Button onClick={submit}>التالي: طريقة إنشاء العقد</Button>
       </div>
     </div>
   );

@@ -131,9 +131,10 @@ export function ContractDetailPage() {
           {parties.map((p) => (
             <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line p-3">
               <div>
-                <p className="text-sm font-bold text-ink">{p.full_name}</p>
+                <p className="text-sm font-bold text-ink">{p.full_name || 'بانتظار التحقق عبر نفاذ'}</p>
                 <p className="text-xs text-slate">
                   {p.role_label} · {PARTY_STATUS_LABEL[p.status]}
+                  {p.verification_method === 'nafath' && p.nafath_verified_at && ' · وُثّق عبر نفاذ'}
                   {p.signed_at && ` في ${new Date(p.signed_at).toLocaleString('ar-SA')}`}
                 </p>
               </div>

@@ -46,11 +46,14 @@ export interface Contract {
   completed_at: string | null;
 }
 
+export type VerificationMethod = 'manual' | 'nafath';
+export type NafathStatus = 'pending' | 'completed' | 'rejected' | 'expired';
+
 export interface ContractParty {
   id: string;
   contract_id: string;
   role_label: string;
-  full_name: string;
+  full_name: string | null;
   national_id: string | null;
   email: string | null;
   phone: string | null;
@@ -60,6 +63,12 @@ export interface ContractParty {
   user_id: string | null;
   signed_at: string | null;
   created_at: string;
+  verification_method: VerificationMethod;
+  date_of_birth: string | null;
+  nafath_trans_id: string | null;
+  nafath_random_code: string | null;
+  nafath_status: NafathStatus | null;
+  nafath_verified_at: string | null;
 }
 
 export interface ContractField {

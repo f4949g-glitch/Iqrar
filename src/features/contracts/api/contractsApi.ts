@@ -89,6 +89,20 @@ export async function saveContractBody(contractId: string, bodyJson: unknown): P
   return data as Contract;
 }
 
+export async function updateContractMeta(
+  contractId: string,
+  patch: { title?: string; duration_days?: number | null; source_type?: 'pdf' | 'editor' },
+): Promise<Contract> {
+  const { data, error } = await supabase
+    .from('contracts')
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq('id', contractId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Contract;
+}
+
 export async function uploadOriginalPdf(contractId: string, file: File, pageCount: number): Promise<Contract> {
   const path = `${contractId}/original.pdf`;
   const { error: uploadError } = await supabase.storage.from('contracts').upload(path, file, {
@@ -125,11 +139,13 @@ export async function listParties(contractId: string): Promise<ContractParty[]> 
 
 export interface NewPartyInput {
   role_label: string;
-  full_name: string;
+  full_name?: string;
   national_id?: string;
   email?: string;
   phone?: string;
   order_index: number;
+  verification_method?: 'manual' | 'nafath';
+  date_of_birth?: string;
 }
 
 export async function addParty(contractId: string, input: NewPartyInput): Promise<ContractParty> {
@@ -138,6 +154,18 @@ export async function addParty(contractId: string, input: NewPartyInput): Promis
     .insert({ contract_id: contractId, ...input })
     .select()
     .single();
+  if (error) throw error;
+  return data as ContractParty;
+}
+
+export async function updateParty(partyId: string, patch: Partial<NewPartyInput>): Promise<ContractParty> {
+  const { data, error } = await supabase.from('contract_parties').update(patch).eq('id', partyId).select().single();
+  if (error) throw error;
+  return data as ContractParty;
+}
+
+export async function refreshParty(partyId: string): Promise<ContractParty> {
+  const { data, error } = await supabase.from('contract_parties').select('*').eq('id', partyId).single();
   if (error) throw error;
   return data as ContractParty;
 }

@@ -13,7 +13,7 @@ export interface JsonNode {
 export interface PartyLike {
   id: string;
   role_label: string;
-  full_name: string;
+  full_name: string | null;
   national_id: string | null;
   email: string | null;
   phone: string | null;
