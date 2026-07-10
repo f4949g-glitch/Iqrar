@@ -7,6 +7,7 @@ import { FieldsStep } from './wizard/FieldsStep';
 import { EditorStep } from './wizard/EditorStep';
 import { ReviewStep } from './wizard/ReviewStep';
 import { addParty, createDraftContract, getOriginalPdfUrl, updateContractMeta, updateParty, uploadOriginalPdf } from '../api/contractsApi';
+import { consumePendingContractIntent } from '../lib/pendingIntent';
 import type { Contract, ContractField, ContractParty, DocumentType, TermUnit } from '../types';
 
 type Step = 'parties' | 'method' | 'upload' | 'fields' | 'editor' | 'review';
@@ -23,18 +24,30 @@ const STEP_LABELS: Record<Step, string> = {
 };
 
 export function NewContractWizard() {
+  // نُقرأ نية الدخول المحفوظة من الصفحة الرئيسية (نوع الوثيقة، عدد الأطراف، وطريقة
+  // التصديق الافتراضية) مرة واحدة فقط عند فتح المعالج، ثم تُمسح من sessionStorage.
+  const [pendingIntent] = useState(() => consumePendingContractIntent());
   const [step, setStep] = useState<Step>('parties');
   const [method, setMethod] = useState<'pdf' | 'editor' | null>(null);
   const [title, setTitle] = useState('');
   const [durationDays, setDurationDays] = useState('');
-  const [documentType, setDocumentType] = useState<DocumentType>('contract');
+  const [documentType] = useState<DocumentType>(pendingIntent?.documentType ?? 'contract');
+  const poaMode = documentType === 'power_of_attorney';
   const [companyName, setCompanyName] = useState('');
   const [companyCrNumber, setCompanyCrNumber] = useState('');
   const [termMode, setTermMode] = useState<TermMode>('none');
   const [termValue, setTermValue] = useState('');
   const [termUnit, setTermUnit] = useState<TermUnit>('month');
   const [termEndDate, setTermEndDate] = useState('');
-  const [draftParties, setDraftParties] = useState<DraftParty[]>([emptyParty()]);
+  const [draftParties, setDraftParties] = useState<DraftParty[]>(() => {
+    if (!pendingIntent) return [emptyParty()];
+    const count = pendingIntent.documentType === 'power_of_attorney' ? 1 : Math.max(pendingIntent.partyCount, 1);
+    return Array.from({ length: count }, () => ({
+      ...emptyParty(),
+      verification_method: pendingIntent.verificationDefault,
+      role_label: pendingIntent.documentType === 'power_of_attorney' ? 'المفوض' : 'الطرف الأول',
+    }));
+  });
   const [contract, setContract] = useState<Contract | null>(null);
   const [parties, setParties] = useState<ContractParty[]>([]);
   const [file, setFile] = useState<File | null>(null);
@@ -156,7 +169,7 @@ export function NewContractWizard() {
           durationDays={durationDays}
           onDurationChange={setDurationDays}
           documentType={documentType}
-          onDocumentTypeChange={setDocumentType}
+          poaMode={poaMode}
           companyName={companyName}
           onCompanyNameChange={setCompanyName}
           companyCrNumber={companyCrNumber}

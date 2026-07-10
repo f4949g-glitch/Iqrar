@@ -15,6 +15,8 @@ import {
   type TermUnit,
   type VerificationMethod,
 } from '../../types';
+// ملاحظة: اختيار نوع الوثيقة (عقد/تفويض) أصبح يتم في خطوة سابقة على الصفحة
+// الرئيسية (اختيار "إنشاء عقد" أو "إنشاء تفويض")، لذا لم يعد قابلًا للتعديل هنا.
 import type { Contract } from '../../types';
 
 export type TermMode = 'none' | 'duration' | 'date';
@@ -66,7 +68,7 @@ interface PartiesStepProps {
   durationDays: string;
   onDurationChange: (v: string) => void;
   documentType: DocumentType;
-  onDocumentTypeChange: (v: DocumentType) => void;
+  poaMode?: boolean;
   companyName: string;
   onCompanyNameChange: (v: string) => void;
   companyCrNumber: string;
@@ -91,7 +93,7 @@ export function PartiesStep({
   durationDays,
   onDurationChange,
   documentType,
-  onDocumentTypeChange,
+  poaMode = false,
   companyName,
   onCompanyNameChange,
   companyCrNumber,
@@ -235,34 +237,26 @@ export function PartiesStep({
           required
           hint="المدة التي تبقى فيها روابط التوقيع صالحة، بين يوم و14 يومًا"
         />
-        <label className="block text-sm">
+        <div className="block text-sm">
           <span className="mb-1.5 block text-xs font-bold text-slate">نوع الوثيقة</span>
-          <select
-            value={documentType}
-            onChange={(e) => onDocumentTypeChange(e.target.value as DocumentType)}
-            className="w-full rounded-lg border border-line bg-white px-3 py-2.5 text-ink outline-none focus:border-seal"
-          >
-            {Object.entries(DOCUMENT_TYPE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
+          <p className="rounded-lg border border-line bg-paper px-3 py-2.5 text-ink">{DOCUMENT_TYPE_LABELS[documentType]}</p>
+        </div>
       </div>
 
-      <div className="rounded-xl border border-line bg-card p-4">
-        {!showCompany ? (
-          <button type="button" onClick={() => setShowCompany(true)} className="text-sm font-bold text-seal">
-            + إرفاق بيانات منشأة صادرة عنها العقد (اختياري)
-          </button>
-        ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="اسم المنشأة (اختياري)" value={companyName} onChange={onCompanyNameChange} />
-            <Field label="رقم السجل التجاري (اختياري)" value={companyCrNumber} onChange={onCompanyCrNumberChange} digitsOnly maxLength={10} />
-          </div>
-        )}
-      </div>
+      {!poaMode && (
+        <div className="rounded-xl border border-line bg-card p-4">
+          {!showCompany ? (
+            <button type="button" onClick={() => setShowCompany(true)} className="text-sm font-bold text-seal">
+              + إرفاق بيانات منشأة صادرة عنها العقد (اختياري)
+            </button>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="اسم المنشأة (اختياري)" value={companyName} onChange={onCompanyNameChange} />
+              <Field label="رقم السجل التجاري (اختياري)" value={companyCrNumber} onChange={onCompanyCrNumberChange} digitsOnly maxLength={10} />
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="rounded-xl border border-line bg-card p-4">
         {termMode === 'none' ? (
@@ -331,44 +325,54 @@ export function PartiesStep({
         {parties.map((party, index) => (
           <div key={index} className="rounded-xl border border-line bg-card p-4">
             <div className="mb-3 flex items-center justify-between">
-              <p className="font-display text-sm font-bold text-ink">الطرف {index + 1}</p>
-              {parties.length > 1 && (
+              <p className="font-display text-sm font-bold text-ink">{poaMode ? 'بيانات المفوَّض' : `الطرف ${index + 1}`}</p>
+              {!poaMode && parties.length > 1 && (
                 <button type="button" onClick={() => removeParty(index)} className="text-clay">
                   <Trash2 size={16} />
                 </button>
               )}
             </div>
 
-            <div className="mb-3 flex gap-1.5 rounded-lg bg-paper p-1">
-              <button
-                type="button"
-                onClick={() => updateParty(index, { party_type: 'individual' })}
-                className={`flex-1 rounded-md py-1.5 text-xs font-bold transition ${
-                  party.party_type === 'individual' ? 'bg-card text-ink shadow-sm' : 'text-slate'
-                }`}
-              >
-                <span className="flex items-center justify-center gap-1">
-                  <User size={13} /> فرد
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => updateParty(index, { party_type: 'entity' })}
-                className={`flex-1 rounded-md py-1.5 text-xs font-bold transition ${
-                  party.party_type === 'entity' ? 'bg-card text-ink shadow-sm' : 'text-slate'
-                }`}
-              >
-                <span className="flex items-center justify-center gap-1">
-                  <Building2 size={13} /> منشأة
-                </span>
-              </button>
-            </div>
+            {!poaMode && (
+              <>
+                <div className="mb-3 flex gap-1.5 rounded-lg bg-paper p-1">
+                  <button
+                    type="button"
+                    onClick={() => updateParty(index, { party_type: 'individual' })}
+                    className={`flex-1 rounded-md py-1.5 text-xs font-bold transition ${
+                      party.party_type === 'individual' ? 'bg-card text-ink shadow-sm' : 'text-slate'
+                    }`}
+                  >
+                    <span className="flex items-center justify-center gap-1">
+                      <User size={13} /> فرد
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateParty(index, { party_type: 'entity' })}
+                    className={`flex-1 rounded-md py-1.5 text-xs font-bold transition ${
+                      party.party_type === 'entity' ? 'bg-card text-ink shadow-sm' : 'text-slate'
+                    }`}
+                  >
+                    <span className="flex items-center justify-center gap-1">
+                      <Building2 size={13} /> منشأة
+                    </span>
+                  </button>
+                </div>
 
-            {party.party_type === 'entity' && (
-              <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="اسم المنشأة" value={party.entity_name} onChange={(v) => updateParty(index, { entity_name: v })} required />
-                <Field label="رقم السجل التجاري" value={party.entity_cr_number} onChange={(v) => updateParty(index, { entity_cr_number: v })} digitsOnly maxLength={10} />
-              </div>
+                {party.party_type === 'entity' && (
+                  <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <Field label="اسم المنشأة" value={party.entity_name} onChange={(v) => updateParty(index, { entity_name: v })} required />
+                    <Field
+                      label="رقم السجل التجاري"
+                      value={party.entity_cr_number}
+                      onChange={(v) => updateParty(index, { entity_cr_number: v })}
+                      digitsOnly
+                      maxLength={10}
+                    />
+                  </div>
+                )}
+              </>
             )}
 
             <div className="mb-3 flex gap-1.5 rounded-lg bg-paper p-1">
@@ -395,28 +399,30 @@ export function PartiesStep({
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="block text-sm">
-                <span className="mb-1 block font-bold text-ink">{party.party_type === 'entity' ? 'صفة ممثل المنشأة' : 'صفة الطرف'}</span>
-                <select
-                  value={party.role_label}
-                  onChange={(e) => updateParty(index, { role_label: e.target.value })}
-                  className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
-                >
-                  {PARTY_ROLE_OPTIONS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {party.role_label === 'أخرى' && (
+              {!poaMode && (
+                <label className="block text-sm">
+                  <span className="mb-1 block font-bold text-ink">{party.party_type === 'entity' ? 'صفة ممثل المنشأة' : 'صفة الطرف'}</span>
+                  <select
+                    value={party.role_label}
+                    onChange={(e) => updateParty(index, { role_label: e.target.value })}
+                    className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
+                  >
+                    {PARTY_ROLE_OPTIONS.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {!poaMode && party.role_label === 'أخرى' && (
                 <Field label="مسمّى الصفة" value={party.custom_role} onChange={(v) => updateParty(index, { custom_role: v })} required />
               )}
 
               {party.verification_method === 'nafath' && (
                 <>
                   <Field
-                    label="رقم الهوية أو الإقامة (10 أرقام)"
+                    label={poaMode ? 'رقم هوية المفوَّض (10 أرقام)' : 'رقم الهوية أو الإقامة (10 أرقام)'}
                     value={party.national_id}
                     onChange={(v) => updateParty(index, { national_id: v })}
                     required
@@ -429,11 +435,13 @@ export function PartiesStep({
 
               <Field
                 label={
-                  party.party_type === 'entity'
-                    ? 'اسم الممثل'
-                    : party.verification_method === 'nafath'
-                      ? 'الاسم (يُملأ تلقائيًا بعد التحقق، أو أدخله مؤقتًا)'
-                      : 'الاسم'
+                  poaMode
+                    ? 'اسم المفوَّض'
+                    : party.party_type === 'entity'
+                      ? 'اسم الممثل'
+                      : party.verification_method === 'nafath'
+                        ? 'الاسم (يُملأ تلقائيًا بعد التحقق، أو أدخله مؤقتًا)'
+                        : 'الاسم'
                 }
                 value={party.full_name}
                 onChange={(v) => updateParty(index, { full_name: v })}
@@ -441,17 +449,25 @@ export function PartiesStep({
               />
               {party.verification_method === 'manual' && (
                 <Field
-                  label="رقم الهوية أو الإقامة"
+                  label={poaMode ? 'رقم هوية المفوَّض' : 'رقم الهوية أو الإقامة'}
                   value={party.national_id}
                   onChange={(v) => updateParty(index, { national_id: v })}
                   digitsOnly
                   maxLength={10}
                 />
               )}
-              <Field label="الجنسية" value={party.nationality} onChange={(v) => updateParty(index, { nationality: v })} />
-              <Field label="العنوان" value={party.address} onChange={(v) => updateParty(index, { address: v })} />
-              <Field label="البريد الإلكتروني" value={party.email} onChange={(v) => updateParty(index, { email: v })} type="email" />
-              <Field label="رقم الجوال" value={party.phone} onChange={(v) => updateParty(index, { phone: v })} digitsOnly maxLength={10} />
+              <Field
+                label={poaMode ? 'جنسية المفوَّض' : 'الجنسية'}
+                value={party.nationality}
+                onChange={(v) => updateParty(index, { nationality: v })}
+              />
+              {!poaMode && (
+                <>
+                  <Field label="العنوان" value={party.address} onChange={(v) => updateParty(index, { address: v })} />
+                  <Field label="البريد الإلكتروني" value={party.email} onChange={(v) => updateParty(index, { email: v })} type="email" />
+                  <Field label="رقم الجوال" value={party.phone} onChange={(v) => updateParty(index, { phone: v })} digitsOnly maxLength={10} />
+                </>
+              )}
             </div>
 
             {party.verification_method === 'nafath' && (
@@ -498,11 +514,13 @@ export function PartiesStep({
         ))}
       </div>
 
-      <Button variant="secondary" onClick={addParty}>
-        <span className="flex items-center gap-1.5">
-          <Plus size={16} /> إضافة طرف
-        </span>
-      </Button>
+      {!poaMode && (
+        <Button variant="secondary" onClick={addParty}>
+          <span className="flex items-center gap-1.5">
+            <Plus size={16} /> إضافة طرف
+          </span>
+        </Button>
+      )}
 
       {error && <p className="text-sm font-bold text-clay">{error}</p>}
 

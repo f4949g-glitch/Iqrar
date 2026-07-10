@@ -1,6 +1,25 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FileSignature, ShieldCheck, Users, Zap, Lock, ScanLine, PenTool, ListChecks, X, LogIn, UserPlus, ArrowLeft, Search } from 'lucide-react';
+import {
+  FileSignature,
+  ShieldCheck,
+  Users,
+  Zap,
+  Lock,
+  ScanLine,
+  PenTool,
+  ListChecks,
+  X,
+  LogIn,
+  UserPlus,
+  ArrowLeft,
+  ArrowRight,
+  Search,
+  Stamp,
+} from 'lucide-react';
+import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '@/features/contracts/api/pricingApi';
+import { setPendingContractIntent } from '@/features/contracts/lib/pendingIntent';
+import type { DocumentType, VerificationMethod } from '@/features/contracts/types';
 
 const FEATURES = [
   {
@@ -80,7 +99,47 @@ function Nav() {
   );
 }
 
-function DocumentationChooser({ onClose }: { onClose: () => void }) {
+// نافذة الدخول لبدء عقد أو تفويض: 1) عدد الأطراف (للعقد فقط) والسعر المتوقع،
+// 2) طريقة التصديق الافتراضية (للعقد فقط)، 3) تسجيل الدخول/إنشاء حساب/الاستمرار
+// كضيف. يُحفَظ الاختيار عبر sessionStorage (setPendingContractIntent) ليقرأه معالج
+// إنشاء العقد بعد أي من المسارات الثلاثة، بما فيها إعادة التوجيه بعد تسجيل الدخول.
+function CreateEntryFlow({ documentType, onClose }: { documentType: DocumentType; onClose: () => void }) {
+  const isPoa = documentType === 'power_of_attorney';
+  const [step, setStep] = useState<'count' | 'method' | 'auth'>('count');
+  const [partyCountInput, setPartyCountInput] = useState('2');
+  const [pricing, setPricing] = useState<PricingSettings | null>(null);
+  const [verificationDefault, setVerificationDefault] = useState<VerificationMethod>('nafath');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchPricingSettings()
+      .then(setPricing)
+      .catch(() => setPricing(null));
+  }, []);
+
+  const partyCount = isPoa ? 1 : Math.max(0, Math.floor(Number(partyCountInput) || 0));
+  const price = pricing ? calculateInvoice(partyCount, pricing) : null;
+  const title = isPoa ? 'إنشاء تفويض' : 'إنشاء عقد';
+
+  const confirmCount = () => {
+    if (!isPoa && (!partyCountInput.trim() || partyCount < 2)) {
+      setError('أدخل عدد أطراف العقد (طرفان على الأقل)');
+      return;
+    }
+    setError('');
+    setStep(isPoa ? 'auth' : 'method');
+  };
+
+  const confirmMethod = () => {
+    setPendingContractIntent({ documentType, partyCount, verificationDefault });
+    setStep('auth');
+  };
+
+  const goToAuthDirect = () => {
+    setPendingContractIntent({ documentType, partyCount, verificationDefault: 'manual' });
+    setStep('auth');
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4" dir="rtl" onClick={onClose}>
       <div className="relative w-full max-w-sm rounded-md border border-line bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -89,22 +148,95 @@ function DocumentationChooser({ onClose }: { onClose: () => void }) {
         </button>
         <div className="mb-5 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-md bg-sealLight">
-            <FileSignature size={22} className="text-seal" />
+            {isPoa ? <Stamp size={22} className="text-seal" /> : <FileSignature size={22} className="text-seal" />}
           </div>
-          <h3 className="font-display text-lg font-bold text-ink">توثيق العقود</h3>
-          <p className="mt-1 text-sm text-slate">كيف تريد المتابعة؟</p>
+          <h3 className="font-display text-lg font-bold text-ink">{title}</h3>
         </div>
-        <div className="space-y-2">
-          <Link to="/login" className="flex items-center gap-2 rounded-md border border-line px-4 py-3 text-sm font-bold text-ink hover:bg-paper">
-            <LogIn size={16} /> تسجيل الدخول
-          </Link>
-          <Link to="/register" className="flex items-center gap-2 rounded-md bg-seal px-4 py-3 text-sm font-bold text-white hover:opacity-90">
-            <UserPlus size={16} /> إنشاء حساب
-          </Link>
-          <Link to="/app/contracts/new" className="flex items-center gap-2 rounded-md px-4 py-3 text-sm font-bold text-seal hover:bg-sealLight">
-            <ArrowLeft size={16} /> استمرار كضيف
-          </Link>
-        </div>
+
+        {step === 'count' && (
+          <div className="space-y-4">
+            {!isPoa && (
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-slate">كم عدد أطراف العقد؟</label>
+                <input
+                  type="number"
+                  min={2}
+                  inputMode="numeric"
+                  value={partyCountInput}
+                  onChange={(e) => setPartyCountInput(e.target.value)}
+                  className="w-full rounded-lg border border-line bg-white px-3 py-2.5 text-center text-ink outline-none focus:border-seal"
+                />
+              </div>
+            )}
+            {price !== null && (
+              <p className="rounded-lg bg-sealLight p-3 text-center text-sm font-bold text-seal">
+                {isPoa ? 'سعر الخدمة هو' : 'سعر التوثيق هو'} {price.toFixed(2)} ريال سعودي
+              </p>
+            )}
+            {error && <p className="text-sm font-bold text-clay">{error}</p>}
+            <button
+              type="button"
+              onClick={confirmCount}
+              className="flex w-full items-center justify-center gap-2 rounded-md bg-seal px-4 py-3 text-sm font-bold text-white hover:opacity-90"
+            >
+              موافق <ArrowRight size={16} />
+            </button>
+          </div>
+        )}
+
+        {step === 'method' && (
+          <div className="space-y-3">
+            <p className="text-center text-sm text-slate">اختر طريقة التصديق</p>
+            <button
+              type="button"
+              onClick={() => setVerificationDefault('nafath')}
+              className={`flex w-full items-center gap-2 rounded-md border px-4 py-3 text-sm font-bold ${
+                verificationDefault === 'nafath' ? 'border-seal bg-sealLight text-seal' : 'border-line text-ink hover:bg-paper'
+              }`}
+            >
+              <ShieldCheck size={16} /> تصديق إلكتروني عبر نفاذ
+            </button>
+            <button
+              type="button"
+              onClick={() => setVerificationDefault('manual')}
+              className={`flex w-full items-center gap-2 rounded-md border px-4 py-3 text-sm font-bold ${
+                verificationDefault === 'manual' ? 'border-seal bg-sealLight text-seal' : 'border-line text-ink hover:bg-paper'
+              }`}
+            >
+              <PenTool size={16} /> توقيع إلكتروني عبر منصة إقرار
+            </button>
+            <button type="button" onClick={confirmMethod} className="w-full rounded-md bg-seal px-4 py-3 text-sm font-bold text-white hover:opacity-90">
+              متابعة
+            </button>
+          </div>
+        )}
+
+        {step === 'auth' && (
+          <div className="space-y-2">
+            <p className="mb-3 text-center text-sm text-slate">كيف تريد المتابعة؟</p>
+            <Link
+              to="/login"
+              onClick={isPoa ? goToAuthDirect : undefined}
+              className="flex items-center gap-2 rounded-md border border-line px-4 py-3 text-sm font-bold text-ink hover:bg-paper"
+            >
+              <LogIn size={16} /> تسجيل الدخول
+            </Link>
+            <Link
+              to="/register"
+              onClick={isPoa ? goToAuthDirect : undefined}
+              className="flex items-center gap-2 rounded-md bg-seal px-4 py-3 text-sm font-bold text-white hover:opacity-90"
+            >
+              <UserPlus size={16} /> إنشاء حساب
+            </Link>
+            <Link
+              to="/app/contracts/new"
+              onClick={isPoa ? goToAuthDirect : undefined}
+              className="flex items-center gap-2 rounded-md px-4 py-3 text-sm font-bold text-seal hover:bg-sealLight"
+            >
+              <ArrowLeft size={16} /> استمرار كضيف
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -162,7 +294,7 @@ function QuickVerify() {
 }
 
 export function LandingPage() {
-  const [showChooser, setShowChooser] = useState(false);
+  const [activeFlow, setActiveFlow] = useState<DocumentType | null>(null);
 
   return (
     <div dir="rtl" className="min-h-screen bg-paper">
@@ -194,7 +326,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {showChooser && <DocumentationChooser onClose={() => setShowChooser(false)} />}
+      {activeFlow && <CreateEntryFlow documentType={activeFlow} onClose={() => setActiveFlow(null)} />}
 
       <section className="border-b border-line bg-card">
         <div className="mx-auto max-w-4xl px-4 py-14 text-center md:px-8">
@@ -210,21 +342,49 @@ export function LandingPage() {
       <QuickVerify />
 
       <section className="border-y border-line bg-card py-14">
-        <div className="mx-auto max-w-6xl px-4 text-center md:px-8">
-          <button
-            type="button"
-            onClick={() => setShowChooser(true)}
-            className="group mx-auto flex w-full max-w-lg items-center gap-5 rounded-md bg-sage px-6 py-6 text-white transition hover:opacity-90"
-          >
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-white/15">
-              <FileSignature size={26} className="text-white" />
+        <div className="mx-auto max-w-6xl px-4 md:px-8">
+          <div className="mx-auto mb-10 max-w-2xl text-center">
+            <SectionEyebrow>خدماتنا</SectionEyebrow>
+            <h2 className="font-display text-2xl font-extrabold text-ink md:text-3xl">توثيق العقود وإنشاء التفويضات</h2>
+          </div>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="flex flex-col rounded-md border border-line bg-paper p-6">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-md bg-sealLight">
+                <FileSignature size={22} className="text-seal" />
+              </div>
+              <h3 className="mb-2 font-display text-lg font-bold text-ink">توثيق العقود</h3>
+              <p className="mb-5 flex-1 text-sm leading-relaxed text-slate">
+                وثّق أي اتفاقية بين طرفين أو أكثر إلكترونيًا: اكتب بنود العقد أو ارفعه PDF جاهزًا، حدّد أطرافه
+                وصفاتهم، وأرسله لهم للتوقيع الإلكتروني أو التصديق عبر نفاذ — لتحصل في النهاية على مستند نهائي
+                معتمد برقم توثيق ورمز QR يُثبت صحته في أي وقت.
+              </p>
+              <button
+                type="button"
+                onClick={() => setActiveFlow('contract')}
+                className="group flex items-center justify-center gap-2 rounded-md bg-sage px-6 py-3 text-sm font-bold text-white transition hover:opacity-90"
+              >
+                إنشاء عقد <ArrowLeft size={16} className="transition group-hover:-translate-x-1" />
+              </button>
             </div>
-            <span className="flex-1 text-right">
-              <span className="block font-display text-lg font-extrabold">توثيق العقود</span>
-              <span className="block text-sm text-white/80">ابدأ توثيق عقدك الآن</span>
-            </span>
-            <ArrowLeft size={22} className="shrink-0 transition group-hover:-translate-x-1" />
-          </button>
+            <div className="flex flex-col rounded-md border border-line bg-paper p-6">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-md bg-sealLight">
+                <Stamp size={22} className="text-seal" />
+              </div>
+              <h3 className="mb-2 font-display text-lg font-bold text-ink">إنشاء تفويض موثق</h3>
+              <p className="mb-5 flex-1 text-sm leading-relaxed text-slate">
+                أصدر تفويضًا موثّقًا لطرف واحد (المفوَّض) بأقل بيانات ممكنة — الاسم ورقم الهوية والجنسية — ليحصل
+                بموجبه على وثيقة معتمدة برقم توثيق ورمز QR، مناسبة للوكالات والتفويضات السريعة التي لا تتطلب
+                أطرافًا متعددة.
+              </p>
+              <button
+                type="button"
+                onClick={() => setActiveFlow('power_of_attorney')}
+                className="group flex items-center justify-center gap-2 rounded-md bg-seal px-6 py-3 text-sm font-bold text-white transition hover:opacity-90"
+              >
+                إنشاء تفويض <ArrowLeft size={16} className="transition group-hover:-translate-x-1" />
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
