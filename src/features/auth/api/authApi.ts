@@ -103,3 +103,14 @@ export async function changePassword(newPassword: string) {
     .eq('id', userData.user.id);
   if (profileError) throw profileError;
 }
+
+// يحفظ توقيع المستخدم (مرسومًا أو مرفوعًا) في ملفه الشخصي. هذا التوقيع المحفوظ
+// وحده لا يكفي لاستخدامه في التوقيع الإلكتروني على عقد؛ يجب أولًا التحقق منه عبر
+// رمز يُرسل للجوال عند فتح رابط التوقيع (انظر signingApi.requestSigningOtp).
+export async function saveSignature(dataUrl: string | null): Promise<void> {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) throw new Error('يجب تسجيل الدخول');
+
+  const { error } = await supabase.from('profiles').update({ signature_data_url: dataUrl }).eq('id', userData.user.id);
+  if (error) throw error;
+}

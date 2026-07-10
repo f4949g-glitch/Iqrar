@@ -70,6 +70,9 @@ interface PartiesStepProps {
   onDurationChange: (v: string) => void;
   documentType: DocumentType;
   poaMode?: boolean;
+  // null يعني زائرًا بلا حساب بعد؛ التحقق عبر نفاذ يتطلب إنشاء العقد في القاعدة
+  // فورًا، لذا نطلب تسجيل الدخول أولًا بدل محاولة إنشائه لزائر.
+  isGuest?: boolean;
   companyName: string;
   onCompanyNameChange: (v: string) => void;
   companyCrNumber: string;
@@ -95,6 +98,7 @@ export function PartiesStep({
   onDurationChange,
   documentType,
   poaMode = false,
+  isGuest = false,
   companyName,
   onCompanyNameChange,
   companyCrNumber,
@@ -133,6 +137,10 @@ export function PartiesStep({
 
   const startNafathVerification = async (index: number) => {
     const party = parties[index];
+    if (isGuest) {
+      updateParty(index, { nafathState: 'error', nafathMessage: 'سجّل الدخول أو أنشئ حسابًا أولًا لاستخدام التحقق عبر نفاذ' });
+      return;
+    }
     if (!party.national_id.trim() || !party.date_of_birth) {
       updateParty(index, { nafathState: 'error', nafathMessage: 'أدخل رقم الهوية وتاريخ الميلاد أولًا' });
       return;
@@ -205,6 +213,10 @@ export function PartiesStep({
       setError('أضف طرفًا واحدًا على الأقل');
       return;
     }
+    if (poaMode && parties.length > 1) {
+      setError('لا يمكن أن يتضمن التفويض أكثر من طرف واحد');
+      return;
+    }
     for (const p of parties) {
       if (p.party_type === 'entity' && !p.entity_name.trim()) {
         setError('اسم المنشأة مطلوب لكل طرف من نوع منشأة');
@@ -228,17 +240,24 @@ export function PartiesStep({
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label={`عنوان ${docLabel}`} value={title} onChange={onTitleChange} required />
-        <Field
-          label="صلاحية التوثيق (أيام)"
-          value={durationDays}
-          onChange={onDurationChange}
-          type="number"
-          min={1}
-          max={14}
-          placeholder="من 1 إلى 14"
-          required
-          hint="المدة التي تبقى فيها روابط التوقيع صالحة، بين يوم و14 يومًا"
-        />
+        {poaMode ? (
+          <div className="block text-sm">
+            <span className="mb-1.5 block text-xs font-bold text-slate">صلاحية التوثيق (أيام)</span>
+            <p className="rounded-lg border border-line bg-paper px-3 py-2.5 text-ink">7 أيام (تلقائيًا للتفويض)</p>
+          </div>
+        ) : (
+          <Field
+            label="صلاحية التوثيق (أيام)"
+            value={durationDays}
+            onChange={onDurationChange}
+            type="number"
+            min={1}
+            max={14}
+            placeholder="من 1 إلى 14"
+            required
+            hint="المدة التي تبقى فيها روابط التوقيع صالحة، بين يوم و14 يومًا"
+          />
+        )}
         <div className="block text-sm">
           <span className="mb-1.5 block text-xs font-bold text-slate">نوع الوثيقة</span>
           <p className="rounded-lg border border-line bg-paper px-3 py-2.5 text-ink">{DOCUMENT_TYPE_LABELS[documentType]}</p>

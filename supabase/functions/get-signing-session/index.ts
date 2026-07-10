@@ -27,11 +27,20 @@ Deno.serve(async (req: Request) => {
 
   const { data: party, error: partyError } = await admin
     .from('contract_parties')
-    .select('id, contract_id, role_label, full_name, status')
+    .select('id, contract_id, role_label, full_name, status, national_id')
     .eq('token', token)
     .maybeSingle();
 
   if (partyError || !party) return jsonResponse({ error: 'الرابط غير صالح أو منتهي' }, 404);
+
+  // إن كان صاحب هذا الطرف (بمطابقة رقم الهوية) قد حفظ توقيعًا في ملفه الشخصي من
+  // قبل، نتيح له خيار استخدامه بعد تحقق عبر رمز يُرسل لجواله المسجَّل (انظر
+  // request-signing-otp/verify-signing-otp)، دون كشف رقم الجوال أو التوقيع هنا.
+  let hasSavedSignature = false;
+  if (party.national_id) {
+    const { data: ownerProfile } = await admin.from('profiles').select('signature_data_url, phone').eq('national_id', party.national_id).maybeSingle();
+    hasSavedSignature = Boolean(ownerProfile?.signature_data_url && ownerProfile.phone);
+  }
 
   const { data: contract, error: contractError } = await admin
     .from('contracts')
@@ -80,7 +89,7 @@ Deno.serve(async (req: Request) => {
       source_type: contract.source_type,
       body_json: contract.source_type === 'editor' ? contract.body_json : null,
     },
-    party: { id: party.id, role_label: party.role_label, full_name: party.full_name, status: party.status },
+    party: { id: party.id, role_label: party.role_label, full_name: party.full_name, status: party.status, has_saved_signature: hasSavedSignature },
     fields,
     pdf_url: pdfUrl,
     all_parties: allParties,

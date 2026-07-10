@@ -94,7 +94,10 @@ function Nav({ profile, onLogout }: { profile: Profile | null; onLogout: () => v
           <div className="flex h-9 w-9 items-center justify-center rounded-md bg-seal">
             <FileSignature size={18} className="text-white" />
           </div>
-          <span className="font-display text-lg font-extrabold text-ink">إقرار</span>
+          <span className="font-display text-lg font-extrabold text-ink">
+            <span className="sm:hidden">إقرار</span>
+            <span className="hidden sm:inline">منصة إقرار لخدمات الأعمال</span>
+          </span>
         </div>
         <div className="flex items-center gap-1 text-sm font-bold">
           <Link to="/verify" className="hidden items-center gap-1.5 px-3 py-2 text-ink hover:text-seal sm:flex">
@@ -103,8 +106,11 @@ function Nav({ profile, onLogout }: { profile: Profile | null; onLogout: () => v
           {profile ? (
             <>
               <span className="hidden px-3 py-2 text-ink sm:inline">أهلاً بك يا {profile.full_name || profile.email}</span>
+              <Link to="/" className="px-3 py-2 text-ink hover:text-seal">
+                الرئيسية
+              </Link>
               <Link to="/app" className="px-3 py-2 text-ink hover:text-seal">
-                لوحتي
+                حسابي
               </Link>
               <button type="button" onClick={onLogout} className="rounded-md bg-seal px-5 py-2 text-white hover:opacity-90">
                 تسجيل الخروج
@@ -443,7 +449,7 @@ export function LandingPage() {
                 </div>
                 <h3 className="mb-1.5 flex items-center gap-2 font-display text-base font-bold text-ink">
                   {title}
-                  {badge && <span className="rounded-full bg-clayLight px-2 py-0.5 text-[11px] font-bold text-clay">{badge}</span>}
+                  {badge && <span className="rounded-full bg-clayLight px-2.5 py-1 text-sm font-bold text-clay">{badge}</span>}
                 </h3>
                 <p className="text-sm leading-relaxed text-slate">{desc}</p>
                 {isOpen && <p className="mt-3 border-t border-line pt-3 text-sm leading-relaxed text-slate">{details}</p>}
@@ -492,7 +498,7 @@ export function LandingPage() {
                 <div className="flex h-7 w-7 items-center justify-center rounded-md bg-seal">
                   <FileSignature size={14} className="text-white" />
                 </div>
-                <span className="font-display font-bold text-ink">إقرار</span>
+                <span className="font-display font-bold text-ink">منصة إقرار لخدمات الأعمال</span>
               </div>
               <p className="text-sm leading-relaxed text-slate">منصة سعودية لتوثيق العقود والإقرارات إلكترونيًا.</p>
             </div>

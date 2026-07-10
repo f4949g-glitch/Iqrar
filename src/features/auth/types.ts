@@ -9,4 +9,5 @@ export interface Profile {
   date_of_birth: string | null;
   phone: string | null;
   notifications_seen_at: string | null;
+  signature_data_url: string | null;
 }

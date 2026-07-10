@@ -1,26 +1,119 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Document, Page } from 'react-pdf';
-import { CheckCircle2, FileSignature, XCircle } from 'lucide-react';
+import { CheckCircle2, FileSignature, ShieldCheck, XCircle } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { SignaturePad } from '@/shared/ui/SignaturePad';
-import { fetchSigningSession, submitSignature, rejectSignature, type SigningSession } from '../api/signingApi';
+import { fetchSigningSession, submitSignature, rejectSignature, requestSigningOtp, verifySigningOtp, type SigningSession } from '../api/signingApi';
 import { renderContractHtml, renderPartiesHeaderHtml, type JsonNode } from '@/features/contracts/editor/renderContractHtml';
+import { fileToDataUrl } from '@/shared/lib/fileToDataUrl';
 import '@/lib/pdf/setupWorker';
 
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+// يتيح للطرف الموقّع استخدام توقيعه المحفوظ مسبقًا في ملفه الشخصي بدل الرسم من
+// جديد، لكن فقط بعد التحقق برمز يُرسل لجواله المسجَّل عند طلبه هنا تحديدًا —
+// التوقيع المحفوظ وحده لا يُستخدم تلقائيًا أبدًا.
+function SavedSignatureField({ token, onChange }: { token: string; onChange: (dataUrl: string | null) => void }) {
+  const [mode, setMode] = useState<'choice' | 'otp' | 'done' | 'draw'>('choice');
+  const [requesting, setRequesting] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [code, setCode] = useState('');
+  const [phoneHint, setPhoneHint] = useState('');
+  const [devCode, setDevCode] = useState('');
+  const [error, setError] = useState('');
+
+  const requestOtp = async () => {
+    setRequesting(true);
+    setError('');
+    try {
+      const res = await requestSigningOtp(token);
+      setPhoneHint(res.phone_hint);
+      setDevCode(res.sms_configured ? '' : res.dev_code ?? '');
+      setMode('otp');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'تعذّر إرسال رمز التحقق');
+    } finally {
+      setRequesting(false);
+    }
+  };
+
+  const verify = async () => {
+    setVerifying(true);
+    setError('');
+    try {
+      const res = await verifySigningOtp(token, code.trim());
+      onChange(res.signature_data_url);
+      setMode('done');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'تعذّر التحقق من الرمز');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  if (mode === 'draw') return <SignaturePad onChange={onChange} />;
+
+  if (mode === 'done') {
+    return <p className="text-xs font-bold text-sage">✓ تم استخدام توقيعك المحفوظ بعد التحقق من رقم جوالك</p>;
+  }
+
+  if (mode === 'otp') {
+    return (
+      <div className="space-y-2 rounded-lg border border-dashed border-seal bg-sealLight p-3">
+        <p className="text-xs font-bold text-ink">أُرسل رمز تحقق إلى جوالك ({phoneHint})</p>
+        {devCode && <p className="text-xs text-slate">رمز الاختبار (بوابة SMS غير مُفعَّلة بعد): {devCode}</p>}
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+          inputMode="numeric"
+          placeholder="رمز التحقق"
+          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-center text-sm text-ink outline-none focus:border-seal"
+        />
+        {error && <p className="text-xs font-bold text-clay">{error}</p>}
+        <Button onClick={verify} disabled={verifying || code.trim().length < 4}>
+          {verifying ? 'جارِ التحقق...' : 'تحقق واستخدم التوقيع'}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={requestOtp}
+        disabled={requesting}
+        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-seal bg-sealLight px-3 py-2 text-xs font-bold text-seal"
+      >
+        <ShieldCheck size={14} /> {requesting ? 'جارِ الإرسال...' : 'استخدام توقيعي المحفوظ (تحقق عبر الجوال)'}
+      </button>
+      {error && <p className="text-xs font-bold text-clay">{error}</p>}
+      <button type="button" onClick={() => setMode('draw')} className="w-full text-center text-xs font-bold text-slate hover:text-ink">
+        أو ارسم توقيعًا جديدًا
+      </button>
+    </div>
+  );
 }
 
-function FieldInput({ field, value, onChange }: { field: SigningSession['fields'][number]; value: unknown; onChange: (v: unknown) => void }) {
+function FieldInput({
+  field,
+  value,
+  onChange,
+  token,
+  hasSavedSignature,
+}: {
+  field: SigningSession['fields'][number];
+  value: unknown;
+  onChange: (v: unknown) => void;
+  token: string;
+  hasSavedSignature: boolean;
+}) {
   switch (field.field_type) {
     case 'signature':
-      return <SignaturePad onChange={(dataUrl) => onChange(dataUrl)} />;
+      return hasSavedSignature ? (
+        <SavedSignatureField token={token} onChange={(dataUrl) => onChange(dataUrl)} />
+      ) : (
+        <SignaturePad onChange={(dataUrl) => onChange(dataUrl)} />
+      );
     case 'checkbox':
       return (
         <label className="flex items-center gap-2 text-sm text-ink">
@@ -93,6 +186,7 @@ export function SigningPage() {
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [rejecting, setRejecting] = useState(false);
+  const [agreedToDeclaration, setAgreedToDeclaration] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -114,6 +208,10 @@ export function SigningPage() {
 
   const submit = async () => {
     if (!token || !session) return;
+    if (!agreedToDeclaration) {
+      setError('يجب الموافقة على إقرار التوقيع أدناه أولًا');
+      return;
+    }
     const missing = session.fields.find((f) => f.required && !values[f.id]);
     if (missing) {
       setError(`الحقل "${missing.label}" مطلوب`);
@@ -251,7 +349,13 @@ export function SigningPage() {
                         }}
                       >
                         <div className="h-full w-full overflow-hidden text-[10px]">
-                          <FieldInput field={f} value={values[f.id]} onChange={(v) => setValues((prev) => ({ ...prev, [f.id]: v }))} />
+                          <FieldInput
+                            field={f}
+                            value={values[f.id]}
+                            onChange={(v) => setValues((prev) => ({ ...prev, [f.id]: v }))}
+                            token={token ?? ''}
+                            hasSavedSignature={session.party.has_saved_signature}
+                          />
                         </div>
                       </div>
                     ))}
@@ -269,10 +373,40 @@ export function SigningPage() {
                 <p className="mb-1 text-xs font-bold text-slate">
                   {f.label} {f.required && <span className="text-clay">*</span>}
                 </p>
-                <FieldInput field={f} value={values[f.id]} onChange={(v) => setValues((prev) => ({ ...prev, [f.id]: v }))} />
+                <FieldInput
+                  field={f}
+                  value={values[f.id]}
+                  onChange={(v) => setValues((prev) => ({ ...prev, [f.id]: v }))}
+                  token={token ?? ''}
+                  hasSavedSignature={session.party.has_saved_signature}
+                />
               </div>
             ))}
           </div>
+        </div>
+
+        <div className="rounded-xl border border-line bg-card p-5">
+          <h4 className="mb-2 font-display text-sm font-bold text-ink">إقرار وتعهد الموقّع</h4>
+          <p className="mb-3 text-xs leading-relaxed text-slate">
+            بالموافقة أدناه، أُقرّ بأنني الشخص صاحب البيانات الموضحة في هذا الرابط ({session.party.full_name})، وأنني الوحيد
+            المخوَّل بالوصول إلى وسيلة التحقق (الجوال/الرابط) المستخدمة لإتمام هذا التوثيق. أتعهد بصحة جميع البيانات
+            والمعلومات التي أدخلتها أو أقررتها ضمن هذا المستند، وأتحمّل كامل المسؤولية القانونية المترتبة على ذلك أمام
+            الأطراف الأخرى وأمام الجهات ذات العلاقة. كما أُقرّ بأن توقيعي هذا يُعدّ بمثابة توقيع معتبر شرعًا ونظامًا لا
+            يقل حجيةً عن التوقيع الخطي، وأنني بذلك لا أملك حق الاعتراض لاحقًا على محتوى هذه المصادقة أو الطعن في صحة
+            صدورها عني بعد اكتمال التوثيق، إلا وفق ما تسمح به الأنظمة المرعية في المملكة العربية السعودية. وأُقرّ بأن دور
+            منصة "إقرار لخدمات الأعمال" يقتصر على توفير الوسيلة التقنية للتوثيق الإلكتروني والتحقق من الهوية، وأن المنصة
+            غير مسؤولة عن مضمون الاتفاق أو العقد نفسه ولا عن أي نزاع أو خلاف قد ينشأ بين الأطراف بشأنه، وتُخلي مسؤوليتها
+            عن أي استخدام غير مصرَّح به لوسيلة التحقق الخاصة بي.
+          </p>
+          <label className="flex items-start gap-2 text-xs font-bold text-ink">
+            <input
+              type="checkbox"
+              checked={agreedToDeclaration}
+              onChange={(e) => setAgreedToDeclaration(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>قرأت الإقرار أعلاه وأوافق عليه، وأتعهد بصحة بياناتي ومسؤوليتي الكاملة عن هذا التوثيق.</span>
+          </label>
         </div>
 
         {error && <p className="text-sm font-bold text-clay">{error}</p>}
@@ -300,7 +434,7 @@ export function SigningPage() {
             <Button variant="secondary" onClick={() => setShowRejectForm(true)} disabled={submitting} className="flex-1 py-3">
               رفض العقد
             </Button>
-            <Button onClick={submit} disabled={submitting} className="flex-[2] py-3">
+            <Button onClick={submit} disabled={submitting || !agreedToDeclaration} className="flex-[2] py-3">
               {submitting ? 'جارِ الإرسال...' : 'الموافقة وإتمام التوثيق'}
             </Button>
           </div>

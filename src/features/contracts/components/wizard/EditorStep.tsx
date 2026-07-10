@@ -7,7 +7,9 @@ import { addField, deleteField, saveContractBody } from '../../api/contractsApi'
 import { DOCUMENT_TYPE_DEFINITE_LABELS, type ContractField, type ContractParty, type DocumentType } from '../../types';
 
 interface EditorStepProps {
-  contractId: string;
+  // null قبل تسجيل دخول الزائر: يُتاح للزائر كتابة المحتوى محليًا دون إنشاء
+  // العقد في القاعدة بعد؛ يُنشأ العقد وحقوله دفعة واحدة بعد المصادقة.
+  contractId: string | null;
   documentType: DocumentType;
   parties: ContractParty[];
   body: JSONContent | null;
@@ -31,6 +33,12 @@ export function EditorStep({ contractId, documentType, parties, body, onBodyChan
     setSaving(true);
     setError('');
     try {
+      if (!contractId) {
+        // زائر بلا حساب بعد: ننتقل للخطوة التالية مباشرة، وسيُنشأ العقد وحقوله
+        // دفعة واحدة بعد تسجيل الدخول/إنشاء الحساب (انظر NewContractWizard).
+        onNext();
+        return;
+      }
       await saveContractBody(contractId, body);
 
       const extracted = extractFillFields(body as never);

@@ -425,6 +425,7 @@ export type Database = {
           notifications_seen_at: string | null;
           phone: string | null;
           role: string;
+          signature_data_url: string | null;
         };
         Insert: {
           created_at?: string;
@@ -439,6 +440,7 @@ export type Database = {
           notifications_seen_at?: string | null;
           phone?: string | null;
           role?: string;
+          signature_data_url?: string | null;
         };
         Update: {
           created_at?: string;
@@ -453,6 +455,7 @@ export type Database = {
           notifications_seen_at?: string | null;
           phone?: string | null;
           role?: string;
+          signature_data_url?: string | null;
         };
         Relationships: [];
       };

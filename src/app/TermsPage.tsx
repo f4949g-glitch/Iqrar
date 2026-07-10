@@ -37,7 +37,10 @@ export function TermsPage() {
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-seal">
               <FileSignature size={18} className="text-white" />
             </div>
-            <span className="font-display text-lg font-extrabold text-ink">إقرار</span>
+            <span className="font-display text-lg font-extrabold text-ink">
+              <span className="sm:hidden">إقرار</span>
+              <span className="hidden sm:inline">منصة إقرار لخدمات الأعمال</span>
+            </span>
           </Link>
         </div>
       </header>

@@ -22,15 +22,37 @@ interface SidebarLink {
   icon: typeof User;
 }
 
-const MAIN_LINKS: SidebarLink[] = [
-  { to: '/', label: 'الصفحة الرئيسية', icon: Home },
-  { to: '/app/contracts/new', label: 'توثيق العقود', icon: FileSignature },
-  { to: '/verify', label: 'التحقق من وثيقة موثقة', icon: ShieldCheck },
-  { to: '/app/profile', label: 'الملف الشخصي', icon: User },
-  { to: '/app/contracts?tab=previous', label: 'عقودي السابقة', icon: FileClock },
-  { to: '/app/contracts?tab=awaiting', label: 'طلبات الموافقة', icon: ClipboardCheck },
-  { to: '/app/contracts?tab=rejected', label: 'عقود مرفوضة', icon: FileX2 },
-  { to: '/app/balance', label: 'رصيدي', icon: Wallet },
+interface SidebarGroup {
+  title: string | null;
+  links: SidebarLink[];
+}
+
+// مجموعات القائمة اليمنى للمستخدم: كل مجموعة بعنوان قصير يوضّح الغرض منها
+// بدل قائمة مسطّحة واحدة، ليسهل إيجاد الرابط المطلوب بسرعة.
+const USER_GROUPS: SidebarGroup[] = [
+  {
+    title: null,
+    links: [
+      { to: '/', label: 'الصفحة الرئيسية', icon: Home },
+      { to: '/app/contracts/new', label: 'توثيق العقود', icon: FileSignature },
+      { to: '/verify', label: 'التحقق من وثيقة موثقة', icon: ShieldCheck },
+    ],
+  },
+  {
+    title: 'عقودي',
+    links: [
+      { to: '/app/contracts?tab=previous', label: 'عقودي السابقة', icon: FileClock },
+      { to: '/app/contracts?tab=awaiting', label: 'طلبات الموافقة', icon: ClipboardCheck },
+      { to: '/app/contracts?tab=rejected', label: 'عقود مرفوضة', icon: FileX2 },
+    ],
+  },
+  {
+    title: 'حسابي',
+    links: [
+      { to: '/app/profile', label: 'الملف الشخصي', icon: User },
+      { to: '/app/balance', label: 'رصيدي', icon: Wallet },
+    ],
+  },
 ];
 
 const FOOTER_LINKS: SidebarLink[] = [
@@ -39,11 +61,14 @@ const FOOTER_LINKS: SidebarLink[] = [
   { to: '/app/contact', label: 'اتصل بنا', icon: Phone },
 ];
 
-const ADMIN_LINKS: SidebarLink[] = [
-  { to: '/app/contracts/discounts', label: 'أكواد الخصم', icon: Percent },
-  { to: '/app/contracts/credit-codes', label: 'أكواد الشحن', icon: Wallet },
-  { to: '/app/contracts/pricing', label: 'إعدادات التسعير', icon: SlidersHorizontal },
-];
+const ADMIN_GROUP: SidebarGroup = {
+  title: 'الإدارة',
+  links: [
+    { to: '/app/contracts/discounts', label: 'أكواد الخصم', icon: Percent },
+    { to: '/app/contracts/credit-codes', label: 'أكواد الشحن', icon: Wallet },
+    { to: '/app/contracts/pricing', label: 'إعدادات التسعير', icon: SlidersHorizontal },
+  ],
+};
 
 function NavItem({ link, active }: { link: SidebarLink; active: boolean }) {
   const Icon = link.icon;
@@ -60,6 +85,19 @@ function NavItem({ link, active }: { link: SidebarLink; active: boolean }) {
   );
 }
 
+function NavGroup({ group, isActive }: { group: SidebarGroup; isActive: (to: string) => boolean }) {
+  return (
+    <div className="mb-4 last:mb-0">
+      {group.title && <p className="mb-1 px-3 text-[11px] font-bold text-slate">{group.title}</p>}
+      <nav className="space-y-1">
+        {group.links.map((link) => (
+          <NavItem key={link.to} link={link} active={isActive(link.to)} />
+        ))}
+      </nav>
+    </div>
+  );
+}
+
 export function Sidebar({ profile }: { profile: Profile }) {
   const location = useLocation();
   const currentPath = `${location.pathname}${location.search}`;
@@ -68,22 +106,11 @@ export function Sidebar({ profile }: { profile: Profile }) {
   return (
     <aside className="sticky top-0 flex h-screen w-40 shrink-0 flex-col justify-between overflow-y-auto border-e border-line bg-card p-3 sm:w-52 lg:w-60 lg:p-4">
       <div>
-        <nav className="space-y-1">
-          {MAIN_LINKS.map((link) => (
-            <NavItem key={link.to} link={link} active={isActive(link.to)} />
-          ))}
-        </nav>
+        {USER_GROUPS.map((group) => (
+          <NavGroup key={group.title ?? 'main'} group={group} isActive={isActive} />
+        ))}
 
-        {profile.role === 'admin' && (
-          <>
-            <p className="mb-1 mt-5 px-3 text-[11px] font-bold text-slate">الإدارة</p>
-            <nav className="space-y-1">
-              {ADMIN_LINKS.map((link) => (
-                <NavItem key={link.to} link={link} active={isActive(link.to)} />
-              ))}
-            </nav>
-          </>
-        )}
+        {profile.role === 'admin' && <NavGroup group={ADMIN_GROUP} isActive={isActive} />}
       </div>
 
       <nav className="space-y-1 border-t border-line pt-3">

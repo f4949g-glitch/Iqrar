@@ -69,7 +69,9 @@ function AppShell() {
         <Routes>
           <Route path="/" element={<Navigate to="/app/contracts" replace />} />
           <Route path="/contracts" element={profile ? <ContractsListPage /> : <AuthGate />} />
-          <Route path="/contracts/new" element={profile ? <NewContractWizard /> : <AuthGate />} />
+          {/* يُتاح المعالج للزائر أيضًا: يمكنه تعبئة الأطراف وكتابة محتوى العقد محليًا،
+              ولا يُطلب منه تسجيل الدخول إلا قبل المراجعة والدفع مباشرة (انظر NewContractWizard). */}
+          <Route path="/contracts/new" element={<NewContractWizard />} />
           <Route path="/contracts/:id" element={profile ? <ContractDetailPage /> : <AuthGate />} />
           <Route path="/balance" element={profile ? <BalancePage /> : <AuthGate />} />
           <Route path="/profile" element={profile ? <ProfilePage profile={profile} /> : <AuthGate />} />
