@@ -17,6 +17,7 @@ export default {
         clay: 'var(--color-clay)',
         clayLight: 'var(--color-clay-light)',
         line: 'var(--color-line)',
+        navy: 'var(--color-navy)',
       },
       backgroundImage: {
         hero: 'var(--gradient-hero)',

@@ -21,6 +21,9 @@
   --color-line: #e2e6f2;
   --scrollbar-thumb: #cdd5ea;
   --gradient-hero: linear-gradient(135deg, #eaf0fd 0%, #dce6fb 55%, #cfdcfa 100%);
+  /* كحلي ثابت لا يتغيّر مع الوضع الداكن/الفاتح — يُستخدم لأقسام ذات خلفية داكنة دائمًا
+     (لا يجوز استخدام --color-ink كخلفية لأنها تنعكس فاتحة في الوضع الداكن). */
+  --color-navy: #131b2e;
 }
 
 :root[data-theme='dark'] {

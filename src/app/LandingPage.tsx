@@ -82,7 +82,7 @@ function Nav() {
 
 function DocumentationChooser({ onClose }: { onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4" dir="rtl" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4" dir="rtl" onClick={onClose}>
       <div className="relative w-full max-w-sm rounded-md border border-line bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <button type="button" onClick={onClose} aria-label="إغلاق" className="absolute left-4 top-4 text-slate hover:text-ink">
           <X size={20} />
@@ -168,7 +168,7 @@ export function LandingPage() {
     <div dir="rtl" className="min-h-screen bg-paper">
       <Nav />
 
-      <section className="border-b-4 border-seal bg-ink">
+      <section className="border-b-4 border-seal bg-navy">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 md:grid-cols-[1.15fr_0.85fr] md:items-center md:px-8 md:py-20">
           <div>
             <p className="mb-4 inline-block rounded-md border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-bold text-white/80">
@@ -279,7 +279,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="border-t border-line bg-ink">
+      <section className="border-t border-line bg-navy">
         <div className="mx-auto max-w-6xl px-4 py-16 text-center md:px-8">
           <h2 className="mb-3 font-display text-2xl font-extrabold text-white md:text-3xl">جاهز للبدء؟</h2>
           <p className="mx-auto mb-8 max-w-xl text-sm text-white/70 md:text-base">
