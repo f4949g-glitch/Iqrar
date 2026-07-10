@@ -33,12 +33,12 @@ function NavItem({ link, active }: { link: SidebarLink; active: boolean }) {
   return (
     <Link
       to={link.to}
-      className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-bold transition ${
+      className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-bold leading-tight transition sm:gap-2.5 sm:px-3 sm:text-sm ${
         active ? 'bg-sealLight text-seal' : 'text-slate hover:bg-paper hover:text-ink'
       }`}
     >
-      <Icon size={17} />
-      {link.label}
+      <Icon size={16} className="shrink-0 sm:size-[17px]" />
+      <span>{link.label}</span>
     </Link>
   );
 }
@@ -49,7 +49,7 @@ export function Sidebar({ profile }: { profile: Profile }) {
   const isActive = (to: string) => currentPath === to || (!to.includes('?') && location.pathname === to);
 
   return (
-    <aside className="hidden w-60 shrink-0 border-e border-line bg-card p-4 lg:flex lg:flex-col lg:justify-between lg:sticky lg:top-0 lg:h-screen">
+    <aside className="sticky top-0 flex h-screen w-40 shrink-0 flex-col justify-between overflow-y-auto border-e border-line bg-card p-3 sm:w-52 lg:w-60 lg:p-4">
       <div>
         <nav className="space-y-1">
           {MAIN_LINKS.map((link) => (

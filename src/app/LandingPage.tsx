@@ -1,12 +1,8 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FileSignature, ShieldCheck, Users, Zap, FileText, Lock, ScanLine, PenTool, ListChecks } from 'lucide-react';
+import { FileSignature, ShieldCheck, Users, Zap, Lock, ScanLine, PenTool, ListChecks, X, LogIn, UserPlus, ArrowLeft } from 'lucide-react';
 
 const FEATURES = [
-  {
-    icon: FileText,
-    title: 'توثيق العقود',
-    desc: 'أنشئ عقودك من محرر غني بحقول ديناميكية، أو ارفع ملف PDF/Word جاهزًا وحدّد مواضع الحقول بنفسك.',
-  },
   {
     icon: ListChecks,
     title: 'تتبع العقود',
@@ -73,7 +69,39 @@ function Nav() {
   );
 }
 
+function DocumentationChooser({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4" dir="rtl" onClick={onClose}>
+      <div className="relative w-full max-w-sm rounded-2xl bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <button type="button" onClick={onClose} aria-label="إغلاق" className="absolute left-4 top-4 text-slate hover:text-ink">
+          <X size={20} />
+        </button>
+        <div className="mb-5 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-sealLight">
+            <FileSignature size={22} className="text-seal" />
+          </div>
+          <h3 className="font-display text-lg font-bold text-ink">توثيق العقود</h3>
+          <p className="mt-1 text-sm text-slate">كيف تريد المتابعة؟</p>
+        </div>
+        <div className="space-y-2">
+          <Link to="/login" className="flex items-center gap-2 rounded-lg border border-line px-4 py-3 text-sm font-bold text-ink hover:bg-paper">
+            <LogIn size={16} /> تسجيل الدخول
+          </Link>
+          <Link to="/register" className="flex items-center gap-2 rounded-lg bg-seal px-4 py-3 text-sm font-bold text-white hover:opacity-90">
+            <UserPlus size={16} /> إنشاء حساب
+          </Link>
+          <Link to="/app/contracts/new" className="flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-bold text-seal hover:bg-sealLight">
+            <ArrowLeft size={16} /> استمرار كضيف
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function LandingPage() {
+  const [showChooser, setShowChooser] = useState(false);
+
   return (
     <div dir="rtl" className="min-h-screen bg-paper">
       <Nav />
@@ -90,6 +118,19 @@ export function LandingPage() {
             أنشئ عقودًا متعددة الأطراف، أرسلها للتوقيع برابط فريد، وتحقق من هوية الأطراف عبر نفاذ — كل ذلك من مكان
             واحد، بدون أوراق وبدون تعقيد.
           </p>
+
+          <button
+            type="button"
+            onClick={() => setShowChooser(true)}
+            className="mx-auto mb-8 flex w-full max-w-xs flex-col items-center gap-3 rounded-2xl bg-white p-6 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
+          >
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-seal">
+              <FileSignature size={28} className="text-white" />
+            </div>
+            <span className="font-display text-base font-bold text-ink">توثيق العقود</span>
+            <span className="text-xs text-slate">ابدأ توثيق عقدك الآن</span>
+          </button>
+
           <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link to="/register" className="w-full rounded-full bg-seal px-8 py-3.5 text-sm font-bold text-white shadow-lg hover:opacity-90 sm:w-auto">
               إنشاء حساب
@@ -103,6 +144,8 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+
+      {showChooser && <DocumentationChooser onClose={() => setShowChooser(false)} />}
 
       <section className="mx-auto max-w-6xl px-4 py-16 md:px-8">
         <div className="mx-auto mb-10 max-w-2xl text-center">

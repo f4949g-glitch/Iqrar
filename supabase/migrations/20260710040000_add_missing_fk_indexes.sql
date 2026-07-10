@@ -1,0 +1,9 @@
+create index if not exists contract_events_party_id_idx on public.contract_events (party_id);
+create index if not exists contracts_discount_code_id_idx on public.contracts (discount_code_id);
+create index if not exists credit_code_redemptions_credit_code_id_idx on public.credit_code_redemptions (credit_code_id);
+create index if not exists credit_code_redemptions_redeemed_by_idx on public.credit_code_redemptions (redeemed_by);
+create index if not exists credit_codes_created_by_idx on public.credit_codes (created_by);
+create index if not exists discount_code_uses_contract_id_idx on public.discount_code_uses (contract_id);
+create index if not exists discount_code_uses_discount_code_id_idx on public.discount_code_uses (discount_code_id);
+create index if not exists discount_code_uses_used_by_idx on public.discount_code_uses (used_by);
+create index if not exists discount_codes_created_by_idx on public.discount_codes (created_by);

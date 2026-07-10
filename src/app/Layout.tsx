@@ -1,24 +1,12 @@
 import type { ReactNode } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { FileSignature, LogOut } from 'lucide-react';
 import { signOut, type Profile } from '@/features/auth';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { WhatsAppButton } from '@/shared/ui/WhatsAppButton';
 import { Sidebar } from './Sidebar';
 
-const MOBILE_LINKS = [
-  { to: '/app/profile', label: 'ملفي' },
-  { to: '/app/contracts?tab=previous', label: 'عقودي' },
-  { to: '/app/contracts?tab=awaiting', label: 'الموافقات' },
-  { to: '/app/contracts?tab=rejected', label: 'مرفوضة' },
-  { to: '/app/balance', label: 'رصيدي' },
-  { to: '/app/settings', label: 'الإعدادات' },
-];
-
 export function Layout({ profile, children }: { profile: Profile | null; children: ReactNode }) {
-  const location = useLocation();
-  const currentPath = `${location.pathname}${location.search}`;
-
   const handleLogout = async () => {
     await signOut();
     window.location.href = '/';
@@ -60,21 +48,6 @@ export function Layout({ profile, children }: { profile: Profile | null; childre
             )}
           </div>
         </div>
-        {profile && (
-          <div className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 pb-2 md:px-8 lg:hidden">
-            {MOBILE_LINKS.map((l) => (
-              <Link
-                key={l.to}
-                to={l.to}
-                className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${
-                  currentPath === l.to ? 'bg-sealLight text-seal' : 'text-slate hover:bg-paper'
-                }`}
-              >
-                {l.label}
-              </Link>
-            ))}
-          </div>
-        )}
       </header>
       <div className="mx-auto flex max-w-7xl">
         {profile && <Sidebar profile={profile} />}
