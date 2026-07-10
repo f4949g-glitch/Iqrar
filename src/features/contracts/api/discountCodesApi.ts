@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase/client';
 
+export type DiscountApprovalStatus = 'approved' | 'pending' | 'rejected';
+
 export interface DiscountCode {
   id: string;
   code: string;
@@ -9,7 +11,11 @@ export interface DiscountCode {
   starts_at: string | null;
   ends_at: string | null;
   is_active: boolean;
+  created_by: string;
   created_at: string;
+  approval_status: DiscountApprovalStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
 }
 
 export interface DiscountPreview {
@@ -35,13 +41,22 @@ export interface NewDiscountCodeInput {
   ends_at: string | null;
 }
 
-export async function createDiscountCode(input: NewDiscountCodeInput): Promise<DiscountCode> {
+// إن كان المستخدم أدمن فرعيًا بصلاحية إنشاء أكواد خصم بلا موافقة مباشرة (وليس
+// أدمنًا كاملًا)، يُنشأ الكود بحالة "pending" وغير مُفعَّل حتى يوافق عليه
+// الأدمن الرئيسي من قسم الطلبات — القاعدة الفعلية تُفرَض من سياسة RLS نفسها
+// (discount_codes_insert)، وهذا الطرف مجرّد اختيار القيم الصحيحة قبل الإرسال.
+export async function createDiscountCode(input: NewDiscountCodeInput, needsApproval: boolean): Promise<DiscountCode> {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) throw new Error('غير مسجّل الدخول');
 
   const { data, error } = await supabase
     .from('discount_codes')
-    .insert({ ...input, created_by: userData.user.id })
+    .insert({
+      ...input,
+      created_by: userData.user.id,
+      approval_status: needsApproval ? 'pending' : 'approved',
+      is_active: !needsApproval,
+    })
     .select()
     .single();
   if (error) throw error;
@@ -55,6 +70,22 @@ export async function toggleDiscountCode(id: string, isActive: boolean): Promise
 
 export async function deleteDiscountCode(id: string): Promise<void> {
   const { error } = await supabase.from('discount_codes').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// موافقة/رفض الأدمن الرئيسي على كود خصم أنشأه أدمن فرعي بلا صلاحية مباشرة.
+export async function reviewDiscountCode(id: string, approve: boolean): Promise<void> {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) throw new Error('غير مسجّل الدخول');
+  const { error } = await supabase
+    .from('discount_codes')
+    .update({
+      approval_status: approve ? 'approved' : 'rejected',
+      is_active: approve,
+      reviewed_by: userData.user.id,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq('id', id);
   if (error) throw error;
 }
 

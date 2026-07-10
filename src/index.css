@@ -121,6 +121,14 @@ body {
   font-size: 0.75rem;
   color: var(--color-slate);
 }
+
+/* إخفاء عناصر التنقل (الرأس والقائمة الجانبية وزر واتساب) عند طباعة صفحات
+   مثل التقارير الإحصائية، بحيث تُطبع محتويات الصفحة فقط. */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
 .fill-image {
   max-height: 70px;
 }

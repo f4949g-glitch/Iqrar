@@ -13,8 +13,11 @@ import {
   Percent,
   Wallet,
   SlidersHorizontal,
+  BarChart3,
+  Users,
 } from 'lucide-react';
 import type { Profile } from '@/features/auth';
+import { hasAdminPermission } from '@/features/auth/types';
 
 interface SidebarLink {
   to: string;
@@ -61,14 +64,28 @@ const FOOTER_LINKS: SidebarLink[] = [
   { to: '/app/contact', label: 'اتصل بنا', icon: Phone },
 ];
 
-const ADMIN_GROUP: SidebarGroup = {
-  title: 'الإدارة',
-  links: [
-    { to: '/app/contracts/discounts', label: 'أكواد الخصم', icon: Percent },
-    { to: '/app/contracts/credit-codes', label: 'أكواد الشحن', icon: Wallet },
-    { to: '/app/contracts/pricing', label: 'إعدادات التسعير', icon: SlidersHorizontal },
-  ],
-};
+// روابط الإدارة تُبنى ديناميكيًا حسب دور المستخدم وصلاحياته: الأدمن الكامل يرى
+// الكل، والأدمن الفرعي يرى فقط ما يملك صلاحيته تحديدًا.
+function buildAdminGroup(profile: Profile): SidebarGroup | null {
+  const isFullAdmin = profile.role === 'admin';
+  const links: SidebarLink[] = [];
+
+  if (hasAdminPermission(profile, 'view_reports')) {
+    links.push({ to: '/app/contracts/reports', label: 'التقارير الإحصائية', icon: BarChart3 });
+  }
+  if (hasAdminPermission(profile, 'create_discount_codes')) {
+    links.push({ to: '/app/contracts/discounts', label: 'أكواد الخصم', icon: Percent });
+  }
+  if (isFullAdmin) {
+    links.push(
+      { to: '/app/contracts/credit-codes', label: 'أكواد الشحن', icon: Wallet },
+      { to: '/app/contracts/pricing', label: 'إعدادات التسعير', icon: SlidersHorizontal },
+      { to: '/app/contracts/admin-users', label: 'مستخدمو الإدارة', icon: Users },
+    );
+  }
+
+  return links.length > 0 ? { title: 'الإدارة', links } : null;
+}
 
 function NavItem({ link, active, onNavigate }: { link: SidebarLink; active: boolean; onNavigate?: () => void }) {
   const Icon = link.icon;
@@ -128,7 +145,10 @@ export function Sidebar({ profile, mobileOpen = false, onMobileClose }: SidebarP
             <NavGroup key={group.title ?? 'main'} group={group} isActive={isActive} onNavigate={onMobileClose} />
           ))}
 
-          {profile.role === 'admin' && <NavGroup group={ADMIN_GROUP} isActive={isActive} onNavigate={onMobileClose} />}
+          {(() => {
+            const adminGroup = buildAdminGroup(profile);
+            return adminGroup && <NavGroup group={adminGroup} isActive={isActive} onNavigate={onMobileClose} />;
+          })()}
         </div>
 
         <nav className="space-y-1 border-t border-line pt-3">

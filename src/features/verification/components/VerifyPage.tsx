@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, FileSignature, ShieldCheck } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { CheckCircle2, FileSignature, Home, ShieldCheck } from 'lucide-react';
 import { Field } from '@/shared/ui/Field';
 import { GregorianDateInput } from '@/shared/ui/GregorianDateInput';
 import { Button } from '@/shared/ui/Button';
@@ -16,6 +16,7 @@ const PARTY_STATUS_LABEL: Record<string, string> = {
 };
 
 export function VerifyPage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [verificationNumber, setVerificationNumber] = useState(searchParams.get('number') ?? '');
   const [isPoa, setIsPoa] = useState(false);
@@ -113,6 +114,18 @@ export function VerifyPage() {
             {loading ? 'جارِ التحقق...' : 'تحقّق'}
           </Button>
         </form>
+
+        <div className="mt-4 flex gap-2">
+          <Button variant="secondary" onClick={() => navigate(-1)} className="flex-1">
+            رجوع
+          </Button>
+          <Link
+            to="/"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-line bg-paper py-2 text-sm font-bold text-ink transition hover:bg-white"
+          >
+            <Home size={15} /> العودة إلى الصفحة الرئيسية
+          </Link>
+        </div>
 
         {result && (
           <div className="mt-6 rounded-2xl bg-card p-6 shadow-sm">

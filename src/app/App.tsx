@@ -1,6 +1,7 @@
 import { Suspense, lazy, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
 import { useSession, LoginForm, RegisterForm, ForcedPasswordChange } from '@/features/auth';
+import { hasAdminPermission } from '@/features/auth/types';
 import { Layout } from './Layout';
 import { LandingPage } from './LandingPage';
 import { AuthGate } from './AuthGate';
@@ -17,6 +18,8 @@ const ContractDetailPage = lazy(() => import('@/features/contracts/components/Co
 const DiscountCodesPage = lazy(() => import('@/features/contracts/components/DiscountCodesPage').then((m) => ({ default: m.DiscountCodesPage })));
 const CreditCodesPage = lazy(() => import('@/features/contracts/components/CreditCodesPage').then((m) => ({ default: m.CreditCodesPage })));
 const PricingSettingsPage = lazy(() => import('@/features/contracts/components/PricingSettingsPage').then((m) => ({ default: m.PricingSettingsPage })));
+const ReportsPage = lazy(() => import('@/features/contracts/components/ReportsPage').then((m) => ({ default: m.ReportsPage })));
+const AdminUsersPage = lazy(() => import('@/features/auth/components/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage })));
 const BalancePage = lazy(() => import('@/features/contracts/components/BalancePage').then((m) => ({ default: m.BalancePage })));
 const ProfilePage = lazy(() => import('@/features/auth/components/ProfilePage').then((m) => ({ default: m.ProfilePage })));
 const SettingsPage = lazy(() => import('@/features/auth/components/SettingsPage').then((m) => ({ default: m.SettingsPage })));
@@ -77,9 +80,17 @@ function AppShell() {
           <Route path="/profile" element={profile ? <ProfilePage profile={profile} /> : <AuthGate />} />
           <Route path="/settings" element={profile ? <SettingsPage /> : <AuthGate />} />
           <Route path="/contact" element={<ContactPage />} />
-          <Route path="/contracts/discounts" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <DiscountCodesPage /> : <AdminGate />} />
+          <Route
+            path="/contracts/discounts"
+            element={!profile ? <AuthGate /> : hasAdminPermission(profile, 'create_discount_codes') ? <DiscountCodesPage /> : <AdminGate />}
+          />
           <Route path="/contracts/credit-codes" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <CreditCodesPage /> : <AdminGate />} />
           <Route path="/contracts/pricing" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <PricingSettingsPage /> : <AdminGate />} />
+          <Route
+            path="/contracts/reports"
+            element={!profile ? <AuthGate /> : hasAdminPermission(profile, 'view_reports') ? <ReportsPage /> : <AdminGate />}
+          />
+          <Route path="/contracts/admin-users" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <AdminUsersPage /> : <AdminGate />} />
         </Routes>
       </Suspense>
     </Layout>

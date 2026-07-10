@@ -7,7 +7,7 @@ import { fileToDataUrl } from '@/shared/lib/fileToDataUrl';
 import { SignaturePad } from '@/shared/ui/SignaturePad';
 import { Button } from '@/shared/ui/Button';
 
-const ROLE_LABEL: Record<string, string> = { admin: 'مدير المنصة', member: 'عضو' };
+const ROLE_LABEL: Record<string, string> = { admin: 'مدير المنصة', sub_admin: 'أدمن فرعي', member: 'عضو' };
 
 function Row({ label, value }: { label: string; value: string }) {
   return (

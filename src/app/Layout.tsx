@@ -17,7 +17,7 @@ export function Layout({ profile, children }: { profile: Profile | null; childre
 
   return (
     <div className="min-h-screen bg-paper" dir="rtl">
-      <header className="border-b border-line bg-card">
+      <header className="no-print border-b border-line bg-card">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-8">
           <div className="flex items-center gap-1">
             {profile && (
@@ -72,7 +72,9 @@ export function Layout({ profile, children }: { profile: Profile | null; childre
         {profile && <Sidebar profile={profile} mobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />}
         <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
       </div>
-      <WhatsAppButton />
+      <div className="no-print">
+        <WhatsAppButton />
+      </div>
     </div>
   );
 }

@@ -350,6 +350,7 @@ export type Database = {
       };
       discount_codes: {
         Row: {
+          approval_status: string;
           code: string;
           created_at: string;
           created_by: string;
@@ -359,9 +360,12 @@ export type Database = {
           is_active: boolean;
           max_uses: number | null;
           max_uses_per_user: number | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
           starts_at: string | null;
         };
         Insert: {
+          approval_status?: string;
           code: string;
           created_at?: string;
           created_by: string;
@@ -371,9 +375,12 @@ export type Database = {
           is_active?: boolean;
           max_uses?: number | null;
           max_uses_per_user?: number | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
           starts_at?: string | null;
         };
         Update: {
+          approval_status?: string;
           code?: string;
           created_at?: string;
           created_by?: string;
@@ -383,6 +390,8 @@ export type Database = {
           is_active?: boolean;
           max_uses?: number | null;
           max_uses_per_user?: number | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
           starts_at?: string | null;
         };
         Relationships: [];
@@ -419,6 +428,7 @@ export type Database = {
       };
       profiles: {
         Row: {
+          admin_permissions: string[];
           created_at: string;
           credit_balance: number;
           date_of_birth: string | null;
@@ -434,6 +444,7 @@ export type Database = {
           signature_data_url: string | null;
         };
         Insert: {
+          admin_permissions?: string[];
           created_at?: string;
           credit_balance?: number;
           date_of_birth?: string | null;
@@ -449,6 +460,7 @@ export type Database = {
           signature_data_url?: string | null;
         };
         Update: {
+          admin_permissions?: string[];
           created_at?: string;
           credit_balance?: number;
           date_of_birth?: string | null;
