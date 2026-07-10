@@ -55,6 +55,7 @@ export function ForcedPasswordChange({ onDone }: ForcedPasswordChangeProps) {
               className="w-full rounded-lg border border-line bg-white px-3 py-2.5 text-right text-ink outline-none"
               style={{ direction: 'ltr' }}
             />
+            <p className="mt-1 text-xs text-slate">8-15 حرفًا، ويجب أن تحتوي على حرف كبير وحرف صغير ورقم ورمز خاص</p>
           </div>
           <div>
             <label htmlFor="confirm-password" className="mb-1.5 block text-xs font-bold text-slate">

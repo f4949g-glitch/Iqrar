@@ -273,7 +273,14 @@ export function PartiesStep({
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="اسم المنشأة (اختياري)" value={companyName} onChange={onCompanyNameChange} />
-              <Field label="رقم السجل التجاري (اختياري)" value={companyCrNumber} onChange={onCompanyCrNumberChange} digitsOnly maxLength={10} />
+              <Field
+                label="رقم السجل التجاري (اختياري)"
+                value={companyCrNumber}
+                onChange={onCompanyCrNumberChange}
+                digitsOnly
+                maxLength={10}
+                hint="10 أرقام فقط"
+              />
             </div>
           )}
         </div>
@@ -390,6 +397,7 @@ export function PartiesStep({
                       onChange={(v) => updateParty(index, { entity_cr_number: v })}
                       digitsOnly
                       maxLength={10}
+                      hint="10 أرقام فقط"
                     />
                   </div>
                 )}
@@ -475,6 +483,7 @@ export function PartiesStep({
                   onChange={(v) => updateParty(index, { national_id: v })}
                   digitsOnly
                   maxLength={10}
+                  hint="10 أرقام فقط"
                 />
               )}
               <Field

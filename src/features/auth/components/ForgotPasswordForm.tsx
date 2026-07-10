@@ -85,6 +85,7 @@ export function ForgotPasswordForm() {
                   className={inputClass}
                   style={{ direction: 'ltr' }}
                 />
+                <p className="mt-1 text-xs text-slate">10 أرقام فقط</p>
               </div>
               {error && (
                 <p role="alert" className="text-sm font-bold text-clay">
@@ -141,6 +142,7 @@ export function ForgotPasswordForm() {
                   className={inputClass}
                   style={{ direction: 'ltr' }}
                 />
+                <p className="mt-1 text-xs text-slate">8-15 حرفًا، ويجب أن تحتوي على حرف كبير وحرف صغير ورقم ورمز خاص</p>
               </div>
               {error && (
                 <p role="alert" className="text-sm font-bold text-clay">

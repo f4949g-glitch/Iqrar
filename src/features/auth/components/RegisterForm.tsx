@@ -116,6 +116,7 @@ export function RegisterForm({ onRegistered }: RegisterFormProps) {
                     className={inputClass}
                     style={{ direction: 'ltr' }}
                   />
+                  <p className="mt-1 text-xs text-slate">10 أرقام فقط</p>
                 </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-bold text-slate">الجنسية</label>
@@ -146,6 +147,7 @@ export function RegisterForm({ onRegistered }: RegisterFormProps) {
                   className={inputClass}
                   style={{ direction: 'ltr' }}
                 />
+                <p className="mt-1 text-xs text-slate">10 أرقام تبدأ بـ 05</p>
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-slate">البريد الإلكتروني</label>
@@ -157,6 +159,7 @@ export function RegisterForm({ onRegistered }: RegisterFormProps) {
                   className={inputClass}
                   style={{ direction: 'ltr' }}
                 />
+                <p className="mt-1 text-xs text-slate">مثال: name@example.com</p>
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-slate">كلمة المرور</label>
@@ -169,6 +172,7 @@ export function RegisterForm({ onRegistered }: RegisterFormProps) {
                   className={inputClass}
                   style={{ direction: 'ltr' }}
                 />
+                <p className="mt-1 text-xs text-slate">8-15 حرفًا، ويجب أن تحتوي على حرف كبير وحرف صغير ورقم ورمز خاص</p>
               </div>
               {error && (
                 <p role="alert" className="text-sm font-bold text-clay">

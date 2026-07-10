@@ -86,6 +86,7 @@ export function SettingsPage() {
               className={inputClass}
               style={{ direction: 'ltr' }}
             />
+            <p className="mt-1 text-xs text-slate">8-15 حرفًا، ويجب أن تحتوي على حرف كبير وحرف صغير ورقم ورمز خاص</p>
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-bold text-slate">تأكيد كلمة المرور</label>

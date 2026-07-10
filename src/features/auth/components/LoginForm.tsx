@@ -64,6 +64,7 @@ export function LoginForm({ onSignedIn }: LoginFormProps) {
               className={inputClass}
               style={{ direction: 'ltr' }}
             />
+            <p className="mt-1 text-xs text-slate">10 أرقام فقط</p>
           </div>
           <div>
             <div className="mb-1.5 flex items-center justify-between">
