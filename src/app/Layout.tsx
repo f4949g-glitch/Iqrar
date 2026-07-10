@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { FileSignature, LogOut } from 'lucide-react';
+import { FileSignature, LogOut, Menu } from 'lucide-react';
 import { signOut, type Profile } from '@/features/auth';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { WhatsAppButton } from '@/shared/ui/WhatsAppButton';
@@ -8,6 +8,8 @@ import { Sidebar } from './Sidebar';
 import { NotificationsBell } from './NotificationsBell';
 
 export function Layout({ profile, children }: { profile: Profile | null; children: ReactNode }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const handleLogout = async () => {
     await signOut();
     window.location.href = '/';
@@ -17,15 +19,27 @@ export function Layout({ profile, children }: { profile: Profile | null; childre
     <div className="min-h-screen bg-paper" dir="rtl">
       <header className="border-b border-line bg-card">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-8">
-          <Link to="/app" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-seal">
-              <FileSignature size={18} className="text-white" />
-            </div>
-            <span className="font-display text-lg font-extrabold text-ink">
-              <span className="sm:hidden">إقرار</span>
-              <span className="hidden sm:inline">منصة إقرار لخدمات الأعمال</span>
-            </span>
-          </Link>
+          <div className="flex items-center gap-1">
+            {profile && (
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                aria-label="فتح القائمة"
+                className="-ms-1 flex h-9 w-9 items-center justify-center rounded-lg text-ink hover:bg-paper md:hidden"
+              >
+                <Menu size={20} />
+              </button>
+            )}
+            <Link to="/app" className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-seal">
+                <FileSignature size={18} className="text-white" />
+              </div>
+              <span className="font-display text-lg font-extrabold text-ink">
+                <span className="sm:hidden">إقرار</span>
+                <span className="hidden sm:inline">منصة إقرار لخدمات الأعمال</span>
+              </span>
+            </Link>
+          </div>
           <div className="flex items-center gap-2 sm:gap-4">
             <ThemeToggle />
             {profile ? (
@@ -55,7 +69,7 @@ export function Layout({ profile, children }: { profile: Profile | null; childre
         </div>
       </header>
       <div className="mx-auto flex max-w-7xl">
-        {profile && <Sidebar profile={profile} />}
+        {profile && <Sidebar profile={profile} mobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />}
         <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
       </div>
       <WhatsAppButton />

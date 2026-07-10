@@ -99,7 +99,7 @@ function Nav({ profile, onLogout }: { profile: Profile | null; onLogout: () => v
             <span className="hidden sm:inline">منصة إقرار لخدمات الأعمال</span>
           </span>
         </div>
-        <div className="flex items-center gap-1 text-sm font-bold">
+        <div className="flex items-center gap-0.5 text-xs font-bold sm:gap-1 sm:text-sm">
           {!profile && (
             <Link to="/verify" className="hidden items-center gap-1.5 px-3 py-2 text-ink hover:text-seal sm:flex">
               <ShieldCheck size={16} /> التحقق من وثيقة
@@ -110,20 +110,20 @@ function Nav({ profile, onLogout }: { profile: Profile | null; onLogout: () => v
               <span className="hidden px-3 py-2 text-ink sm:inline">أهلاً بك يا {profile.full_name || profile.email}</span>
               <Link
                 to="/app"
-                className="rounded-md bg-seal px-5 py-2.5 text-base font-extrabold text-white shadow-sm hover:opacity-90"
+                className="whitespace-nowrap rounded-md bg-seal px-3 py-2 text-sm font-extrabold text-white shadow-sm hover:opacity-90 sm:px-5 sm:py-2.5 sm:text-base"
               >
                 حسابي
               </Link>
-              <button type="button" onClick={onLogout} className="px-3 py-2 text-ink hover:text-seal">
+              <button type="button" onClick={onLogout} className="whitespace-nowrap px-2 py-2 text-ink hover:text-seal sm:px-3">
                 تسجيل الخروج
               </button>
             </>
           ) : (
             <>
-              <Link to="/login?return=/" className="px-3 py-2 text-ink hover:text-seal">
+              <Link to="/login?return=/" className="whitespace-nowrap px-2 py-2 text-ink hover:text-seal sm:px-3">
                 تسجيل الدخول
               </Link>
-              <Link to="/register" className="rounded-md bg-seal px-5 py-2 text-white hover:opacity-90">
+              <Link to="/register" className="whitespace-nowrap rounded-md bg-seal px-3 py-2 text-white hover:opacity-90 sm:px-5">
                 إنشاء حساب
               </Link>
             </>
