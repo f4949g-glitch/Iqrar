@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Copy, Download, Plus, Printer, Trash2 } from 'lucide-react';
+import { Copy, Download, Plus, Printer, RefreshCw, Trash2 } from 'lucide-react';
 import { StatusPill } from '@/shared/ui/StatusPill';
 import { Field } from '@/shared/ui/Field';
 import { Button } from '@/shared/ui/Button';
+import { GregorianDateInput } from '@/shared/ui/GregorianDateInput';
+import type { TermMode } from './wizard/PartiesStep';
 import {
   getContractDetail,
   updateContractMeta,
@@ -11,17 +13,27 @@ import {
   updateParty,
   deleteParty,
   sendContract,
+  resendToRejectedParty,
   type NewPartyInput,
 } from '../api/contractsApi';
 import { supabase } from '@/lib/supabase/client';
-import { renderContractHtml, renderPartiesHeaderHtml, escapeHtml, type JsonNode } from '../editor/renderContractHtml';
+import { renderContractHtml, renderPartiesHeaderHtml, renderTermLineHtml, escapeHtml, type JsonNode } from '../editor/renderContractHtml';
 import { getErrorMessage } from '@/shared/lib/errorMessage';
 import { formatDate, formatDateTime } from '@/shared/lib/formatDate';
-import { CONTRACT_STATUS_LABEL, PARTY_ROLE_OPTIONS, type Contract, type ContractEvent, type ContractParty } from '../types';
+import {
+  CONTRACT_STATUS_LABEL,
+  PARTY_ROLE_OPTIONS,
+  TERM_UNIT_LABELS,
+  type Contract,
+  type ContractEvent,
+  type ContractParty,
+  type TermUnit,
+} from '../types';
 
 const PRINT_STYLES = `
   body { font-family: 'Tajawal', 'Arial', sans-serif; color: #000; padding: 32px; line-height: 1.8; }
   h1.contract-title { font-size: 22px; margin-bottom: 16px; }
+  p.contract-term { font-size: 13px; font-weight: bold; margin-bottom: 16px; }
   table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 13px; }
   th, td { border: 1px solid #999; padding: 6px 10px; text-align: right; color: #000; }
   th { background: #f0f0f0; }
@@ -57,8 +69,13 @@ export function ContractDetailPage() {
   const [downloadUrl, setDownloadUrl] = useState('');
   const [editTitle, setEditTitle] = useState('');
   const [editDuration, setEditDuration] = useState('');
+  const [editTermMode, setEditTermMode] = useState<TermMode>('none');
+  const [editTermValue, setEditTermValue] = useState('');
+  const [editTermUnit, setEditTermUnit] = useState<TermUnit>('month');
+  const [editTermEndDate, setEditTermEndDate] = useState('');
   const [savingMeta, setSavingMeta] = useState(false);
   const [sending, setSending] = useState(false);
+  const [resendingPartyId, setResendingPartyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -71,6 +88,16 @@ export function ContractDetailPage() {
       setEvents(detail.events);
       setEditTitle(detail.contract.title);
       setEditDuration(detail.contract.duration_days ? String(detail.contract.duration_days) : '');
+      if (detail.contract.term_value && detail.contract.term_unit) {
+        setEditTermMode('duration');
+        setEditTermValue(String(detail.contract.term_value));
+        setEditTermUnit(detail.contract.term_unit);
+      } else if (detail.contract.term_end_date) {
+        setEditTermMode('date');
+        setEditTermEndDate(detail.contract.term_end_date);
+      } else {
+        setEditTermMode('none');
+      }
       if (detail.contract.final_file_path) {
         const { data } = await supabase.storage.from('contracts').createSignedUrl(detail.contract.final_file_path, 3600);
         if (data) setDownloadUrl(data.signedUrl);
@@ -90,7 +117,7 @@ export function ContractDetailPage() {
     if (!contract || contract.source_type !== 'editor') return '';
     if (contract.status === 'completed' && contract.final_html) return contract.final_html;
     if (!contract.body_json) return '';
-    return renderPartiesHeaderHtml(parties) + renderContractHtml(contract.body_json as JsonNode, parties);
+    return renderTermLineHtml(contract) + renderPartiesHeaderHtml(parties) + renderContractHtml(contract.body_json as JsonNode, parties);
   }, [contract, parties]);
 
   const printFinal = () => {
@@ -113,6 +140,9 @@ export function ContractDetailPage() {
       const updated = await updateContractMeta(contract.id, {
         title: editTitle.trim(),
         duration_days: editDuration ? Number(editDuration) : null,
+        term_value: editTermMode === 'duration' && editTermValue ? Number(editTermValue) : null,
+        term_unit: editTermMode === 'duration' && editTermValue ? editTermUnit : null,
+        term_end_date: editTermMode === 'date' && editTermEndDate ? editTermEndDate : null,
       });
       setContract(updated);
     } catch (err) {
@@ -164,12 +194,32 @@ export function ContractDetailPage() {
     }
   };
 
+  const resendToParty = async (partyId: string) => {
+    if (!contract) return;
+    setResendingPartyId(partyId);
+    setError('');
+    try {
+      await resendToRejectedParty(contract.id, partyId);
+      await load();
+    } catch (err) {
+      setError(getErrorMessage(err, 'تعذّر إعادة الإرسال'));
+    } finally {
+      setResendingPartyId(null);
+    }
+  };
+
   if (loading) return <p className="text-sm text-slate">جارِ التحميل...</p>;
   if (error && !contract) return <p className="text-sm font-bold text-clay">{error}</p>;
   if (!contract) return null;
 
   const isDraft = contract.status === 'draft';
   const info = CONTRACT_STATUS_LABEL[contract.status];
+  const termLabel =
+    contract.term_value && contract.term_unit
+      ? `${contract.term_value} ${TERM_UNIT_LABELS[contract.term_unit]}`
+      : contract.term_end_date
+        ? `حتى ${formatDate(contract.term_end_date)}`
+        : null;
   const signedCount = parties.filter((p) => p.status === 'signed').length;
   const progress = parties.length > 0 ? Math.round((signedCount / parties.length) * 100) : 0;
 
@@ -183,6 +233,7 @@ export function ContractDetailPage() {
             {contract.expires_at && ` · ينتهي في ${formatDate(contract.expires_at)}`}
             {contract.invoice_amount !== null && ` · الفاتورة: ${contract.invoice_amount.toFixed(2)} ريال`}
           </p>
+          {termLabel && <p className="mt-1 text-xs text-slate">مدة سريان العقد: {termLabel}</p>}
           {contract.verification_number && (
             <p className="mt-1 text-xs font-bold text-seal">
               رقم التوثيق: <span dir="ltr">{contract.verification_number}</span>
@@ -214,9 +265,67 @@ export function ContractDetailPage() {
           <h2 className="mb-3 font-display text-sm font-bold text-ink">تعديل العقد (مسودة)</h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="عنوان العقد" value={editTitle} onChange={setEditTitle} required />
-            <Field label="مدة التوثيق (أيام)" value={editDuration} onChange={setEditDuration} type="number" />
+            <Field label="صلاحية التوثيق (أيام)" value={editDuration} onChange={setEditDuration} type="number" min={1} max={14} placeholder="من 1 إلى 14" />
           </div>
-          <div className="mt-3">
+
+          <div className="mt-4">
+            {editTermMode === 'none' ? (
+              <button type="button" onClick={() => setEditTermMode('duration')} className="text-sm font-bold text-seal">
+                + تحديد مدة سريان العقد (اختياري)
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate">مدة سريان العقد</span>
+                  <button type="button" onClick={() => setEditTermMode('none')} className="text-xs font-bold text-clay">
+                    إزالة
+                  </button>
+                </div>
+                <div className="flex gap-1.5 rounded-lg bg-paper p-1">
+                  <button
+                    type="button"
+                    onClick={() => setEditTermMode('duration')}
+                    className={`flex-1 rounded-md py-1.5 text-xs font-bold transition ${editTermMode === 'duration' ? 'bg-card text-ink shadow-sm' : 'text-slate'}`}
+                  >
+                    مدة
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditTermMode('date')}
+                    className={`flex-1 rounded-md py-1.5 text-xs font-bold transition ${editTermMode === 'date' ? 'bg-card text-ink shadow-sm' : 'text-slate'}`}
+                  >
+                    تاريخ محدد
+                  </button>
+                </div>
+                {editTermMode === 'duration' ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="القيمة" value={editTermValue} onChange={setEditTermValue} type="number" min={1} placeholder="مثال: 12" />
+                    <label className="block text-sm">
+                      <span className="mb-1 block font-bold text-ink">الوحدة</span>
+                      <select
+                        value={editTermUnit}
+                        onChange={(e) => setEditTermUnit(e.target.value as TermUnit)}
+                        className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
+                      >
+                        {Object.entries(TERM_UNIT_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                ) : (
+                  <div>
+                    <span className="mb-1 block text-sm font-bold text-ink">تاريخ انتهاء العقد</span>
+                    <GregorianDateInput value={editTermEndDate} onChange={setEditTermEndDate} />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4">
             <Button variant="secondary" onClick={saveMeta} disabled={savingMeta}>
               {savingMeta ? 'جارِ الحفظ...' : 'حفظ التعديلات'}
             </Button>
@@ -284,15 +393,31 @@ export function ContractDetailPage() {
                     {p.signed_at && ` في ${formatDateTime(p.signed_at)}`}
                   </p>
                 </div>
-                {p.status !== 'signed' && (
-                  <button
-                    type="button"
-                    onClick={() => copyLink(p.token)}
-                    className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1 text-xs font-bold text-ink hover:bg-paper"
-                  >
-                    <Copy size={12} /> نسخ رابط التوقيع
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {p.status !== 'signed' && (
+                    <button
+                      type="button"
+                      onClick={() => copyLink(p.token)}
+                      className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1 text-xs font-bold text-ink hover:bg-paper"
+                    >
+                      <Copy size={12} /> نسخ رابط التوقيع
+                    </button>
+                  )}
+                  {p.status === 'rejected' &&
+                    (p.reject_resend_count < 3 ? (
+                      <button
+                        type="button"
+                        onClick={() => resendToParty(p.id)}
+                        disabled={resendingPartyId === p.id}
+                        className="flex items-center gap-1.5 rounded-lg bg-seal px-2.5 py-1 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
+                      >
+                        <RefreshCw size={12} />
+                        {resendingPartyId === p.id ? 'جارِ الإرسال...' : `إعادة الإرسال (متبقٍ ${3 - p.reject_resend_count})`}
+                      </button>
+                    ) : (
+                      <span className="text-xs font-bold text-clay">استُنفدت محاولات إعادة الإرسال (3/3)</span>
+                    ))}
+                </div>
               </div>
             ),
           )}

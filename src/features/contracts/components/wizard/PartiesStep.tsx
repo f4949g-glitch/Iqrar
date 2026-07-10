@@ -2,11 +2,22 @@ import { useEffect, useState } from 'react';
 import { Building2, Plus, ShieldCheck, Trash2, User } from 'lucide-react';
 import { Field } from '@/shared/ui/Field';
 import { Button } from '@/shared/ui/Button';
+import { GregorianDateInput } from '@/shared/ui/GregorianDateInput';
 import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '../../api/pricingApi';
 import { addParty as addPartyApi } from '../../api/contractsApi';
 import { initiateNafathVerification, checkNafathStatus } from '../../api/nafathApi';
-import { PARTY_ROLE_OPTIONS, DOCUMENT_TYPE_LABELS, type DocumentType, type PartyType, type VerificationMethod } from '../../types';
+import {
+  PARTY_ROLE_OPTIONS,
+  DOCUMENT_TYPE_LABELS,
+  TERM_UNIT_LABELS,
+  type DocumentType,
+  type PartyType,
+  type TermUnit,
+  type VerificationMethod,
+} from '../../types';
 import type { Contract } from '../../types';
+
+export type TermMode = 'none' | 'duration' | 'date';
 
 export interface DraftParty {
   partyId?: string;
@@ -60,6 +71,14 @@ interface PartiesStepProps {
   onCompanyNameChange: (v: string) => void;
   companyCrNumber: string;
   onCompanyCrNumberChange: (v: string) => void;
+  termMode: TermMode;
+  onTermModeChange: (v: TermMode) => void;
+  termValue: string;
+  onTermValueChange: (v: string) => void;
+  termUnit: TermUnit;
+  onTermUnitChange: (v: TermUnit) => void;
+  termEndDate: string;
+  onTermEndDateChange: (v: string) => void;
   parties: DraftParty[];
   onPartiesChange: (parties: DraftParty[]) => void;
   ensureContract: () => Promise<Contract>;
@@ -77,6 +96,14 @@ export function PartiesStep({
   onCompanyNameChange,
   companyCrNumber,
   onCompanyCrNumberChange,
+  termMode,
+  onTermModeChange,
+  termValue,
+  onTermValueChange,
+  termUnit,
+  onTermUnitChange,
+  termEndDate,
+  onTermEndDateChange,
   parties,
   onPartiesChange,
   ensureContract,
@@ -165,6 +192,11 @@ export function PartiesStep({
       setError('عنوان العقد مطلوب');
       return;
     }
+    const duration = Number(durationDays);
+    if (!durationDays.trim() || !Number.isInteger(duration) || duration < 1 || duration > 14) {
+      setError('حدد صلاحية التوثيق كعدد صحيح من الأيام بين 1 و14');
+      return;
+    }
     if (parties.length === 0) {
       setError('أضف طرفًا واحدًا على الأقل');
       return;
@@ -192,7 +224,17 @@ export function PartiesStep({
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="عنوان العقد" value={title} onChange={onTitleChange} required />
-        <Field label="مدة توثيق العقد (أيام)" value={durationDays} onChange={onDurationChange} type="number" placeholder="مثال: 30" />
+        <Field
+          label="صلاحية التوثيق (أيام)"
+          value={durationDays}
+          onChange={onDurationChange}
+          type="number"
+          min={1}
+          max={14}
+          placeholder="من 1 إلى 14"
+          required
+          hint="المدة التي تبقى فيها روابط التوقيع صالحة، بين يوم و14 يومًا"
+        />
         <label className="block text-sm">
           <span className="mb-1.5 block text-xs font-bold text-slate">نوع الوثيقة</span>
           <select
@@ -218,6 +260,63 @@ export function PartiesStep({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="اسم المنشأة (اختياري)" value={companyName} onChange={onCompanyNameChange} />
             <Field label="رقم السجل التجاري (اختياري)" value={companyCrNumber} onChange={onCompanyCrNumberChange} />
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-xl border border-line bg-card p-4">
+        {termMode === 'none' ? (
+          <button type="button" onClick={() => onTermModeChange('duration')} className="text-sm font-bold text-seal">
+            + تحديد مدة سريان العقد (اختياري)
+          </button>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate">مدة سريان العقد</span>
+              <button type="button" onClick={() => onTermModeChange('none')} className="text-xs font-bold text-clay">
+                إزالة
+              </button>
+            </div>
+            <div className="flex gap-1.5 rounded-lg bg-paper p-1">
+              <button
+                type="button"
+                onClick={() => onTermModeChange('duration')}
+                className={`flex-1 rounded-md py-1.5 text-xs font-bold transition ${termMode === 'duration' ? 'bg-card text-ink shadow-sm' : 'text-slate'}`}
+              >
+                مدة
+              </button>
+              <button
+                type="button"
+                onClick={() => onTermModeChange('date')}
+                className={`flex-1 rounded-md py-1.5 text-xs font-bold transition ${termMode === 'date' ? 'bg-card text-ink shadow-sm' : 'text-slate'}`}
+              >
+                تاريخ محدد
+              </button>
+            </div>
+            {termMode === 'duration' ? (
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="القيمة" value={termValue} onChange={onTermValueChange} type="number" min={1} placeholder="مثال: 12" />
+                <label className="block text-sm">
+                  <span className="mb-1 block font-bold text-ink">الوحدة</span>
+                  <select
+                    value={termUnit}
+                    onChange={(e) => onTermUnitChange(e.target.value as TermUnit)}
+                    className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
+                  >
+                    {Object.entries(TERM_UNIT_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            ) : (
+              <div>
+                <span className="mb-1 block text-sm font-bold text-ink">تاريخ انتهاء العقد</span>
+                <GregorianDateInput value={termEndDate} onChange={onTermEndDateChange} />
+              </div>
+            )}
           </div>
         )}
       </div>

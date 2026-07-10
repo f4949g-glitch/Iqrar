@@ -32,6 +32,15 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   power_of_attorney: 'تفويض',
 };
 
+export type TermUnit = 'day' | 'week' | 'month' | 'year';
+
+export const TERM_UNIT_LABELS: Record<TermUnit, string> = {
+  day: 'يوم',
+  week: 'أسبوع',
+  month: 'شهر',
+  year: 'سنة',
+};
+
 export interface Contract {
   id: string;
   title: string;
@@ -46,6 +55,9 @@ export interface Contract {
   page_count: number;
   duration_days: number | null;
   expires_at: string | null;
+  term_value: number | null;
+  term_unit: TermUnit | null;
+  term_end_date: string | null;
   discount_code_id: string | null;
   invoice_amount: number | null;
   company_name: string | null;
@@ -92,6 +104,7 @@ export interface ContractParty {
   entity_cr_number: string | null;
   nationality: string | null;
   address: string | null;
+  reject_resend_count: number;
 }
 
 export interface ContractField {

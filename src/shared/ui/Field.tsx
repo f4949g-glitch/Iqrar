@@ -8,9 +8,12 @@ interface FieldProps {
   required?: boolean;
   error?: string | null;
   placeholder?: string;
+  min?: number;
+  max?: number;
+  hint?: string;
 }
 
-export function Field({ label, value, onChange, type = 'text', required, error, placeholder }: FieldProps) {
+export function Field({ label, value, onChange, type = 'text', required, error, placeholder, min, max, hint }: FieldProps) {
   return (
     <label className="block text-sm">
       <span className="mb-1 block font-bold text-ink">{label}</span>
@@ -22,11 +25,14 @@ export function Field({ label, value, onChange, type = 'text', required, error, 
           value={value}
           required={required}
           placeholder={placeholder}
+          min={min}
+          max={max}
           onChange={(e) => onChange(e.target.value)}
           className="w-full rounded-lg border bg-white px-3 py-2 text-ink outline-none focus:border-seal"
           style={{ borderColor: error ? '#B5533C' : '#E5E1D6' }}
         />
       )}
+      {hint && !error && <span className="mt-1 block text-xs text-slate">{hint}</span>}
       {error && <span className="mt-1 block text-xs font-bold text-clay">{error}</span>}
     </label>
   );

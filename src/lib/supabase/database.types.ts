@@ -110,6 +110,7 @@ export type Database = {
           order_index: number;
           party_type: string;
           phone: string | null;
+          reject_resend_count: number;
           role_label: string;
           signed_at: string | null;
           status: string;
@@ -136,6 +137,7 @@ export type Database = {
           order_index?: number;
           party_type?: string;
           phone?: string | null;
+          reject_resend_count?: number;
           role_label: string;
           signed_at?: string | null;
           status?: string;
@@ -162,6 +164,7 @@ export type Database = {
           order_index?: number;
           party_type?: string;
           phone?: string | null;
+          reject_resend_count?: number;
           role_label?: string;
           signed_at?: string | null;
           status?: string;
@@ -193,6 +196,9 @@ export type Database = {
           sent_at: string | null;
           source_type: string;
           status: string;
+          term_end_date: string | null;
+          term_unit: string | null;
+          term_value: number | null;
           title: string;
           updated_at: string;
           verification_number: string | null;
@@ -218,6 +224,9 @@ export type Database = {
           sent_at?: string | null;
           source_type?: string;
           status?: string;
+          term_end_date?: string | null;
+          term_unit?: string | null;
+          term_value?: number | null;
           title: string;
           updated_at?: string;
           verification_number?: string | null;
@@ -243,6 +252,9 @@ export type Database = {
           sent_at?: string | null;
           source_type?: string;
           status?: string;
+          term_end_date?: string | null;
+          term_unit?: string | null;
+          term_value?: number | null;
           title?: string;
           updated_at?: string;
           verification_number?: string | null;
@@ -476,6 +488,10 @@ export type Database = {
           final_amount: number;
           message: string | null;
         }[];
+      };
+      resend_to_rejected_party: {
+        Args: { p_party_id: string };
+        Returns: Database['public']['Tables']['contract_parties']['Row'];
       };
       send_contract: {
         Args: { p_contract_id: string };

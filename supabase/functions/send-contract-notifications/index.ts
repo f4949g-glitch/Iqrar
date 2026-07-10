@@ -35,6 +35,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const contractId = String(body.contract_id ?? '');
+  const partyId = body.party_id ? String(body.party_id) : null;
   if (!contractId) return jsonResponse({ error: 'contract_id مطلوب' }, 400);
 
   const { data: contract, error: contractError } = await admin.from('contracts').select('id, title, created_by').eq('id', contractId).single();
@@ -47,7 +48,10 @@ Deno.serve(async (req: Request) => {
   const { data: creatorProfile } = await admin.from('profiles').select('full_name, email').eq('id', contract.created_by).maybeSingle();
   const creatorName = creatorProfile?.full_name || creatorProfile?.email || 'منشئ العقد';
 
-  const { data: parties, error: partiesError } = await admin.from('contract_parties').select('*').eq('contract_id', contractId);
+  // party_id: عند إعادة الإرسال لطرف رافض تحديدًا، لا نُشعِر بقية الأطراف من جديد.
+  let partiesQuery = admin.from('contract_parties').select('*').eq('contract_id', contractId);
+  if (partyId) partiesQuery = partiesQuery.eq('id', partyId);
+  const { data: parties, error: partiesError } = await partiesQuery;
   if (partiesError) return jsonResponse({ error: 'تعذّر تحميل أطراف العقد' }, 500);
 
   const origin = req.headers.get('origin') ?? Deno.env.get('APP_ORIGIN') ?? '';

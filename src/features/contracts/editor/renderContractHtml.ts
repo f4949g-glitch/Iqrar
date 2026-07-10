@@ -136,6 +136,26 @@ export function renderPartiesHeaderHtml(parties: PartyLike[]): string {
   return `<div class="parties-header"><h3>أطراف العقد</h3><table class="parties-table"><thead><tr><th>الاسم</th><th>رقم الهوية</th><th>الجوال</th><th>الصفة</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
+const TERM_UNIT_LABEL: Record<string, string> = { day: 'يوم', week: 'أسبوع', month: 'شهر', year: 'سنة' };
+
+export interface TermLike {
+  term_value: number | null;
+  term_unit: string | null;
+  term_end_date: string | null;
+}
+
+// سطر تعريفي بمدة سريان العقد (اختياري) يُدرَج بعد عنوان العقد مباشرة إن كان
+// منشئ العقد قد حدّدها — إما كمدة نسبية (قيمة + وحدة) أو تاريخ انتهاء محدد.
+export function renderTermLineHtml(contract: TermLike): string {
+  if (contract.term_value && contract.term_unit) {
+    return `<p class="contract-term">مدة سريان العقد: ${contract.term_value} ${TERM_UNIT_LABEL[contract.term_unit] ?? contract.term_unit}</p>`;
+  }
+  if (contract.term_end_date) {
+    return `<p class="contract-term">مدة سريان العقد: حتى ${escapeHtml(contract.term_end_date)}</p>`;
+  }
+  return '';
+}
+
 export interface SignatureFieldLike {
   party_id: string;
   field_type: string;

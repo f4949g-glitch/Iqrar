@@ -104,6 +104,9 @@ export async function updateContractMeta(
     company_name?: string | null;
     company_cr_number?: string | null;
     document_type?: 'contract' | 'power_of_attorney';
+    term_value?: number | null;
+    term_unit?: 'day' | 'week' | 'month' | 'year' | null;
+    term_end_date?: string | null;
   },
 ): Promise<Contract> {
   const { data, error } = await supabase
@@ -272,4 +275,18 @@ export async function sendContract(contractId: string): Promise<Contract> {
 export async function deleteDraftContract(contractId: string): Promise<void> {
   const { error } = await supabase.from('contracts').delete().eq('id', contractId);
   if (error) throw error;
+}
+
+export async function resendToRejectedParty(contractId: string, partyId: string): Promise<ContractParty> {
+  const { data, error } = await supabase.rpc('resend_to_rejected_party', { p_party_id: partyId });
+  if (error) throw error;
+
+  const { error: fnError } = await supabase.functions.invoke('send-contract-notifications', {
+    body: { contract_id: contractId, party_id: partyId },
+  });
+  if (fnError) {
+    console.error('send-contract-notifications failed', fnError);
+  }
+
+  return data as ContractParty;
 }

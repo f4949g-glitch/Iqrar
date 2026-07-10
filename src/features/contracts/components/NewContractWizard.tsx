@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import type { JSONContent } from '@tiptap/react';
-import { PartiesStep, emptyParty, type DraftParty } from './wizard/PartiesStep';
+import { PartiesStep, emptyParty, type DraftParty, type TermMode } from './wizard/PartiesStep';
 import { MethodStep } from './wizard/MethodStep';
 import { UploadStep } from './wizard/UploadStep';
 import { FieldsStep } from './wizard/FieldsStep';
 import { EditorStep } from './wizard/EditorStep';
 import { ReviewStep } from './wizard/ReviewStep';
 import { addParty, createDraftContract, getOriginalPdfUrl, updateContractMeta, updateParty, uploadOriginalPdf } from '../api/contractsApi';
-import type { Contract, ContractField, ContractParty, DocumentType } from '../types';
+import type { Contract, ContractField, ContractParty, DocumentType, TermUnit } from '../types';
 
 type Step = 'parties' | 'method' | 'upload' | 'fields' | 'editor' | 'review';
 
@@ -30,6 +30,10 @@ export function NewContractWizard() {
   const [documentType, setDocumentType] = useState<DocumentType>('contract');
   const [companyName, setCompanyName] = useState('');
   const [companyCrNumber, setCompanyCrNumber] = useState('');
+  const [termMode, setTermMode] = useState<TermMode>('none');
+  const [termValue, setTermValue] = useState('');
+  const [termUnit, setTermUnit] = useState<TermUnit>('month');
+  const [termEndDate, setTermEndDate] = useState('');
   const [draftParties, setDraftParties] = useState<DraftParty[]>([emptyParty()]);
   const [contract, setContract] = useState<Contract | null>(null);
   const [parties, setParties] = useState<ContractParty[]>([]);
@@ -65,6 +69,9 @@ export function NewContractWizard() {
         document_type: documentType,
         company_name: companyName.trim() || null,
         company_cr_number: companyCrNumber.trim() || null,
+        term_value: termMode === 'duration' && termValue ? Number(termValue) : null,
+        term_unit: termMode === 'duration' && termValue ? termUnit : null,
+        term_end_date: termMode === 'date' && termEndDate ? termEndDate : null,
       });
       const createdParties: ContractParty[] = [];
       for (let i = 0; i < draftParties.length; i++) {
@@ -154,6 +161,14 @@ export function NewContractWizard() {
           onCompanyNameChange={setCompanyName}
           companyCrNumber={companyCrNumber}
           onCompanyCrNumberChange={setCompanyCrNumber}
+          termMode={termMode}
+          onTermModeChange={setTermMode}
+          termValue={termValue}
+          onTermValueChange={setTermValue}
+          termUnit={termUnit}
+          onTermUnitChange={setTermUnit}
+          termEndDate={termEndDate}
+          onTermEndDateChange={setTermEndDate}
           parties={draftParties}
           onPartiesChange={setDraftParties}
           ensureContract={ensureContract}

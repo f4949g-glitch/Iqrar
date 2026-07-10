@@ -8,6 +8,7 @@ import {
   renderContractHtml,
   renderPartiesHeaderHtml,
   renderSignatureBlockHtml,
+  renderTermLineHtml,
   escapeHtml,
   type FillValue,
   type SignatureFieldLike,
@@ -241,6 +242,7 @@ async function finalizeEditorContract(admin: ReturnType<typeof createClient>, co
 
   const html =
     `<h1 class="contract-title">${escapeHtml(String(contract.title ?? ''))}</h1>` +
+    renderTermLineHtml(contract) +
     renderPartiesHeaderHtml(parties ?? []) +
     renderContractHtml(contract.body_json as JsonNode, parties ?? [], fillValues) +
     renderSignatureBlockHtml(unanchoredFields, parties ?? []) +
