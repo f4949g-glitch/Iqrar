@@ -3,7 +3,7 @@ import type { Profile } from '../types';
 
 // supabase-js لا يُدرج نص الخطأ التفصيلي القادم من جسم استجابة Edge Function ضمن
 // error.message تلقائيًا لأخطاء FunctionsHttpError؛ نستخرجه يدويًا لعرض الرسالة العربية الفعلية.
-async function invokeRegistration<T>(name: string, body: object): Promise<T> {
+async function invokeAuthFunction<T>(name: string, body: object): Promise<T> {
   const { data, error } = await supabase.functions.invoke<T & { error?: string }>(name, { body });
   if (error) {
     const context = (error as { context?: Response }).context;
@@ -28,7 +28,7 @@ export interface RequestOtpPayload {
 }
 
 export async function requestRegistrationOtp(payload: RequestOtpPayload) {
-  return invokeRegistration<{ ok: boolean; sms_configured: boolean; dev_code?: string }>('register-request-otp', payload);
+  return invokeAuthFunction<{ ok: boolean; sms_configured: boolean; dev_code?: string }>('register-request-otp', payload);
 }
 
 export interface VerifyOtpPayload {
@@ -43,7 +43,21 @@ export interface VerifyOtpPayload {
 }
 
 export async function verifyRegistrationOtp(payload: VerifyOtpPayload) {
-  return invokeRegistration<{ ok: boolean }>('register-verify-otp', payload);
+  return invokeAuthFunction<{ ok: boolean }>('register-verify-otp', payload);
+}
+
+export async function requestPasswordReset(nationalId: string) {
+  return invokeAuthFunction<{ ok: boolean; sms_configured: boolean; dev_code?: string }>('request-password-reset', {
+    national_id: nationalId,
+  });
+}
+
+export async function confirmPasswordReset(nationalId: string, code: string, newPassword: string) {
+  return invokeAuthFunction<{ ok: boolean }>('confirm-password-reset', {
+    national_id: nationalId,
+    code,
+    new_password: newPassword,
+  });
 }
 
 export async function signInWithNationalId(nationalId: string, password: string) {

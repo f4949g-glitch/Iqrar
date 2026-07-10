@@ -23,6 +23,9 @@ const ProfilePage = lazy(() => import('@/features/auth/components/ProfilePage').
 const SettingsPage = lazy(() => import('@/features/auth/components/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 const SigningPage = lazy(() => import('@/features/signing/components/SigningPage').then((m) => ({ default: m.SigningPage })));
 const VerifyPage = lazy(() => import('@/features/verification/components/VerifyPage').then((m) => ({ default: m.VerifyPage })));
+const ForgotPasswordForm = lazy(() =>
+  import('@/features/auth/components/ForgotPasswordForm').then((m) => ({ default: m.ForgotPasswordForm })),
+);
 
 function LoadingScreen() {
   return (
@@ -102,6 +105,7 @@ export function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordForm />} />
         <Route path="/sign/:token" element={<SigningPage />} />
         <Route path="/verify" element={<VerifyPage />} />
         <Route path="/terms" element={<TermsPage />} />

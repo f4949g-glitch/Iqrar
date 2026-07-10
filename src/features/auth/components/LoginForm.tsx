@@ -1,15 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileSignature } from 'lucide-react';
-import { signIn, signInWithNationalId } from '../api/authApi';
+import { signInWithNationalId } from '../api/authApi';
 
 interface LoginFormProps {
   onSignedIn: () => void;
 }
 
 export function LoginForm({ onSignedIn }: LoginFormProps) {
-  const [mode, setMode] = useState<'email' | 'national_id'>('email');
-  const [email, setEmail] = useState('');
   const [nationalId, setNationalId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -20,11 +18,7 @@ export function LoginForm({ onSignedIn }: LoginFormProps) {
     setError('');
     setSubmitting(true);
     try {
-      if (mode === 'email') {
-        await signIn(email, password);
-      } else {
-        await signInWithNationalId(nationalId, password);
-      }
+      await signInWithNationalId(nationalId, password);
       onSignedIn();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'حدث خطأ غير متوقع');
@@ -46,66 +40,34 @@ export function LoginForm({ onSignedIn }: LoginFormProps) {
           <span className="font-display text-xl font-extrabold text-ink">إقرار</span>
         </Link>
         <h2 className="mb-1 font-display text-xl font-bold text-ink">تسجيل الدخول</h2>
-        <p className="mb-6 text-sm text-slate">أدخل بيانات حسابك للمتابعة</p>
-
-        <div className="mb-6 flex rounded-full bg-paper p-1 text-sm font-bold">
-          <button
-            type="button"
-            onClick={() => setMode('email')}
-            className={`flex-1 rounded-full py-2 transition ${mode === 'email' ? 'bg-white text-seal shadow-sm' : 'text-slate'}`}
-          >
-            البريد الإلكتروني
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('national_id')}
-            className={`flex-1 rounded-full py-2 transition ${mode === 'national_id' ? 'bg-white text-seal shadow-sm' : 'text-slate'}`}
-          >
-            رقم الهوية
-          </button>
-        </div>
+        <p className="mb-6 text-sm text-slate">أدخل رقم هويتك وكلمة المرور للمتابعة</p>
 
         <form className="space-y-4" onSubmit={submit}>
-          {mode === 'email' ? (
-            <div>
-              <label htmlFor="email" className="mb-1.5 block text-xs font-bold text-slate">
-                البريد الإلكتروني
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoCapitalize="none"
-                autoCorrect="off"
-                autoComplete="username"
-                spellCheck={false}
-                placeholder="name@example.com"
-                className={inputClass}
-                style={{ direction: 'ltr' }}
-              />
-            </div>
-          ) : (
-            <div>
-              <label htmlFor="national-id" className="mb-1.5 block text-xs font-bold text-slate">
-                رقم الهوية
-              </label>
-              <input
-                id="national-id"
-                inputMode="numeric"
-                value={nationalId}
-                onChange={(e) => setNationalId(e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-                className={inputClass}
-                style={{ direction: 'ltr' }}
-              />
-            </div>
-          )}
           <div>
-            <label htmlFor="password" className="mb-1.5 block text-xs font-bold text-slate">
-              كلمة المرور
+            <label htmlFor="national-id" className="mb-1.5 block text-xs font-bold text-slate">
+              رقم الهوية
             </label>
+            <input
+              id="national-id"
+              inputMode="numeric"
+              maxLength={10}
+              value={nationalId}
+              onChange={(e) => setNationalId(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
+              autoComplete="off"
+              spellCheck={false}
+              className={inputClass}
+              style={{ direction: 'ltr' }}
+            />
+          </div>
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <label htmlFor="password" className="text-xs font-bold text-slate">
+                كلمة المرور
+              </label>
+              <Link to="/forgot-password" className="text-xs font-bold text-seal">
+                نسيت كلمة المرور؟
+              </Link>
+            </div>
             <input
               id="password"
               type="password"
