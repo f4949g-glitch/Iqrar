@@ -100,19 +100,21 @@ function Nav({ profile, onLogout }: { profile: Profile | null; onLogout: () => v
           </span>
         </div>
         <div className="flex items-center gap-1 text-sm font-bold">
-          <Link to="/verify" className="hidden items-center gap-1.5 px-3 py-2 text-ink hover:text-seal sm:flex">
-            <ShieldCheck size={16} /> التحقق من وثيقة
-          </Link>
+          {!profile && (
+            <Link to="/verify" className="hidden items-center gap-1.5 px-3 py-2 text-ink hover:text-seal sm:flex">
+              <ShieldCheck size={16} /> التحقق من وثيقة
+            </Link>
+          )}
           {profile ? (
             <>
               <span className="hidden px-3 py-2 text-ink sm:inline">أهلاً بك يا {profile.full_name || profile.email}</span>
-              <Link to="/" className="px-3 py-2 text-ink hover:text-seal">
-                الرئيسية
-              </Link>
-              <Link to="/app" className="px-3 py-2 text-ink hover:text-seal">
+              <Link
+                to="/app"
+                className="rounded-md bg-seal px-5 py-2.5 text-base font-extrabold text-white shadow-sm hover:opacity-90"
+              >
                 حسابي
               </Link>
-              <button type="button" onClick={onLogout} className="rounded-md bg-seal px-5 py-2 text-white hover:opacity-90">
+              <button type="button" onClick={onLogout} className="px-3 py-2 text-ink hover:text-seal">
                 تسجيل الخروج
               </button>
             </>
