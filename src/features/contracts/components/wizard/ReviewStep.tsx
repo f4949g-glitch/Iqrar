@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CreditCard } from 'lucide-react';
 import { Field } from '@/shared/ui/Field';
 import { Button } from '@/shared/ui/Button';
 import { getErrorMessage } from '@/shared/lib/errorMessage';
@@ -24,6 +25,12 @@ export function ReviewStep({ contract: initialContract, parties, fields, onBack 
   const [discountCode, setDiscountCode] = useState('');
   const [discountPreview, setDiscountPreview] = useState<DiscountPreview | null>(null);
   const [checkingCode, setCheckingCode] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  // بوابة الدفع الفعلية غير مربوطة بعد؛ بيانات البطاقة أصفار تمهيدية للاختبار
+  // فقط، وسيُستبدل هذا الحقل بمُكوّن بوابة الدفع الحقيقي عند توفر بيانات الحساب.
+  const [cardNumber] = useState('0000 0000 0000 0000');
+  const [cardExpiry] = useState('00/00');
+  const [cardCvv] = useState('000');
 
   useEffect(() => {
     fetchPricingSettings()
@@ -140,10 +147,64 @@ export function ReviewStep({ contract: initialContract, parties, fields, onBack 
         <Button variant="secondary" onClick={onBack} disabled={submitting}>
           السابق
         </Button>
-        <Button onClick={send} disabled={submitting}>
-          {submitting ? 'جارِ الإرسال...' : 'إرسال للتوثيق'}
+        <Button onClick={() => setShowPayment(true)} disabled={submitting}>
+          {submitting ? 'جارِ الإرسال...' : 'المتابعة للدفع وإرسال العقد'}
         </Button>
       </div>
+
+      {showPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4" dir="rtl" onClick={() => !submitting && setShowPayment(false)}>
+          <div className="w-full max-w-sm rounded-md border border-line bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-5 text-center">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-md bg-sealLight">
+                <CreditCard size={22} className="text-seal" />
+              </div>
+              <h3 className="font-display text-lg font-bold text-ink">بوابة الدفع</h3>
+              <p className="mt-1 text-xs text-slate">بوابة الدفع الفعلية قيد الربط — البيانات أدناه تجريبية لأغراض الاختبار فقط</p>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate">رقم البطاقة</label>
+                <input
+                  value={cardNumber}
+                  readOnly
+                  dir="ltr"
+                  className="w-full rounded-lg border border-line bg-paper px-3 py-2.5 text-center text-ink outline-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate">تاريخ الانتهاء</label>
+                  <input
+                    value={cardExpiry}
+                    readOnly
+                    dir="ltr"
+                    className="w-full rounded-lg border border-line bg-paper px-3 py-2.5 text-center text-ink outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-bold text-slate">رمز التحقق CVV</label>
+                  <input
+                    value={cardCvv}
+                    readOnly
+                    dir="ltr"
+                    className="w-full rounded-lg border border-line bg-paper px-3 py-2.5 text-center text-ink outline-none"
+                  />
+                </div>
+              </div>
+              {invoice !== null && (
+                <p className="rounded-lg bg-sealLight p-3 text-center text-sm font-bold text-seal">
+                  المبلغ المطلوب: {(discountPreview?.discount_code_id ? discountPreview.final_amount : invoice).toFixed(2)} ريال
+                </p>
+              )}
+              {error && <p className="text-sm font-bold text-clay">{error}</p>}
+              <Button onClick={send} disabled={submitting} className="w-full">
+                {submitting ? 'جارِ معالجة الدفع...' : 'الدفع وإرسال العقد للتوثيق'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
