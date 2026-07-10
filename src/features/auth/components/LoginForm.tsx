@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileSignature } from 'lucide-react';
 import { signInWithNationalId } from '../api/authApi';
+import { nationalIdError } from '@/shared/lib/validation';
 
 interface LoginFormProps {
   onSignedIn: () => void;
@@ -16,6 +17,11 @@ export function LoginForm({ onSignedIn }: LoginFormProps) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    const idError = nationalIdError(nationalId);
+    if (idError) {
+      setError(idError);
+      return;
+    }
     setSubmitting(true);
     try {
       await signInWithNationalId(nationalId, password);
@@ -50,8 +56,9 @@ export function LoginForm({ onSignedIn }: LoginFormProps) {
             <input
               id="national-id"
               inputMode="numeric"
+              maxLength={10}
               value={nationalId}
-              onChange={(e) => setNationalId(e.target.value.replace(/[^0-9]/g, ''))}
+              onChange={(e) => setNationalId(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
               autoComplete="off"
               spellCheck={false}
               className={inputClass}

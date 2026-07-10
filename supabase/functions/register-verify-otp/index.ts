@@ -39,7 +39,18 @@ Deno.serve(async (req: Request) => {
   if (!fullName || !nationalId || !email || !password || !code) {
     return jsonResponse({ error: 'جميع الحقول مطلوبة' }, 400);
   }
-  if (password.length < 8) return jsonResponse({ error: 'يجب ألا تقل كلمة المرور عن 8 أحرف' }, 400);
+  if (!/^\d{10}$/.test(nationalId)) return jsonResponse({ error: 'رقم الهوية يجب أن يتكون من 10 أرقام فقط' }, 400);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return jsonResponse({ error: 'أدخل بريدًا إلكترونيًا صحيحًا يحتوي على علامة @' }, 400);
+  if (
+    password.length < 8 ||
+    password.length > 15 ||
+    !/[a-z]/.test(password) ||
+    !/[A-Z]/.test(password) ||
+    !/[0-9]/.test(password) ||
+    !/[^A-Za-z0-9]/.test(password)
+  ) {
+    return jsonResponse({ error: 'كلمة المرور يجب أن تكون بين 8 و15 حرفًا وتحتوي على حرف كبير وصغير ورقم ورمز' }, 400);
+  }
 
   const { data: otp } = await admin.schema('private').from('registration_otps').select('*').eq('phone', phone).maybeSingle();
   if (!otp) return jsonResponse({ error: 'لم يتم طلب رمز تحقق لهذا الرقم' }, 400);

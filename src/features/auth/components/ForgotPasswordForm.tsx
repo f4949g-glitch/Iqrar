@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileSignature } from 'lucide-react';
 import { requestPasswordReset, confirmPasswordReset } from '../api/authApi';
+import { nationalIdError, passwordError } from '@/shared/lib/validation';
 
 export function ForgotPasswordForm() {
   const [step, setStep] = useState<'request' | 'confirm' | 'done'>('request');
@@ -18,6 +19,11 @@ export function ForgotPasswordForm() {
   const submitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    const idError = nationalIdError(nationalId);
+    if (idError) {
+      setError(idError);
+      return;
+    }
     setSubmitting(true);
     try {
       const result = await requestPasswordReset(nationalId);
@@ -33,8 +39,9 @@ export function ForgotPasswordForm() {
   const submitConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (newPassword.length < 8) {
-      setError('يجب ألا تقل كلمة المرور عن 8 أحرف');
+    const pwError = passwordError(newPassword);
+    if (pwError) {
+      setError(pwError);
       return;
     }
     setSubmitting(true);
@@ -70,8 +77,9 @@ export function ForgotPasswordForm() {
                 <input
                   id="national-id"
                   inputMode="numeric"
+                  maxLength={10}
                   value={nationalId}
-                  onChange={(e) => setNationalId(e.target.value.replace(/[^0-9]/g, ''))}
+                  onChange={(e) => setNationalId(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
                   autoComplete="off"
                   spellCheck={false}
                   className={inputClass}
@@ -129,7 +137,7 @@ export function ForgotPasswordForm() {
                   onChange={(e) => setNewPassword(e.target.value)}
                   autoComplete="new-password"
                   spellCheck={false}
-                  placeholder="8 أحرف على الأقل"
+                  placeholder="8-15 حرفًا: كبير وصغير ورقم ورمز"
                   className={inputClass}
                   style={{ direction: 'ltr' }}
                 />

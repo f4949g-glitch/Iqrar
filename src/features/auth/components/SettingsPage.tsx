@@ -3,6 +3,7 @@ import { Moon, Sun } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { getThemePreference, setThemePreference, type ThemePreference } from '@/shared/lib/theme';
 import { changePassword } from '../api/authApi';
+import { passwordError } from '@/shared/lib/validation';
 
 const THEME_OPTIONS: { value: ThemePreference; label: string; icon: typeof Sun }[] = [
   { value: 'light', label: 'فاتح', icon: Sun },
@@ -26,8 +27,9 @@ export function SettingsPage() {
     e.preventDefault();
     setError('');
     setSuccess('');
-    if (password.length < 8) {
-      setError('يجب ألا تقل كلمة المرور عن 8 أحرف');
+    const pwError = passwordError(password);
+    if (pwError) {
+      setError(pwError);
       return;
     }
     if (password !== confirm) {
@@ -76,7 +78,14 @@ export function SettingsPage() {
         <div className="space-y-3">
           <div>
             <label className="mb-1.5 block text-xs font-bold text-slate">كلمة المرور الجديدة</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} style={{ direction: 'ltr' }} />
+            <input
+              type="password"
+              placeholder="8-15 حرفًا: كبير وصغير ورقم ورمز"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={inputClass}
+              style={{ direction: 'ltr' }}
+            />
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-bold text-slate">تأكيد كلمة المرور</label>

@@ -4,6 +4,7 @@ import { FileSignature } from 'lucide-react';
 import { requestRegistrationOtp, verifyRegistrationOtp } from '../api/authApi';
 import { signIn } from '../api/authApi';
 import { GregorianDateInput } from '@/shared/ui/GregorianDateInput';
+import { emailError, nationalIdError, passwordError } from '@/shared/lib/validation';
 
 const NATIONALITIES = ['سعودي', 'مقيم'];
 
@@ -28,8 +29,19 @@ export function RegisterForm({ onRegistered }: RegisterFormProps) {
   const submitForm = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (password.length < 8) {
-      setError('يجب ألا تقل كلمة المرور عن 8 أحرف');
+    const idError = nationalIdError(nationalId);
+    if (idError) {
+      setError(idError);
+      return;
+    }
+    const mailError = emailError(email);
+    if (mailError) {
+      setError(mailError);
+      return;
+    }
+    const pwError = passwordError(password);
+    if (pwError) {
+      setError(pwError);
       return;
     }
     setSubmitting(true);
@@ -151,6 +163,7 @@ export function RegisterForm({ onRegistered }: RegisterFormProps) {
                 <input
                   required
                   type="password"
+                  placeholder="8-15 حرفًا: كبير وصغير ورقم ورمز"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className={inputClass}

@@ -27,7 +27,16 @@ Deno.serve(async (req: Request) => {
   const newPassword = String(body.new_password ?? '');
 
   if (!nationalId || !code || !newPassword) return jsonResponse({ error: 'جميع الحقول مطلوبة' }, 400);
-  if (newPassword.length < 8) return jsonResponse({ error: 'يجب ألا تقل كلمة المرور عن 8 أحرف' }, 400);
+  if (
+    newPassword.length < 8 ||
+    newPassword.length > 15 ||
+    !/[a-z]/.test(newPassword) ||
+    !/[A-Z]/.test(newPassword) ||
+    !/[0-9]/.test(newPassword) ||
+    !/[^A-Za-z0-9]/.test(newPassword)
+  ) {
+    return jsonResponse({ error: 'كلمة المرور يجب أن تكون بين 8 و15 حرفًا وتحتوي على حرف كبير وصغير ورقم ورمز' }, 400);
+  }
 
   const { data: otp } = await admin.schema('private').from('password_reset_otps').select('*').eq('national_id', nationalId).maybeSingle();
   if (!otp) return jsonResponse({ error: 'لم يتم طلب رمز تحقق لهذا الحساب' }, 400);

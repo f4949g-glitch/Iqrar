@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { changePassword } from '../api/authApi';
+import { passwordError } from '@/shared/lib/validation';
 
 interface ForcedPasswordChangeProps {
   onDone: () => void;
@@ -14,8 +15,9 @@ export function ForcedPasswordChange({ onDone }: ForcedPasswordChangeProps) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (password.length < 8) {
-      setError('يجب ألا تقل كلمة المرور عن 8 أحرف');
+    const pwError = passwordError(password);
+    if (pwError) {
+      setError(pwError);
       return;
     }
     if (password !== confirm) {
@@ -46,6 +48,7 @@ export function ForcedPasswordChange({ onDone }: ForcedPasswordChangeProps) {
             <input
               id="new-password"
               type="password"
+              placeholder="8-15 حرفًا: كبير وصغير ورقم ورمز"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="new-password"
