@@ -23,7 +23,7 @@ interface SidebarLink {
 }
 
 const MAIN_LINKS: SidebarLink[] = [
-  { to: '/app', label: 'الرئيسية', icon: Home },
+  { to: '/', label: 'الصفحة الرئيسية', icon: Home },
   { to: '/app/contracts/new', label: 'توثيق العقود', icon: FileSignature },
   { to: '/verify', label: 'التحقق من وثيقة موثقة', icon: ShieldCheck },
   { to: '/app/profile', label: 'الملف الشخصي', icon: User },

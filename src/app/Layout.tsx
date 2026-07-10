@@ -5,6 +5,7 @@ import { signOut, type Profile } from '@/features/auth';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { WhatsAppButton } from '@/shared/ui/WhatsAppButton';
 import { Sidebar } from './Sidebar';
+import { NotificationsBell } from './NotificationsBell';
 
 export function Layout({ profile, children }: { profile: Profile | null; children: ReactNode }) {
   const handleLogout = async () => {
@@ -26,7 +27,8 @@ export function Layout({ profile, children }: { profile: Profile | null; childre
             <ThemeToggle />
             {profile ? (
               <>
-                <span className="hidden text-sm text-slate sm:inline">{profile.email}</span>
+                <NotificationsBell profile={profile} />
+                <span className="hidden text-sm font-bold text-ink sm:inline">أهلاً بك يا {profile.full_name || profile.email}</span>
                 <button
                   type="button"
                   onClick={handleLogout}

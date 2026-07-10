@@ -1,5 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useSession } from '@/features/auth/hooks/useSession';
+import { signOut } from '@/features/auth/api/authApi';
+import type { Profile } from '@/features/auth/types';
 import {
   FileSignature,
   ShieldCheck,
@@ -73,7 +76,7 @@ const TRUST_POINTS = [
   { icon: ScanLine, label: 'رقم توثيق ورمز QR على كل مستند' },
 ];
 
-function Nav() {
+function Nav({ profile, onLogout }: { profile: Profile | null; onLogout: () => void }) {
   return (
     <header className="border-b border-line bg-card">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 md:px-8">
@@ -87,12 +90,26 @@ function Nav() {
           <Link to="/verify" className="hidden items-center gap-1.5 px-3 py-2 text-ink hover:text-seal sm:flex">
             <ShieldCheck size={16} /> التحقق من وثيقة
           </Link>
-          <Link to="/login" className="px-3 py-2 text-ink hover:text-seal">
-            تسجيل الدخول
-          </Link>
-          <Link to="/register" className="rounded-md bg-seal px-5 py-2 text-white hover:opacity-90">
-            إنشاء حساب
-          </Link>
+          {profile ? (
+            <>
+              <span className="hidden px-3 py-2 text-ink sm:inline">أهلاً بك يا {profile.full_name || profile.email}</span>
+              <Link to="/app" className="px-3 py-2 text-ink hover:text-seal">
+                لوحتي
+              </Link>
+              <button type="button" onClick={onLogout} className="rounded-md bg-seal px-5 py-2 text-white hover:opacity-90">
+                تسجيل الخروج
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login?return=/" className="px-3 py-2 text-ink hover:text-seal">
+                تسجيل الدخول
+              </Link>
+              <Link to="/register" className="rounded-md bg-seal px-5 py-2 text-white hover:opacity-90">
+                إنشاء حساب
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </header>
@@ -295,10 +312,16 @@ function QuickVerify() {
 
 export function LandingPage() {
   const [activeFlow, setActiveFlow] = useState<DocumentType | null>(null);
+  const { profile, refresh } = useSession();
+
+  const handleLogout = async () => {
+    await signOut();
+    await refresh();
+  };
 
   return (
     <div dir="rtl" className="min-h-screen bg-paper">
-      <Nav />
+      <Nav profile={profile} onLogout={handleLogout} />
 
       <section className="border-b-4 border-seal bg-navy">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 md:grid-cols-[1.15fr_0.85fr] md:items-center md:px-8 md:py-20">
@@ -379,7 +402,7 @@ export function LandingPage() {
               <button
                 type="button"
                 onClick={() => setActiveFlow('power_of_attorney')}
-                className="group flex items-center justify-center gap-2 rounded-md bg-seal px-6 py-3 text-sm font-bold text-white transition hover:opacity-90"
+                className="group flex items-center justify-center gap-2 rounded-md bg-sage px-6 py-3 text-sm font-bold text-white transition hover:opacity-90"
               >
                 إنشاء تفويض <ArrowLeft size={16} className="transition group-hover:-translate-x-1" />
               </button>
@@ -395,13 +418,10 @@ export function LandingPage() {
           <p className="text-base leading-relaxed text-slate">اختر طريقة التوثيق المناسبة لكل طرف في عقدك حسب مستوى التوثيق المطلوب.</p>
         </div>
         <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-line bg-line sm:grid-cols-2">
-          {VERIFICATION_TYPES.map(({ icon: Icon, title, desc }, i) => (
+          {VERIFICATION_TYPES.map(({ icon: Icon, title, desc }) => (
             <div key={title} className="bg-card p-6 transition hover:bg-paper">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-sealLight">
-                  <Icon size={20} className="text-seal" />
-                </div>
-                <span className="font-mono text-xs font-bold text-slate">{`0${i + 1}`}</span>
+              <div className="mb-4 flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-sealLight">
+                <Icon size={20} className="text-seal" />
               </div>
               <h3 className="mb-1.5 font-display text-base font-bold text-ink">{title}</h3>
               <p className="text-sm leading-relaxed text-slate">{desc}</p>

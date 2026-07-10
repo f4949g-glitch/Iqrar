@@ -422,6 +422,7 @@ export type Database = {
           must_change_password: boolean;
           national_id: string | null;
           nationality: string | null;
+          notifications_seen_at: string | null;
           phone: string | null;
           role: string;
         };
@@ -435,6 +436,7 @@ export type Database = {
           must_change_password?: boolean;
           national_id?: string | null;
           nationality?: string | null;
+          notifications_seen_at?: string | null;
           phone?: string | null;
           role?: string;
         };
@@ -448,6 +450,7 @@ export type Database = {
           must_change_password?: boolean;
           national_id?: string | null;
           nationality?: string | null;
+          notifications_seen_at?: string | null;
           phone?: string | null;
           role?: string;
         };

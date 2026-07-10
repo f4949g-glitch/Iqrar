@@ -8,4 +8,5 @@ export interface Profile {
   nationality: string | null;
   date_of_birth: string | null;
   phone: string | null;
+  notifications_seen_at: string | null;
 }

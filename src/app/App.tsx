@@ -1,5 +1,5 @@
 import { Suspense, lazy, useState } from 'react';
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
 import { useSession, LoginForm, RegisterForm, ForcedPasswordChange } from '@/features/auth';
 import { Layout } from './Layout';
 import { HomePage } from './HomePage';
@@ -37,8 +37,11 @@ function LoadingScreen() {
 
 function LoginPage() {
   const { loading, profile, refresh } = useSession();
+  const [searchParams] = useSearchParams();
   if (loading) return <LoadingScreen />;
-  if (profile) return <Navigate to="/app" replace />;
+  // ?return=/ يُستخدم عند فتح تسجيل الدخول من الشريط العلوي للصفحة الرئيسية
+  // كي يبقى المستخدم على المحتوى العام بعد الدخول بدل الانتقال للوحة التحكم.
+  if (profile) return <Navigate to={searchParams.get('return') || '/app'} replace />;
   return <LoginForm onSignedIn={refresh} />;
 }
 
