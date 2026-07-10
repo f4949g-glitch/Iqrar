@@ -1,5 +1,5 @@
-import { Suspense, lazy, useState } from 'react';
-import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
+import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom';
 import { useSession, LoginForm, RegisterForm, ForcedPasswordChange } from '@/features/auth';
 import { hasAdminPermission } from '@/features/auth/types';
 import { Layout } from './Layout';
@@ -8,7 +8,6 @@ import { AuthGate } from './AuthGate';
 import { AdminGate } from './AdminGate';
 import { TermsPage } from './TermsPage';
 import { ContactPage } from './ContactPage';
-import { SplashScreen, shouldShowSplash, markSplashShown } from './SplashScreen';
 
 // تحميل كسول للصفحات الثقيلة (محرر Tiptap، عارض PDF، توليد QR) كي لا يُحمَّل أي من
 // ذلك ضمن الحزمة الأولى للصفحة الرئيسية العامة — هذا هو سبب البطء بعد الشاشة الترحيبية.
@@ -118,23 +117,6 @@ function AppShell() {
 }
 
 export function App() {
-  const location = useLocation();
-  // لا نعرض الشاشة الترحيبية لروابط توقيع خارجية (يريد الطرف الوصول للمستند مباشرة).
-  const [showSplash, setShowSplash] = useState(
-    () => shouldShowSplash() && !location.pathname.startsWith('/sign/') && !location.pathname.startsWith('/verify'),
-  );
-
-  if (showSplash) {
-    return (
-      <SplashScreen
-        onDone={() => {
-          markSplashShown();
-          setShowSplash(false);
-        }}
-      />
-    );
-  }
-
   return (
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
