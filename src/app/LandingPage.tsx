@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { FileSignature, ShieldCheck, Users, Zap, Lock, ScanLine, PenTool, ListChecks, X, LogIn, UserPlus, ArrowLeft } from 'lucide-react';
+import { useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { FileSignature, ShieldCheck, Users, Zap, Lock, ScanLine, PenTool, ListChecks, X, LogIn, UserPlus, ArrowLeft, Search } from 'lucide-react';
 
 const FEATURES = [
   {
@@ -27,6 +27,11 @@ const FEATURES = [
     icon: ScanLine,
     title: 'مستند نهائي معتمد',
     desc: 'احصل على نسخة نهائية موقّعة برقم توثيق ورمز QR يُمكن مسحه للتأكد من صحة الوثيقة.',
+  },
+  {
+    icon: Search,
+    title: 'التحقق من الوثائق',
+    desc: 'تحقق من صحة أي عقد موثّق عبر رقم التوثيق أو رمز QR الموجود عليه في أي وقت.',
   },
 ];
 
@@ -99,6 +104,50 @@ function DocumentationChooser({ onClose }: { onClose: () => void }) {
   );
 }
 
+function QuickVerify() {
+  const [number, setNumber] = useState('');
+  const navigate = useNavigate();
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const trimmed = number.trim();
+    navigate(trimmed ? `/verify?number=${encodeURIComponent(trimmed)}` : '/verify');
+  };
+
+  return (
+    <section className="mx-auto max-w-6xl px-4 py-16 md:px-8">
+      <div className="rounded-3xl border border-line bg-card p-6 shadow-sm md:p-10">
+        <div className="mx-auto max-w-xl text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-sealLight">
+            <Search size={22} className="text-seal" />
+          </div>
+          <h2 className="mb-2 font-display text-xl font-extrabold text-ink md:text-2xl">التحقق من العقود الموثّقة</h2>
+          <p className="mb-6 text-sm leading-relaxed text-slate md:text-base">
+            أدخل رقم التوثيق الموجود على المستند للتأكد من صحته والاطلاع على أطرافه وحالة توقيعهم.
+          </p>
+          <form onSubmit={submit} className="flex flex-col gap-3 sm:flex-row">
+            <input
+              type="text"
+              inputMode="numeric"
+              dir="ltr"
+              value={number}
+              onChange={(e) => setNumber(e.target.value)}
+              placeholder="رقم التوثيق (10 أرقام)"
+              className="w-full flex-1 rounded-full border border-line bg-paper px-5 py-3 text-center text-sm font-bold text-ink placeholder:text-slate/70 focus:border-seal focus:outline-none"
+            />
+            <button
+              type="submit"
+              className="rounded-full bg-seal px-8 py-3 text-sm font-bold text-white shadow-sm hover:opacity-90"
+            >
+              تحقق الآن
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function LandingPage() {
   const [showChooser, setShowChooser] = useState(false);
 
@@ -107,41 +156,17 @@ export function LandingPage() {
       <Nav />
 
       <section className="bg-hero">
-        <div className="mx-auto max-w-6xl px-4 py-20 text-center md:px-8 md:py-28">
+        <div className="mx-auto max-w-6xl px-4 py-14 text-center md:px-8 md:py-16">
           <p className="mb-4 inline-block rounded-full bg-white px-4 py-1.5 text-xs font-bold text-seal shadow-sm">
             منصة توثيق العقود الإلكترونية
           </p>
-          <h1 className="mx-auto mb-5 max-w-3xl font-display text-3xl font-extrabold leading-tight text-ink sm:text-4xl md:text-5xl">
+          <h1 className="mx-auto mb-4 max-w-3xl font-display text-2xl font-extrabold leading-tight text-ink sm:text-3xl md:text-4xl">
             وثّق عقودك واعتماداتك إلكترونيًا بثقة وسهولة
           </h1>
-          <p className="mx-auto mb-10 max-w-2xl text-base leading-relaxed text-slate md:text-lg">
+          <p className="mx-auto max-w-2xl text-base leading-relaxed text-slate md:text-lg">
             أنشئ عقودًا متعددة الأطراف، أرسلها للتوقيع برابط فريد، وتحقق من هوية الأطراف عبر نفاذ — كل ذلك من مكان
             واحد، بدون أوراق وبدون تعقيد.
           </p>
-
-          <button
-            type="button"
-            onClick={() => setShowChooser(true)}
-            className="mx-auto mb-8 flex w-full max-w-xs flex-col items-center gap-3 rounded-2xl bg-white p-6 shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
-          >
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-seal">
-              <FileSignature size={28} className="text-white" />
-            </div>
-            <span className="font-display text-base font-bold text-ink">توثيق العقود</span>
-            <span className="text-xs text-slate">ابدأ توثيق عقدك الآن</span>
-          </button>
-
-          <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link to="/register" className="w-full rounded-full bg-seal px-8 py-3.5 text-sm font-bold text-white shadow-lg hover:opacity-90 sm:w-auto">
-              إنشاء حساب
-            </Link>
-            <Link to="/login" className="w-full rounded-full bg-white px-8 py-3.5 text-sm font-bold text-ink shadow-sm hover:bg-paper sm:w-auto">
-              تسجيل الدخول
-            </Link>
-            <Link to="/app" className="w-full rounded-full px-8 py-3.5 text-sm font-bold text-seal hover:underline sm:w-auto">
-              استمرار كضيف
-            </Link>
-          </div>
         </div>
       </section>
 
@@ -165,15 +190,37 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-16 md:px-8 md:py-24">
-        <div className="mx-auto mb-14 max-w-2xl text-center">
-          <h2 className="mb-3 font-display text-2xl font-extrabold text-ink md:text-3xl">من نحن</h2>
-          <p className="text-base leading-relaxed text-slate">
-            إقرار منصة سعودية لتوثيق العقود والإقرارات إلكترونيًا، تجمع بين سهولة الاستخدام وقوة التحقق من الهوية
-            الوطنية، لتمنح الأفراد والمنشآت وسيلة موثوقة لإتمام اتفاقياتهم دون الحاجة للقاء الأطراف فعليًا.
-          </p>
-        </div>
+      <section className="bg-card py-16 md:py-20">
+        <div className="mx-auto max-w-6xl px-4 text-center md:px-8">
+          <button
+            type="button"
+            onClick={() => setShowChooser(true)}
+            className="mx-auto flex w-full max-w-sm flex-col items-center gap-4 rounded-3xl bg-seal p-10 text-white shadow-xl transition hover:-translate-y-0.5 hover:shadow-2xl"
+          >
+            <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-white/15">
+              <FileSignature size={40} className="text-white" />
+            </div>
+            <span className="font-display text-xl font-extrabold">توثيق العقود</span>
+            <span className="text-sm text-white/80">ابدأ توثيق عقدك الآن</span>
+          </button>
 
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link to="/register" className="w-full rounded-full bg-seal px-8 py-3.5 text-sm font-bold text-white shadow-lg hover:opacity-90 sm:w-auto">
+              إنشاء حساب
+            </Link>
+            <Link to="/login" className="w-full rounded-full bg-paper px-8 py-3.5 text-sm font-bold text-ink shadow-sm hover:bg-white sm:w-auto">
+              تسجيل الدخول
+            </Link>
+            <Link to="/app" className="w-full rounded-full px-8 py-3.5 text-sm font-bold text-seal hover:underline sm:w-auto">
+              استمرار كضيف
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <QuickVerify />
+
+      <section className="mx-auto max-w-6xl px-4 py-16 md:px-8 md:py-24">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map(({ icon: Icon, title, desc }) => (
             <div key={title} className="rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:shadow-md">
@@ -188,6 +235,16 @@ export function LandingPage() {
       </section>
 
       <section className="border-t border-line bg-card">
+        <div className="mx-auto max-w-4xl px-4 py-16 text-center md:px-8">
+          <h2 className="mb-3 font-display text-2xl font-extrabold text-ink md:text-3xl">من نحن</h2>
+          <p className="text-base leading-relaxed text-slate">
+            إقرار منصة سعودية لتوثيق العقود والإقرارات إلكترونيًا، تجمع بين سهولة الاستخدام وقوة التحقق من الهوية
+            الوطنية، لتمنح الأفراد والمنشآت وسيلة موثوقة لإتمام اتفاقياتهم دون الحاجة للقاء الأطراف فعليًا.
+          </p>
+        </div>
+      </section>
+
+      <section className="border-t border-line">
         <div className="mx-auto max-w-6xl px-4 py-16 text-center md:px-8">
           <h2 className="mb-3 font-display text-2xl font-extrabold text-ink md:text-3xl">جاهز للبدء؟</h2>
           <p className="mx-auto mb-8 max-w-xl text-sm text-slate md:text-base">
