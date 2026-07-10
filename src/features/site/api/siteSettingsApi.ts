@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { translateErrorMessage } from '@/shared/lib/errorMessage';
 
 export interface SocialLink {
   label: string;
@@ -18,7 +19,7 @@ const COLUMNS = 'org_name, logo_data_url, contact_phone, contact_email, whatsapp
 
 export async function fetchSiteSettings(): Promise<SiteSettings> {
   const { data, error } = await supabase.from('site_settings').select(COLUMNS).eq('id', 1).single();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as unknown as SiteSettings;
 }
 
@@ -29,6 +30,6 @@ export async function updateSiteSettings(patch: Partial<SiteSettings>): Promise<
     .eq('id', 1)
     .select(COLUMNS)
     .single();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as unknown as SiteSettings;
 }

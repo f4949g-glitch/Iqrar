@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { translateErrorMessage } from '@/shared/lib/errorMessage';
 
 export type ContactCategory = 'suggestion' | 'complaint' | 'technical_issue';
 export type ContactStatus = 'new' | 'read';
@@ -26,16 +27,16 @@ export interface NewContactMessageInput {
 export async function submitContactMessage(input: NewContactMessageInput): Promise<void> {
   const { data: userData } = await supabase.auth.getUser();
   const { error } = await supabase.from('contact_messages').insert({ ...input, created_by: userData.user?.id ?? null });
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 }
 
 export async function listContactMessages(): Promise<ContactMessage[]> {
   const { data, error } = await supabase.from('contact_messages').select('*').order('created_at', { ascending: false });
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as ContactMessage[];
 }
 
 export async function markContactMessageRead(id: string): Promise<void> {
   const { error } = await supabase.from('contact_messages').update({ status: 'read' }).eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 }

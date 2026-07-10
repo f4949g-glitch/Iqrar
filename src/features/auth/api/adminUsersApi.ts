@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { extractFunctionError, translateErrorMessage } from '@/shared/lib/errorMessage';
 import type { AdminPermission, Profile } from '../types';
 
 export interface CreateSubAdminInput {
@@ -21,30 +22,18 @@ export async function createSubAdmin(input: CreateSubAdminInput): Promise<Create
   const { data, error } = await supabase.functions.invoke<CreateSubAdminResult & { error?: string }>('admin-create-user', {
     body: input,
   });
-  if (error) {
-    const context = (error as { context?: Response }).context;
-    let specificMessage: string | undefined;
-    if (context) {
-      try {
-        const parsed = await context.clone().json();
-        if (parsed?.error) specificMessage = parsed.error;
-      } catch {
-        // تجاهل فشل التحليل والانتقال إلى الرسالة العامة أدناه
-      }
-    }
-    throw new Error(specificMessage ?? error.message);
-  }
+  if (error) throw await extractFunctionError(error);
   if (data && 'error' in data && data.error) throw new Error(data.error);
   return data as CreateSubAdminResult;
 }
 
 export async function listAdminUsers(): Promise<Profile[]> {
   const { data, error } = await supabase.from('profiles').select('*').in('role', ['admin', 'sub_admin']).order('created_at', { ascending: false });
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as Profile[];
 }
 
 export async function updateSubAdminPermissions(id: string, permissions: AdminPermission[]): Promise<void> {
   const { error } = await supabase.from('profiles').update({ admin_permissions: permissions }).eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 }

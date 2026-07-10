@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { translateErrorMessage } from '@/shared/lib/errorMessage';
 
 export interface PricingSettings {
   base_amount: number;
@@ -13,7 +14,7 @@ export async function fetchPricingSettings(): Promise<PricingSettings> {
     .select('base_amount, extra_party_fee, minimum_invoice, tax_percent')
     .eq('id', 1)
     .single();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as PricingSettings;
 }
 
@@ -24,7 +25,7 @@ export async function updatePricingSettings(patch: Partial<PricingSettings>): Pr
     .eq('id', 1)
     .select('base_amount, extra_party_fee, minimum_invoice, tax_percent')
     .single();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as PricingSettings;
 }
 
@@ -50,13 +51,13 @@ export async function requestPricingChange(values: PricingSettings): Promise<Pri
     .insert({ ...values, requested_by: userData.user.id })
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as PricingChangeRequest;
 }
 
 export async function listPricingChangeRequests(): Promise<PricingChangeRequest[]> {
   const { data, error } = await supabase.from('pricing_change_requests').select('*').order('created_at', { ascending: false });
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as PricingChangeRequest[];
 }
 
@@ -66,7 +67,7 @@ export async function reviewPricingChangeRequest(id: string, approve: boolean): 
 
   if (approve) {
     const { data: request, error: fetchError } = await supabase.from('pricing_change_requests').select('*').eq('id', id).single();
-    if (fetchError) throw fetchError;
+    if (fetchError) throw new Error(translateErrorMessage(fetchError.message));
     await updatePricingSettings({
       base_amount: request.base_amount,
       extra_party_fee: request.extra_party_fee,
@@ -79,7 +80,7 @@ export async function reviewPricingChangeRequest(id: string, approve: boolean): 
     .from('pricing_change_requests')
     .update({ status: approve ? 'approved' : 'rejected', reviewed_by: userData.user.id, reviewed_at: new Date().toISOString() })
     .eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 }
 
 // يطابق حساب الخادم في send_contract/preview_discount_code: قيمة أساسية تغطي أول

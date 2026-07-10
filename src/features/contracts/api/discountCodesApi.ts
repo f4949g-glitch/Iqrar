@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { translateErrorMessage } from '@/shared/lib/errorMessage';
 
 export type DiscountApprovalStatus = 'approved' | 'pending' | 'rejected';
 
@@ -28,7 +29,7 @@ export interface DiscountPreview {
 
 export async function listDiscountCodes(): Promise<DiscountCode[]> {
   const { data, error } = await supabase.from('discount_codes').select('*').order('created_at', { ascending: false });
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as DiscountCode[];
 }
 
@@ -59,18 +60,18 @@ export async function createDiscountCode(input: NewDiscountCodeInput, needsAppro
     })
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as DiscountCode;
 }
 
 export async function toggleDiscountCode(id: string, isActive: boolean): Promise<void> {
   const { error } = await supabase.from('discount_codes').update({ is_active: isActive }).eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 }
 
 export async function deleteDiscountCode(id: string): Promise<void> {
   const { error } = await supabase.from('discount_codes').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 }
 
 // موافقة/رفض الأدمن الرئيسي على كود خصم أنشأه أدمن فرعي بلا صلاحية مباشرة.
@@ -86,12 +87,12 @@ export async function reviewDiscountCode(id: string, approve: boolean): Promise<
       reviewed_at: new Date().toISOString(),
     })
     .eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 }
 
 export async function previewDiscountCode(code: string, partyCount: number): Promise<DiscountPreview> {
   const { data, error } = await supabase.rpc('preview_discount_code', { p_code: code, p_party_count: partyCount });
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   const row = (data as DiscountPreview[])[0];
   return row;
 }
@@ -99,9 +100,9 @@ export async function previewDiscountCode(code: string, partyCount: number): Pro
 export async function setContractDiscountCode(contractId: string, code: string | null): Promise<void> {
   if (!code) {
     const { error } = await supabase.from('contracts').update({ discount_code_id: null }).eq('id', contractId);
-    if (error) throw error;
+    if (error) throw new Error(translateErrorMessage(error.message));
     return;
   }
   const { error } = await supabase.rpc('set_contract_discount_code', { p_contract_id: contractId, p_code: code });
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 }

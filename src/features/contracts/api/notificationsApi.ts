@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { translateErrorMessage } from '@/shared/lib/errorMessage';
 
 export interface ContractNotification {
   id: string;
@@ -15,7 +16,7 @@ export async function fetchCompletedContractNotifications(): Promise<ContractNot
     .eq('status', 'completed')
     .order('completed_at', { ascending: false })
     .limit(20);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return (data ?? []) as ContractNotification[];
 }
 
@@ -23,5 +24,5 @@ export async function markNotificationsSeen(): Promise<void> {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return;
   const { error } = await supabase.from('profiles').update({ notifications_seen_at: new Date().toISOString() }).eq('id', userData.user.id);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 }

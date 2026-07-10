@@ -34,10 +34,11 @@ Deno.serve(async (req: Request) => {
   const code = String(Math.floor(100000 + Math.random() * 900000));
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-  const { error: upsertError } = await admin
-    .schema('private')
-    .from('password_reset_otps')
-    .upsert({ national_id: nationalId, code, attempts: 0, expires_at: expiresAt }, { onConflict: 'national_id' });
+  const { error: upsertError } = await admin.rpc('rpc_upsert_password_reset_otp', {
+    p_national_id: nationalId,
+    p_code: code,
+    p_expires_at: expiresAt,
+  });
   if (upsertError) return jsonResponse({ error: 'تعذّر إنشاء رمز التحقق' }, 500);
 
   const smsConfigured = isSmsConfigured();

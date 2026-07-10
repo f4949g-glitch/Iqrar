@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { translateErrorMessage } from '@/shared/lib/errorMessage';
 
 export interface UserReportRow {
   id: string;
@@ -23,9 +24,9 @@ export async function fetchUsersReport(): Promise<UserReportRow[]> {
       supabase.from('contracts').select('created_by, status'),
       supabase.from('contract_parties').select('user_id, status'),
     ]);
-  if (profilesError) throw profilesError;
-  if (contractsError) throw contractsError;
-  if (partiesError) throw partiesError;
+  if (profilesError) throw new Error(translateErrorMessage(profilesError.message));
+  if (contractsError) throw new Error(translateErrorMessage(contractsError.message));
+  if (partiesError) throw new Error(translateErrorMessage(partiesError.message));
 
   return (profiles ?? []).map((p) => ({
     ...p,
@@ -67,9 +68,9 @@ export async function fetchPendingContractsReport(): Promise<PendingContractRow[
       supabase.from('contract_parties').select('contract_id, full_name, national_id, phone, role_label, status'),
       supabase.from('profiles').select('id, full_name'),
     ]);
-  if (contractsError) throw contractsError;
-  if (partiesError) throw partiesError;
-  if (profilesError) throw profilesError;
+  if (contractsError) throw new Error(translateErrorMessage(contractsError.message));
+  if (partiesError) throw new Error(translateErrorMessage(partiesError.message));
+  if (profilesError) throw new Error(translateErrorMessage(profilesError.message));
 
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
 
@@ -111,7 +112,7 @@ export async function fetchPaymentsReport(from: string, to: string): Promise<Pay
     .gte('sent_at', new Date(from).toISOString())
     .lt('sent_at', toExclusive)
     .order('sent_at', { ascending: true });
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 
   const byDay = new Map<string, DailyPayment>();
   let total = 0;
@@ -149,8 +150,8 @@ export async function fetchDiscountCodesReport(): Promise<DiscountCodeReportRow[
     supabase.from('discount_codes').select('id, code, discount_percent, is_active, approval_status, ends_at, max_uses').order('created_at', { ascending: false }),
     supabase.from('discount_code_uses').select('discount_code_id'),
   ]);
-  if (codesError) throw codesError;
-  if (usesError) throw usesError;
+  if (codesError) throw new Error(translateErrorMessage(codesError.message));
+  if (usesError) throw new Error(translateErrorMessage(usesError.message));
 
   const now = Date.now();
   return (codes ?? []).map((c) => ({
@@ -182,9 +183,9 @@ export async function fetchCreditCodesReport(): Promise<CreditCodesReportResult>
       supabase.from('credit_code_redemptions').select('id, credit_code_id, redeemed_by, amount, created_at').order('created_at', { ascending: false }),
       supabase.from('profiles').select('id, full_name, phone'),
     ]);
-  if (codesError) throw codesError;
-  if (redemptionsError) throw redemptionsError;
-  if (profilesError) throw profilesError;
+  if (codesError) throw new Error(translateErrorMessage(codesError.message));
+  if (redemptionsError) throw new Error(translateErrorMessage(redemptionsError.message));
+  if (profilesError) throw new Error(translateErrorMessage(profilesError.message));
 
   const codeById = new Map((codes ?? []).map((c) => [c.id, c.code]));
   const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
@@ -219,10 +220,10 @@ export async function fetchOverviewStats(): Promise<OverviewStats> {
       supabase.from('discount_codes').select('is_active'),
       supabase.from('credit_codes').select('is_active'),
     ]);
-  if (profilesError) throw profilesError;
-  if (contractsError) throw contractsError;
-  if (discountError) throw discountError;
-  if (creditError) throw creditError;
+  if (profilesError) throw new Error(translateErrorMessage(profilesError.message));
+  if (contractsError) throw new Error(translateErrorMessage(contractsError.message));
+  if (discountError) throw new Error(translateErrorMessage(discountError.message));
+  if (creditError) throw new Error(translateErrorMessage(creditError.message));
 
   const contractsByStatus: Record<string, number> = {};
   let totalRevenue = 0;

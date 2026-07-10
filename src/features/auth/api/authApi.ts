@@ -1,23 +1,10 @@
 import { supabase } from '@/lib/supabase/client';
+import { extractFunctionError, translateErrorMessage } from '@/shared/lib/errorMessage';
 import type { Profile } from '../types';
 
-// supabase-js لا يُدرج نص الخطأ التفصيلي القادم من جسم استجابة Edge Function ضمن
-// error.message تلقائيًا لأخطاء FunctionsHttpError؛ نستخرجه يدويًا لعرض الرسالة العربية الفعلية.
 async function invokeAuthFunction<T>(name: string, body: object): Promise<T> {
   const { data, error } = await supabase.functions.invoke<T & { error?: string }>(name, { body });
-  if (error) {
-    const context = (error as { context?: Response }).context;
-    let specificMessage: string | undefined;
-    if (context) {
-      try {
-        const parsed = await context.clone().json();
-        if (parsed?.error) specificMessage = parsed.error;
-      } catch {
-        // تجاهل فشل التحليل والانتقال إلى الرسالة العامة أدناه
-      }
-    }
-    throw new Error(specificMessage ?? error.message);
-  }
+  if (error) throw await extractFunctionError(error);
   if (data && (data as { error?: string }).error) throw new Error((data as { error: string }).error);
   return data as T;
 }
@@ -76,24 +63,24 @@ export async function fetchCurrentProfile(): Promise<Profile | null> {
   if (!userData.user) return null;
 
   const { data, error } = await supabase.from('profiles').select('*').eq('id', userData.user.id).maybeSingle();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as Profile | null;
 }
 
 export async function signIn(email: string, password: string) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data;
 }
 
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 }
 
 export async function changePassword(newPassword: string) {
   const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
-  if (updateError) throw updateError;
+  if (updateError) throw new Error(translateErrorMessage(updateError.message));
 
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return;
@@ -102,7 +89,7 @@ export async function changePassword(newPassword: string) {
     .from('profiles')
     .update({ must_change_password: false })
     .eq('id', userData.user.id);
-  if (profileError) throw profileError;
+  if (profileError) throw new Error(translateErrorMessage(profileError.message));
 }
 
 // يحفظ توقيع المستخدم (مرسومًا أو مرفوعًا) في ملفه الشخصي. هذا التوقيع المحفوظ
@@ -113,5 +100,5 @@ export async function saveSignature(dataUrl: string | null): Promise<void> {
   if (!userData.user) throw new Error('يجب تسجيل الدخول');
 
   const { error } = await supabase.from('profiles').update({ signature_data_url: dataUrl }).eq('id', userData.user.id);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 }

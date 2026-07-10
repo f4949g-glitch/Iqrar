@@ -38,7 +38,8 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: 'كلمة المرور يجب أن تكون بين 8 و15 حرفًا وتحتوي على حرف كبير وصغير ورقم ورمز' }, 400);
   }
 
-  const { data: otp } = await admin.schema('private').from('password_reset_otps').select('*').eq('national_id', nationalId).maybeSingle();
+  const { data: otpRows } = await admin.rpc('rpc_get_password_reset_otp', { p_national_id: nationalId });
+  const otp = otpRows?.[0];
   if (!otp) return jsonResponse({ error: 'لم يتم طلب رمز تحقق لهذا الحساب' }, 400);
   if (new Date(otp.expires_at as string).getTime() < Date.now()) {
     return jsonResponse({ error: 'انتهت صلاحية رمز التحقق، يرجى طلب رمز جديد' }, 400);
@@ -46,7 +47,7 @@ Deno.serve(async (req: Request) => {
   if (otp.attempts >= 5) return jsonResponse({ error: 'تجاوزت عدد المحاولات المسموح، اطلب رمزًا جديدًا' }, 429);
 
   if (otp.code !== code) {
-    await admin.schema('private').from('password_reset_otps').update({ attempts: (otp.attempts as number) + 1 }).eq('national_id', nationalId);
+    await admin.rpc('rpc_increment_password_reset_otp_attempts', { p_national_id: nationalId });
     return jsonResponse({ error: 'رمز التحقق غير صحيح' }, 400);
   }
 
@@ -56,7 +57,7 @@ Deno.serve(async (req: Request) => {
   const { error: updateError } = await admin.auth.admin.updateUserById(profile.id, { password: newPassword });
   if (updateError) return jsonResponse({ error: 'تعذّر تحديث كلمة المرور: ' + updateError.message }, 500);
 
-  await admin.schema('private').from('password_reset_otps').delete().eq('national_id', nationalId);
+  await admin.rpc('rpc_delete_password_reset_otp', { p_national_id: nationalId });
 
   return jsonResponse({ ok: true });
 });

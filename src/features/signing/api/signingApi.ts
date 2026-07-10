@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { extractFunctionError } from '@/shared/lib/errorMessage';
 import type { ContractField } from '@/features/contracts';
 
 export interface SigningPartyData {
@@ -22,7 +23,7 @@ export async function fetchSigningSession(token: string): Promise<SigningSession
   const { data, error } = await supabase.functions.invoke<SigningSession | { error: string }>('get-signing-session', {
     body: { token },
   });
-  if (error) throw new Error(error.message);
+  if (error) throw await extractFunctionError(error);
   if (data && 'error' in data) throw new Error(data.error);
   return data as SigningSession;
 }
@@ -32,7 +33,7 @@ export async function submitSignature(token: string, values: Record<string, unkn
     'submit-signature',
     { body: { token, values, action: 'sign' } },
   );
-  if (error) throw new Error(error.message);
+  if (error) throw await extractFunctionError(error);
   if (data && 'error' in data) throw new Error(data.error);
   return data as { completed: boolean };
 }
@@ -41,7 +42,7 @@ export async function rejectSignature(token: string, reason: string): Promise<vo
   const { data, error } = await supabase.functions.invoke<{ success: boolean } | { error: string }>('submit-signature', {
     body: { token, action: 'reject', reason },
   });
-  if (error) throw new Error(error.message);
+  if (error) throw await extractFunctionError(error);
   if (data && 'error' in data) throw new Error(data.error);
 }
 
@@ -52,7 +53,7 @@ export async function requestSigningOtp(token: string): Promise<{ ok: boolean; s
   const { data, error } = await supabase.functions.invoke<
     { ok: boolean; sms_configured: boolean; dev_code?: string; phone_hint: string } | { error: string }
   >('request-signing-otp', { body: { token } });
-  if (error) throw new Error(error.message);
+  if (error) throw await extractFunctionError(error);
   if (data && 'error' in data) throw new Error(data.error);
   return data as { ok: boolean; sms_configured: boolean; dev_code?: string; phone_hint: string };
 }
@@ -62,7 +63,7 @@ export async function verifySigningOtp(token: string, code: string): Promise<{ s
     'verify-signing-otp',
     { body: { token, code } },
   );
-  if (error) throw new Error(error.message);
+  if (error) throw await extractFunctionError(error);
   if (data && 'error' in data) throw new Error(data.error);
   return data as { signature_data_url: string };
 }

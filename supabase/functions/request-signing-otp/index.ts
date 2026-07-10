@@ -50,10 +50,7 @@ Deno.serve(async (req: Request) => {
   const code = String(Math.floor(100000 + Math.random() * 900000));
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-  const { error: upsertError } = await admin
-    .schema('private')
-    .from('signing_otps')
-    .upsert({ party_id: party.id, code, attempts: 0, verified: false, expires_at: expiresAt }, { onConflict: 'party_id' });
+  const { error: upsertError } = await admin.rpc('rpc_upsert_signing_otp', { p_party_id: party.id, p_code: code, p_expires_at: expiresAt });
   if (upsertError) return jsonResponse({ error: 'تعذّر إنشاء رمز التحقق' }, 500);
 
   const smsConfigured = isSmsConfigured();

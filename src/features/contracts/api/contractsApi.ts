@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { translateErrorMessage } from '@/shared/lib/errorMessage';
 import type { Contract, ContractEvent, ContractField, ContractParty, FieldType } from '../types';
 
 export interface ContractListItem extends Contract {
@@ -10,7 +11,7 @@ async function withPartyCounts(contracts: Contract[]): Promise<ContractListItem[
   if (contracts.length === 0) return [];
   const ids = contracts.map((c) => c.id);
   const { data, error } = await supabase.from('contract_parties').select('contract_id, status').in('contract_id', ids);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 
   return contracts.map((c) => {
     const parties = (data ?? []).filter((p) => p.contract_id === c.id);
@@ -28,7 +29,7 @@ export async function listActiveContracts(): Promise<ContractListItem[]> {
     .select('*')
     .in('status', ['draft', 'pending', 'partially_completed'])
     .order('created_at', { ascending: false });
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return withPartyCounts((data ?? []) as Contract[]);
 }
 
@@ -38,13 +39,13 @@ export async function listPreviousContracts(): Promise<ContractListItem[]> {
     .select('*')
     .in('status', ['completed', 'expired', 'rejected', 'cancelled'])
     .order('created_at', { ascending: false });
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return withPartyCounts((data ?? []) as Contract[]);
 }
 
 export async function listRejectedContracts(): Promise<ContractListItem[]> {
   const { data, error } = await supabase.from('contracts').select('*').eq('status', 'rejected').order('updated_at', { ascending: false });
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return withPartyCounts((data ?? []) as Contract[]);
 }
 
@@ -63,7 +64,7 @@ export async function listContractsAwaitingMySignature(): Promise<ContractListIt
   if (contractIds.length === 0) return [];
 
   const { data, error } = await supabase.from('contracts').select('*').in('id', contractIds);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return withPartyCounts((data ?? []) as Contract[]);
 }
 
@@ -80,7 +81,7 @@ export async function createDraftContract(
     .insert({ title, duration_days: durationDays, created_by: userData.user.id, source_type: sourceType })
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as Contract;
 }
 
@@ -91,7 +92,7 @@ export async function saveContractBody(contractId: string, bodyJson: unknown): P
     .eq('id', contractId)
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as Contract;
 }
 
@@ -115,7 +116,7 @@ export async function updateContractMeta(
     .eq('id', contractId)
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as Contract;
 }
 
@@ -133,13 +134,13 @@ export async function uploadOriginalPdf(contractId: string, file: File, pageCoun
     .eq('id', contractId)
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as Contract;
 }
 
 export async function getOriginalPdfUrl(path: string): Promise<string> {
   const { data, error } = await supabase.storage.from('contracts').createSignedUrl(path, 3600);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data.signedUrl;
 }
 
@@ -162,13 +163,13 @@ export async function uploadCompanyLogo(contractId: string, dataUrl: string): Pr
     .eq('id', contractId)
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as Contract;
 }
 
 export async function getCompanyLogoUrl(path: string): Promise<string> {
   const { data, error } = await supabase.storage.from('contracts').createSignedUrl(path, 3600);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data.signedUrl;
 }
 
@@ -178,7 +179,7 @@ export async function listParties(contractId: string): Promise<ContractParty[]> 
     .select('*')
     .eq('contract_id', contractId)
     .order('order_index', { ascending: true });
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as ContractParty[];
 }
 
@@ -204,30 +205,30 @@ export async function addParty(contractId: string, input: NewPartyInput): Promis
     .insert({ contract_id: contractId, ...input })
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as ContractParty;
 }
 
 export async function updateParty(partyId: string, patch: Partial<NewPartyInput>): Promise<ContractParty> {
   const { data, error } = await supabase.from('contract_parties').update(patch).eq('id', partyId).select().single();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as ContractParty;
 }
 
 export async function refreshParty(partyId: string): Promise<ContractParty> {
   const { data, error } = await supabase.from('contract_parties').select('*').eq('id', partyId).single();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as ContractParty;
 }
 
 export async function deleteParty(partyId: string): Promise<void> {
   const { error } = await supabase.from('contract_parties').delete().eq('id', partyId);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 }
 
 export async function listFields(contractId: string): Promise<ContractField[]> {
   const { data, error } = await supabase.from('contract_fields').select('*').eq('contract_id', contractId);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as ContractField[];
 }
 
@@ -251,18 +252,18 @@ export async function addField(contractId: string, input: NewFieldInput): Promis
     .insert({ contract_id: contractId, ...input })
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as ContractField;
 }
 
 export async function updateField(fieldId: string, patch: Partial<NewFieldInput>): Promise<void> {
   const { error } = await supabase.from('contract_fields').update(patch).eq('id', fieldId);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 }
 
 export async function deleteField(fieldId: string): Promise<void> {
   const { error } = await supabase.from('contract_fields').delete().eq('id', fieldId);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 }
 
 export async function getContractDetail(contractId: string) {
@@ -282,13 +283,13 @@ export async function listEvents(contractId: string): Promise<ContractEvent[]> {
     .select('*')
     .eq('contract_id', contractId)
     .order('created_at', { ascending: false });
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as ContractEvent[];
 }
 
 export async function sendContract(contractId: string): Promise<Contract> {
   const { data, error } = await supabase.rpc('send_contract', { p_contract_id: contractId });
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 
   const { error: fnError } = await supabase.functions.invoke('send-contract-notifications', {
     body: { contract_id: contractId },
@@ -303,12 +304,12 @@ export async function sendContract(contractId: string): Promise<Contract> {
 
 export async function deleteDraftContract(contractId: string): Promise<void> {
   const { error } = await supabase.from('contracts').delete().eq('id', contractId);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 }
 
 export async function resendToRejectedParty(contractId: string, partyId: string): Promise<ContractParty> {
   const { data, error } = await supabase.rpc('resend_to_rejected_party', { p_party_id: partyId });
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 
   const { error: fnError } = await supabase.functions.invoke('send-contract-notifications', {
     body: { contract_id: contractId, party_id: partyId },

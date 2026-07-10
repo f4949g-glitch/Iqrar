@@ -52,7 +52,8 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: 'كلمة المرور يجب أن تكون بين 8 و15 حرفًا وتحتوي على حرف كبير وصغير ورقم ورمز' }, 400);
   }
 
-  const { data: otp } = await admin.schema('private').from('registration_otps').select('*').eq('phone', phone).maybeSingle();
+  const { data: otpRows } = await admin.rpc('rpc_get_registration_otp', { p_phone: phone });
+  const otp = otpRows?.[0];
   if (!otp) return jsonResponse({ error: 'لم يتم طلب رمز تحقق لهذا الرقم' }, 400);
   if (new Date(otp.expires_at as string).getTime() < Date.now()) {
     return jsonResponse({ error: 'انتهت صلاحية رمز التحقق، يرجى طلب رمز جديد' }, 400);
@@ -60,7 +61,7 @@ Deno.serve(async (req: Request) => {
   if (otp.attempts >= 5) return jsonResponse({ error: 'تجاوزت عدد المحاولات المسموح، اطلب رمزًا جديدًا' }, 429);
 
   if (otp.code !== code) {
-    await admin.schema('private').from('registration_otps').update({ attempts: (otp.attempts as number) + 1 }).eq('phone', phone);
+    await admin.rpc('rpc_increment_registration_otp_attempts', { p_phone: phone });
     return jsonResponse({ error: 'رمز التحقق غير صحيح' }, 400);
   }
 
@@ -82,7 +83,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: 'أُنشئ الحساب لكن تعذّر حفظ بيانات الهوية: ' + profileError.message }, 500);
   }
 
-  await admin.schema('private').from('registration_otps').delete().eq('phone', phone);
+  await admin.rpc('rpc_delete_registration_otp', { p_phone: phone });
 
   return jsonResponse({ ok: true });
 });

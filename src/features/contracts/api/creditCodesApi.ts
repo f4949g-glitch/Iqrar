@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
+import { translateErrorMessage } from '@/shared/lib/errorMessage';
 
 export type CreditApprovalStatus = 'approved' | 'pending' | 'rejected';
 
@@ -18,7 +19,7 @@ export interface CreditCode {
 
 export async function listCreditCodes(): Promise<CreditCode[]> {
   const { data, error } = await supabase.from('credit_codes').select('*').order('created_at', { ascending: false });
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as CreditCode[];
 }
 
@@ -44,18 +45,18 @@ export async function createCreditCode(input: NewCreditCodeInput, needsApproval:
     })
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as CreditCode;
 }
 
 export async function toggleCreditCode(id: string, isActive: boolean): Promise<void> {
   const { error } = await supabase.from('credit_codes').update({ is_active: isActive }).eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 }
 
 export async function deleteCreditCode(id: string): Promise<void> {
   const { error } = await supabase.from('credit_codes').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 }
 
 // موافقة/رفض الأدمن الرئيسي على كود شحن أنشأه أدمن فرعي بلا صلاحية مباشرة.
@@ -71,12 +72,12 @@ export async function reviewCreditCode(id: string, approve: boolean): Promise<vo
       reviewed_at: new Date().toISOString(),
     })
     .eq('id', id);
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
 }
 
 export async function redeemCreditCode(code: string): Promise<number> {
   const { data, error } = await supabase.rpc('redeem_credit_code', { p_code: code });
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return data as number;
 }
 
@@ -84,6 +85,6 @@ export async function fetchMyBalance(): Promise<number> {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return 0;
   const { data, error } = await supabase.from('profiles').select('credit_balance').eq('id', userData.user.id).single();
-  if (error) throw error;
+  if (error) throw new Error(translateErrorMessage(error.message));
   return (data as { credit_balance: number }).credit_balance;
 }

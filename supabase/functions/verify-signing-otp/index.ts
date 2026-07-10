@@ -29,7 +29,8 @@ Deno.serve(async (req: Request) => {
   const { data: party, error: partyError } = await admin.from('contract_parties').select('id, national_id').eq('token', token).maybeSingle();
   if (partyError || !party) return jsonResponse({ error: 'الرابط غير صالح أو منتهي' }, 404);
 
-  const { data: otp } = await admin.schema('private').from('signing_otps').select('*').eq('party_id', party.id).maybeSingle();
+  const { data: otpRows } = await admin.rpc('rpc_get_signing_otp', { p_party_id: party.id });
+  const otp = otpRows?.[0];
   if (!otp) return jsonResponse({ error: 'لم يتم طلب رمز تحقق، أعد المحاولة' }, 400);
   if (new Date(otp.expires_at as string).getTime() < Date.now()) {
     return jsonResponse({ error: 'انتهت صلاحية رمز التحقق، اطلب رمزًا جديدًا' }, 400);
@@ -37,14 +38,14 @@ Deno.serve(async (req: Request) => {
   if (otp.attempts >= 5) return jsonResponse({ error: 'تجاوزت عدد المحاولات المسموح، اطلب رمزًا جديدًا' }, 429);
 
   if (otp.code !== code) {
-    await admin.schema('private').from('signing_otps').update({ attempts: (otp.attempts as number) + 1 }).eq('party_id', party.id);
+    await admin.rpc('rpc_increment_signing_otp_attempts', { p_party_id: party.id });
     return jsonResponse({ error: 'رمز التحقق غير صحيح' }, 400);
   }
 
   const { data: ownerProfile } = await admin.from('profiles').select('signature_data_url').eq('national_id', party.national_id).maybeSingle();
   if (!ownerProfile?.signature_data_url) return jsonResponse({ error: 'لم يعد التوقيع المحفوظ متاحًا' }, 400);
 
-  await admin.schema('private').from('signing_otps').update({ verified: true }).eq('party_id', party.id);
+  await admin.rpc('rpc_mark_signing_otp_verified', { p_party_id: party.id });
 
   return jsonResponse({ ok: true, signature_data_url: ownerProfile.signature_data_url });
 });
