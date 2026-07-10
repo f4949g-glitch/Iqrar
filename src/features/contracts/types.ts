@@ -32,6 +32,13 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   power_of_attorney: 'تفويض',
 };
 
+// "العقد"/"التفويض" — يُستخدم في نصوص معالج الإنشاء بدل تعميم كلمة "العقد" على
+// كلا النوعين.
+export const DOCUMENT_TYPE_DEFINITE_LABELS: Record<DocumentType, string> = {
+  contract: 'العقد',
+  power_of_attorney: 'التفويض',
+};
+
 export type TermUnit = 'day' | 'week' | 'month' | 'year';
 
 export const TERM_UNIT_LABELS: Record<TermUnit, string> = {

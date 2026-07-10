@@ -7,7 +7,7 @@ import { getErrorMessage } from '@/shared/lib/errorMessage';
 import { sendContract } from '../../api/contractsApi';
 import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '../../api/pricingApi';
 import { previewDiscountCode, setContractDiscountCode, type DiscountPreview } from '../../api/discountCodesApi';
-import { FIELD_TYPE_LABELS, type Contract, type ContractField, type ContractParty } from '../../types';
+import { DOCUMENT_TYPE_DEFINITE_LABELS, FIELD_TYPE_LABELS, type Contract, type ContractField, type ContractParty } from '../../types';
 
 interface ReviewStepProps {
   contract: Contract;
@@ -31,6 +31,7 @@ export function ReviewStep({ contract: initialContract, parties, fields, onBack 
   const [cardNumber] = useState('0000 0000 0000 0000');
   const [cardExpiry] = useState('00/00');
   const [cardCvv] = useState('000');
+  const docLabel = DOCUMENT_TYPE_DEFINITE_LABELS[contract.document_type];
 
   useEffect(() => {
     fetchPricingSettings()
@@ -65,7 +66,7 @@ export function ReviewStep({ contract: initialContract, parties, fields, onBack 
       await sendContract(contract.id);
       navigate(`/app/contracts/${contract.id}`);
     } catch (err) {
-      setError(getErrorMessage(err, 'تعذّر إرسال العقد'));
+      setError(getErrorMessage(err, `تعذّر إرسال ${docLabel}`));
       setSubmitting(false);
     }
   };
@@ -148,7 +149,7 @@ export function ReviewStep({ contract: initialContract, parties, fields, onBack 
           السابق
         </Button>
         <Button onClick={() => setShowPayment(true)} disabled={submitting}>
-          {submitting ? 'جارِ الإرسال...' : 'المتابعة للدفع وإرسال العقد'}
+          {submitting ? 'جارِ الإرسال...' : `المتابعة للدفع وإرسال ${docLabel}`}
         </Button>
       </div>
 
@@ -199,7 +200,7 @@ export function ReviewStep({ contract: initialContract, parties, fields, onBack 
               )}
               {error && <p className="text-sm font-bold text-clay">{error}</p>}
               <Button onClick={send} disabled={submitting} className="w-full">
-                {submitting ? 'جارِ معالجة الدفع...' : 'الدفع وإرسال العقد للتوثيق'}
+                {submitting ? 'جارِ معالجة الدفع...' : `الدفع وإرسال ${docLabel} للتوثيق`}
               </Button>
             </div>
           </div>

@@ -61,17 +61,27 @@ const VERIFICATION_TYPES = [
   {
     icon: ShieldCheck,
     title: 'توقيع عبر نفاذ',
+    badge: 'قريبًا',
     desc: 'تحقق رسمي من هوية الطرف عبر منصة نفاذ الوطنية، مناسب للعقود التي تتطلب أعلى درجات التوثيق.',
+    details:
+      'يتحقق الطرف من هويته مباشرة عبر منصة نفاذ الوطنية بخطوتين بسيطتين من جواله، دون الحاجة لإدخال بيانات يدويًا. ' +
+      'يمنحك هذا أعلى مستوى ثقة قانونية لأن الهوية مؤكدة رسميًا من الجهات الحكومية. ' +
+      'مناسب للعقود ذات القيمة العالية أو التي تتطلب إثباتًا رسميًا قويًا للهوية.',
   },
   {
     icon: PenTool,
     title: 'توقيع إلكتروني',
+    badge: null,
     desc: 'توقيع إلكتروني مباشر بخط اليد داخل المتصفح، مناسب للإقرارات والاتفاقيات الأسرع والأبسط.',
+    details:
+      'يوقّع الطرف بخط يده مباشرة على الشاشة دون تثبيت أي برنامج أو تطبيق إضافي. ' +
+      'أسرع طريقة لإتمام التوثيق، ومناسبة للإقرارات والاتفاقيات البسيطة التي لا تستلزم تحقق هوية حكومي. ' +
+      'يبقى المستند موقّعًا ومحفوظًا برقم توثيق ورمز QR كأي عقد آخر على المنصة.',
   },
 ];
 
 const TRUST_POINTS = [
-  { icon: ShieldCheck, label: 'تحقق هوية عبر نفاذ الوطنية' },
+  { icon: ShieldCheck, label: 'تحقق هوية عبر نفاذ الوطنية (قريبًا)' },
   { icon: Lock, label: 'حماية وتشفير لبيانات كل عقد' },
   { icon: ScanLine, label: 'رقم توثيق ورمز QR على كل مستند' },
 ];
@@ -211,7 +221,7 @@ function CreateEntryFlow({ documentType, onClose }: { documentType: DocumentType
                 verificationDefault === 'nafath' ? 'border-seal bg-sealLight text-seal' : 'border-line text-ink hover:bg-paper'
               }`}
             >
-              <ShieldCheck size={16} /> تصديق إلكتروني عبر نفاذ
+              <ShieldCheck size={16} /> تصديق إلكتروني عبر نفاذ (قريبًا)
             </button>
             <button
               type="button"
@@ -232,14 +242,14 @@ function CreateEntryFlow({ documentType, onClose }: { documentType: DocumentType
           <div className="space-y-2">
             <p className="mb-3 text-center text-sm text-slate">كيف تريد المتابعة؟</p>
             <Link
-              to="/login"
+              to="/login?return=/app/contracts/new"
               onClick={isPoa ? goToAuthDirect : undefined}
               className="flex items-center gap-2 rounded-md border border-line px-4 py-3 text-sm font-bold text-ink hover:bg-paper"
             >
               <LogIn size={16} /> تسجيل الدخول
             </Link>
             <Link
-              to="/register"
+              to="/register?return=/app/contracts/new"
               onClick={isPoa ? goToAuthDirect : undefined}
               className="flex items-center gap-2 rounded-md bg-seal px-4 py-3 text-sm font-bold text-white hover:opacity-90"
             >
@@ -312,6 +322,7 @@ function QuickVerify() {
 
 export function LandingPage() {
   const [activeFlow, setActiveFlow] = useState<DocumentType | null>(null);
+  const [expandedVerification, setExpandedVerification] = useState<string | null>(null);
   const { profile, refresh } = useSession();
 
   const handleLogout = async () => {
@@ -418,15 +429,28 @@ export function LandingPage() {
           <p className="text-base leading-relaxed text-slate">اختر طريقة التوثيق المناسبة لكل طرف في عقدك حسب مستوى التوثيق المطلوب.</p>
         </div>
         <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-line bg-line sm:grid-cols-2">
-          {VERIFICATION_TYPES.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="bg-card p-6 transition hover:bg-paper">
-              <div className="mb-4 flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-sealLight">
-                <Icon size={20} className="text-seal" />
-              </div>
-              <h3 className="mb-1.5 font-display text-base font-bold text-ink">{title}</h3>
-              <p className="text-sm leading-relaxed text-slate">{desc}</p>
-            </div>
-          ))}
+          {VERIFICATION_TYPES.map(({ icon: Icon, title, badge, desc, details }) => {
+            const isOpen = expandedVerification === title;
+            return (
+              <button
+                key={title}
+                type="button"
+                onClick={() => setExpandedVerification(isOpen ? null : title)}
+                className="bg-card p-6 text-right transition hover:bg-paper"
+              >
+                <div className="mb-4 flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-sealLight">
+                  <Icon size={20} className="text-seal" />
+                </div>
+                <h3 className="mb-1.5 flex items-center gap-2 font-display text-base font-bold text-ink">
+                  {title}
+                  {badge && <span className="rounded-full bg-clayLight px-2 py-0.5 text-[11px] font-bold text-clay">{badge}</span>}
+                </h3>
+                <p className="text-sm leading-relaxed text-slate">{desc}</p>
+                {isOpen && <p className="mt-3 border-t border-line pt-3 text-sm leading-relaxed text-slate">{details}</p>}
+                <span className="mt-3 block text-xs font-bold text-seal">{isOpen ? 'إخفاء التفاصيل' : 'عرض المزيد'}</span>
+              </button>
+            );
+          })}
         </div>
       </section>
 

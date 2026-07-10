@@ -9,6 +9,7 @@ import { initiateNafathVerification, checkNafathStatus } from '../../api/nafathA
 import {
   PARTY_ROLE_OPTIONS,
   DOCUMENT_TYPE_LABELS,
+  DOCUMENT_TYPE_DEFINITE_LABELS,
   TERM_UNIT_LABELS,
   type DocumentType,
   type PartyType,
@@ -111,6 +112,7 @@ export function PartiesStep({
   ensureContract,
   onNext,
 }: PartiesStepProps) {
+  const docLabel = DOCUMENT_TYPE_DEFINITE_LABELS[documentType];
   const [pricing, setPricing] = useState<PricingSettings | null>(null);
   const [error, setError] = useState('');
   const [showCompany, setShowCompany] = useState(Boolean(companyName || companyCrNumber));
@@ -191,7 +193,7 @@ export function PartiesStep({
   const submit = () => {
     setError('');
     if (!title.trim()) {
-      setError('عنوان العقد مطلوب');
+      setError(`عنوان ${docLabel} مطلوب`);
       return;
     }
     const duration = Number(durationDays);
@@ -225,7 +227,7 @@ export function PartiesStep({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Field label="عنوان العقد" value={title} onChange={onTitleChange} required />
+        <Field label={`عنوان ${docLabel}`} value={title} onChange={onTitleChange} required />
         <Field
           label="صلاحية التوثيق (أيام)"
           value={durationDays}
@@ -261,12 +263,12 @@ export function PartiesStep({
       <div className="rounded-xl border border-line bg-card p-4">
         {termMode === 'none' ? (
           <button type="button" onClick={() => onTermModeChange('duration')} className="text-sm font-bold text-seal">
-            + تحديد مدة سريان العقد (اختياري)
+            + تحديد مدة سريان {docLabel} (اختياري)
           </button>
         ) : (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate">مدة سريان العقد</span>
+              <span className="text-xs font-bold text-slate">مدة سريان {docLabel}</span>
               <button type="button" onClick={() => onTermModeChange('none')} className="text-xs font-bold text-clay">
                 إزالة
               </button>
@@ -307,7 +309,7 @@ export function PartiesStep({
               </div>
             ) : (
               <div>
-                <span className="mb-1 block text-sm font-bold text-ink">تاريخ انتهاء العقد</span>
+                <span className="mb-1 block text-sm font-bold text-ink">تاريخ انتهاء {docLabel}</span>
                 <GregorianDateInput value={termEndDate} onChange={onTermEndDateChange} />
               </div>
             )}
@@ -525,7 +527,7 @@ export function PartiesStep({
       {error && <p className="text-sm font-bold text-clay">{error}</p>}
 
       <div className="flex justify-end">
-        <Button onClick={submit}>التالي: طريقة إنشاء العقد</Button>
+        <Button onClick={submit}>التالي: طريقة إنشاء {docLabel}</Button>
       </div>
     </div>
   );

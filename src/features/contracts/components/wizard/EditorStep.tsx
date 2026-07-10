@@ -4,10 +4,11 @@ import { Button } from '@/shared/ui/Button';
 import { ContractEditor } from '../../editor/ContractEditor';
 import { extractFillFields } from '../../editor/extractFillFields';
 import { addField, deleteField, saveContractBody } from '../../api/contractsApi';
-import type { ContractField, ContractParty } from '../../types';
+import { DOCUMENT_TYPE_DEFINITE_LABELS, type ContractField, type ContractParty, type DocumentType } from '../../types';
 
 interface EditorStepProps {
   contractId: string;
+  documentType: DocumentType;
   parties: ContractParty[];
   body: JSONContent | null;
   onBodyChange: (body: JSONContent) => void;
@@ -17,13 +18,14 @@ interface EditorStepProps {
   onNext: () => void;
 }
 
-export function EditorStep({ contractId, parties, body, onBodyChange, fields, onFieldsChange, onBack, onNext }: EditorStepProps) {
+export function EditorStep({ contractId, documentType, parties, body, onBodyChange, fields, onFieldsChange, onBack, onNext }: EditorStepProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const docLabel = DOCUMENT_TYPE_DEFINITE_LABELS[documentType];
 
   const save = async () => {
     if (!body) {
-      setError('اكتب محتوى العقد أولًا');
+      setError(`اكتب محتوى ${docLabel} أولًا`);
       return;
     }
     setSaving(true);
@@ -76,7 +78,7 @@ export function EditorStep({ contractId, parties, body, onBodyChange, fields, on
       onFieldsChange(nextFields);
       onNext();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذّر حفظ محتوى العقد');
+      setError(err instanceof Error ? err.message : `تعذّر حفظ محتوى ${docLabel}`);
     } finally {
       setSaving(false);
     }

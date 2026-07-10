@@ -2,7 +2,6 @@ import { Suspense, lazy, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom';
 import { useSession, LoginForm, RegisterForm, ForcedPasswordChange } from '@/features/auth';
 import { Layout } from './Layout';
-import { HomePage } from './HomePage';
 import { LandingPage } from './LandingPage';
 import { AuthGate } from './AuthGate';
 import { AdminGate } from './AdminGate';
@@ -47,8 +46,9 @@ function LoginPage() {
 
 function RegisterPage() {
   const { loading, profile, refresh } = useSession();
+  const [searchParams] = useSearchParams();
   if (loading) return <LoadingScreen />;
-  if (profile) return <Navigate to="/app" replace />;
+  if (profile) return <Navigate to={searchParams.get('return') || '/app'} replace />;
   return <RegisterForm onRegistered={refresh} />;
 }
 
@@ -67,7 +67,7 @@ function AppShell() {
     <Layout profile={profile}>
       <Suspense fallback={<p className="text-sm text-slate">جارِ التحميل...</p>}>
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<Navigate to="/app/contracts" replace />} />
           <Route path="/contracts" element={profile ? <ContractsListPage /> : <AuthGate />} />
           <Route path="/contracts/new" element={profile ? <NewContractWizard /> : <AuthGate />} />
           <Route path="/contracts/:id" element={profile ? <ContractDetailPage /> : <AuthGate />} />

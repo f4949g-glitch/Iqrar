@@ -8,20 +8,20 @@ import { EditorStep } from './wizard/EditorStep';
 import { ReviewStep } from './wizard/ReviewStep';
 import { addParty, createDraftContract, getOriginalPdfUrl, updateContractMeta, updateParty, uploadOriginalPdf } from '../api/contractsApi';
 import { consumePendingContractIntent } from '../lib/pendingIntent';
-import type { Contract, ContractField, ContractParty, DocumentType, TermUnit } from '../types';
+import {
+  DOCUMENT_TYPE_DEFINITE_LABELS,
+  DOCUMENT_TYPE_LABELS,
+  type Contract,
+  type ContractField,
+  type ContractParty,
+  type DocumentType,
+  type TermUnit,
+} from '../types';
 
 type Step = 'parties' | 'method' | 'upload' | 'fields' | 'editor' | 'review';
 
 const STEP_ORDER_PDF: Step[] = ['parties', 'method', 'upload', 'fields', 'review'];
 const STEP_ORDER_EDITOR: Step[] = ['parties', 'method', 'editor', 'review'];
-const STEP_LABELS: Record<Step, string> = {
-  parties: 'بيانات الأطراف',
-  method: 'طريقة الإنشاء',
-  upload: 'رفع المستند',
-  fields: 'الحقول',
-  editor: 'محتوى العقد',
-  review: 'المراجعة والإرسال',
-};
 
 export function NewContractWizard() {
   // نُقرأ نية الدخول المحفوظة من الصفحة الرئيسية (نوع الوثيقة، عدد الأطراف، وطريقة
@@ -33,6 +33,15 @@ export function NewContractWizard() {
   const [durationDays, setDurationDays] = useState('');
   const [documentType] = useState<DocumentType>(pendingIntent?.documentType ?? 'contract');
   const poaMode = documentType === 'power_of_attorney';
+  const docLabel = DOCUMENT_TYPE_DEFINITE_LABELS[documentType];
+  const stepLabels: Record<Step, string> = {
+    parties: 'بيانات الأطراف',
+    method: 'طريقة الإنشاء',
+    upload: 'رفع المستند',
+    fields: 'الحقول',
+    editor: `محتوى ${docLabel}`,
+    review: 'المراجعة والإرسال',
+  };
   const [companyName, setCompanyName] = useState('');
   const [companyCrNumber, setCompanyCrNumber] = useState('');
   const [termMode, setTermMode] = useState<TermMode>('none');
@@ -60,7 +69,7 @@ export function NewContractWizard() {
 
   const ensureContract = async (): Promise<Contract> => {
     if (contract) return contract;
-    const created = await createDraftContract(title.trim() || 'عقد جديد', durationDays ? Number(durationDays) : null);
+    const created = await createDraftContract(title.trim() || `${DOCUMENT_TYPE_LABELS[documentType]} جديد`, durationDays ? Number(durationDays) : null);
     setContract(created);
     return created;
   };
@@ -112,7 +121,7 @@ export function NewContractWizard() {
       setParties(createdParties);
       setStep(chosen === 'editor' ? 'editor' : 'upload');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذّر إنشاء العقد');
+      setError(err instanceof Error ? err.message : `تعذّر إنشاء ${docLabel}`);
     } finally {
       setBusy(false);
     }
@@ -140,7 +149,7 @@ export function NewContractWizard() {
 
   return (
     <div>
-      <h1 className="mb-6 font-display text-2xl font-extrabold text-ink">عقد جديد</h1>
+      <h1 className="mb-6 font-display text-2xl font-extrabold text-ink">{DOCUMENT_TYPE_LABELS[documentType]} جديد</h1>
 
       <div className="mb-8 flex items-center gap-2">
         {stepOrder.map((s, i) => (
@@ -153,7 +162,7 @@ export function NewContractWizard() {
               {i + 1}
             </div>
             <span className={`hidden text-xs font-bold sm:inline ${i <= stepIndex ? 'text-ink' : 'text-slate'}`}>
-              {STEP_LABELS[s]}
+              {stepLabels[s]}
             </span>
             {i < stepOrder.length - 1 && <div className="h-px flex-1 bg-line" />}
           </div>
@@ -189,7 +198,7 @@ export function NewContractWizard() {
         />
       )}
 
-      {step === 'method' && <MethodStep onSelect={selectMethod} onBack={() => setStep('parties')} />}
+      {step === 'method' && <MethodStep documentType={documentType} onSelect={selectMethod} onBack={() => setStep('parties')} />}
 
       {step === 'upload' && contract && (
         <UploadStep
@@ -219,6 +228,7 @@ export function NewContractWizard() {
       {step === 'editor' && contract && (
         <EditorStep
           contractId={contract.id}
+          documentType={documentType}
           parties={parties}
           body={body}
           onBodyChange={setBody}
