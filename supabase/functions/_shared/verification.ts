@@ -24,7 +24,8 @@ export function buildVerifyUrl(verificationNumber: string): string {
 export async function renderVerificationFooterHtml(verificationNumber: string, completedAt: string): Promise<string> {
   const url = buildVerifyUrl(verificationNumber);
   const svg = await QRCode.toString(url, { type: 'svg', margin: 1, width: 110 });
-  const dateLabel = new Date(completedAt).toLocaleDateString('ar-SA');
+  // -u-ca-gregory: التقويم الافتراضي للغة ar-SA في Intl هو الهجري، ونريد ميلاديًا دائمًا.
+  const dateLabel = new Date(completedAt).toLocaleDateString('ar-SA-u-ca-gregory');
   return `<div class="verification-footer">
     <div class="verification-qr">${svg}</div>
     <div class="verification-info">

@@ -9,6 +9,7 @@ import {
   toggleDiscountCode,
   type DiscountCode,
 } from '../api/discountCodesApi';
+import { formatDate } from '@/shared/lib/formatDate';
 
 const emptyForm = { code: '', discount_percent: '10', max_uses: '', max_uses_per_user: '', starts_at: '', ends_at: '' };
 
@@ -112,7 +113,7 @@ export function DiscountCodesPage() {
                   خصم {c.discount_percent}%
                   {c.max_uses !== null && ` · حد أقصى ${c.max_uses} استخدام`}
                   {c.max_uses_per_user !== null && ` · ${c.max_uses_per_user} لكل مستخدم`}
-                  {c.ends_at && ` · حتى ${new Date(c.ends_at).toLocaleDateString('ar-SA')}`}
+                  {c.ends_at && ` · حتى ${formatDate(c.ends_at)}`}
                 </p>
               </div>
               <div className="flex items-center gap-2">

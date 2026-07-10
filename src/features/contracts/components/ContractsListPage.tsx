@@ -11,6 +11,7 @@ import {
   type ContractListItem,
 } from '../api/contractsApi';
 import { CONTRACT_STATUS_LABEL } from '../types';
+import { formatDate } from '@/shared/lib/formatDate';
 
 type Tab = 'new' | 'previous' | 'awaiting' | 'rejected';
 
@@ -31,7 +32,7 @@ function ContractCard({ contract }: { contract: ContractListItem }) {
       <div>
         <p className="font-display font-bold text-ink">{contract.title}</p>
         <p className="mt-1 text-xs text-slate">
-          {contract.signed_count} / {contract.parties_count} أطراف وقّعوا · {new Date(contract.created_at).toLocaleDateString('ar-SA')}
+          {contract.signed_count} / {contract.parties_count} أطراف وقّعوا · {formatDate(contract.created_at)}
         </p>
       </div>
       <StatusPill label={info.label} bg={info.bg} fg={info.fg} />

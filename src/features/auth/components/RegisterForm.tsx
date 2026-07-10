@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { FileSignature } from 'lucide-react';
 import { requestRegistrationOtp, verifyRegistrationOtp } from '../api/authApi';
 import { signIn } from '../api/authApi';
+import { GregorianDateInput } from '@/shared/ui/GregorianDateInput';
 
 const NATIONALITIES = ['سعودي', 'مقيم'];
 
@@ -114,25 +115,23 @@ export function RegisterForm({ onRegistered }: RegisterFormProps) {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-slate">تاريخ الميلاد</label>
-                  <input required type="date" value={dob} onChange={(e) => setDob(e.target.value)} className={inputClass} style={{ direction: 'ltr' }} />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-bold text-slate">الجوال</label>
-                  <input
-                    required
-                    inputMode="numeric"
-                    pattern="05[0-9]{8}"
-                    title="مثال: 05xxxxxxxx"
-                    placeholder="05xxxxxxxx"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className={inputClass}
-                    style={{ direction: 'ltr' }}
-                  />
-                </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-slate">تاريخ الميلاد</label>
+                <GregorianDateInput value={dob} onChange={setDob} required />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-slate">الجوال</label>
+                <input
+                  required
+                  inputMode="numeric"
+                  pattern="05[0-9]{8}"
+                  title="مثال: 05xxxxxxxx"
+                  placeholder="05xxxxxxxx"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className={inputClass}
+                  style={{ direction: 'ltr' }}
+                />
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-slate">البريد الإلكتروني</label>

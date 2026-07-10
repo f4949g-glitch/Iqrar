@@ -16,6 +16,7 @@ import {
 import { supabase } from '@/lib/supabase/client';
 import { renderContractHtml, renderPartiesHeaderHtml, escapeHtml, type JsonNode } from '../editor/renderContractHtml';
 import { getErrorMessage } from '@/shared/lib/errorMessage';
+import { formatDate, formatDateTime } from '@/shared/lib/formatDate';
 import { CONTRACT_STATUS_LABEL, PARTY_ROLE_OPTIONS, type Contract, type ContractEvent, type ContractParty } from '../types';
 
 const PRINT_STYLES = `
@@ -178,8 +179,8 @@ export function ContractDetailPage() {
         <div>
           <h1 className="font-display text-2xl font-extrabold text-ink">{contract.title}</h1>
           <p className="mt-1 text-xs text-slate">
-            أُنشئ في {new Date(contract.created_at).toLocaleString('ar-SA')}
-            {contract.expires_at && ` · ينتهي في ${new Date(contract.expires_at).toLocaleDateString('ar-SA')}`}
+            أُنشئ في {formatDateTime(contract.created_at)}
+            {contract.expires_at && ` · ينتهي في ${formatDate(contract.expires_at)}`}
             {contract.invoice_amount !== null && ` · الفاتورة: ${contract.invoice_amount.toFixed(2)} ريال`}
           </p>
           {contract.verification_number && (
@@ -280,7 +281,7 @@ export function ContractDetailPage() {
                   <p className="text-xs text-slate">
                     {p.role_label} · {PARTY_STATUS_LABEL[p.status]}
                     {p.verification_method === 'nafath' && p.nafath_verified_at && ' · وُثّق عبر نفاذ'}
-                    {p.signed_at && ` في ${new Date(p.signed_at).toLocaleString('ar-SA')}`}
+                    {p.signed_at && ` في ${formatDateTime(p.signed_at)}`}
                   </p>
                 </div>
                 {p.status !== 'signed' && (
@@ -326,7 +327,7 @@ export function ContractDetailPage() {
           {events.map((e) => (
             <li key={e.id} className="flex justify-between border-b border-line pb-2 last:border-0">
               <span>{e.message ?? e.event_type}</span>
-              <span className="text-xs">{new Date(e.created_at).toLocaleString('ar-SA')}</span>
+              <span className="text-xs">{formatDateTime(e.created_at)}</span>
             </li>
           ))}
           {events.length === 0 && <li className="text-xs text-slate">لا توجد أحداث بعد</li>}

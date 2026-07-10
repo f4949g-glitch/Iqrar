@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, FileSignature, ShieldCheck } from 'lucide-react';
 import { Field } from '@/shared/ui/Field';
+import { GregorianDateInput } from '@/shared/ui/GregorianDateInput';
 import { Button } from '@/shared/ui/Button';
+import { formatDate } from '@/shared/lib/formatDate';
 import { verifyDocument, type VerifyResult } from '../api/verifyApi';
 import { DOCUMENT_TYPE_LABELS } from '@/features/contracts/types';
 
@@ -43,8 +45,6 @@ export function VerifyPage() {
       setLoading(false);
     }
   };
-
-  const inputClass = 'w-full rounded-lg border border-line bg-white px-3 py-2.5 text-right text-ink outline-none focus:border-seal';
 
   return (
     <div dir="rtl" className="min-h-screen bg-hero">
@@ -93,7 +93,7 @@ export function VerifyPage() {
               <Field label="رقم هوية الطرف" value={nationalId1} onChange={setNationalId1} required />
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-slate">تاريخ التوثيق</label>
-                <input required type="date" value={completedDate} onChange={(e) => setCompletedDate(e.target.value)} className={inputClass} style={{ direction: 'ltr' }} />
+                <GregorianDateInput value={completedDate} onChange={setCompletedDate} required />
               </div>
             </>
           ) : (
@@ -131,7 +131,7 @@ export function VerifyPage() {
                 <span className="font-bold">رقم التوثيق:</span> <span dir="ltr">{result.verification_number}</span>
               </p>
               <p>
-                <span className="font-bold">تاريخ التوثيق:</span> {new Date(result.completed_at).toLocaleDateString('ar-SA')}
+                <span className="font-bold">تاريخ التوثيق:</span> {formatDate(result.completed_at)}
               </p>
             </div>
             <h2 className="mb-2 font-display text-sm font-bold text-ink">الأطراف والتواقيع ({result.parties.length})</h2>

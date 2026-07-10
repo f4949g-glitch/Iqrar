@@ -1,5 +1,6 @@
 import { User } from 'lucide-react';
 import type { Profile } from '../types';
+import { formatDate } from '@/shared/lib/formatDate';
 
 const ROLE_LABEL: Record<string, string> = { admin: 'مدير المنصة', member: 'عضو' };
 
@@ -30,7 +31,7 @@ export function ProfilePage({ profile }: { profile: Profile }) {
         <Row label="رقم الهوية" value={profile.national_id || '—'} />
         <Row label="الجنسية" value={profile.nationality || '—'} />
         <Row label="رقم الجوال" value={profile.phone || '—'} />
-        <Row label="تاريخ الميلاد" value={profile.date_of_birth ? new Date(profile.date_of_birth).toLocaleDateString('ar-SA') : '—'} />
+        <Row label="تاريخ الميلاد" value={profile.date_of_birth ? formatDate(profile.date_of_birth) : '—'} />
       </div>
     </div>
   );
