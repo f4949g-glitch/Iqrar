@@ -19,8 +19,6 @@ import {
   ArrowRight,
   Search,
   Stamp,
-  Camera,
-  AtSign,
   Globe,
   Mail,
 } from 'lucide-react';
@@ -28,6 +26,7 @@ import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '@/
 import { setPendingContractIntent } from '@/features/contracts/lib/pendingIntent';
 import type { DocumentType, VerificationMethod } from '@/features/contracts/types';
 import { fetchSiteSettings, type SiteSettings } from '@/features/site/api/siteSettingsApi';
+import { WhatsAppButton } from '@/shared/ui/WhatsAppButton';
 
 const DEFAULT_ORG_NAME = 'منصة إقرار لخدمات الأعمال';
 
@@ -361,6 +360,7 @@ export function LandingPage() {
 
   return (
     <div dir="rtl" className="min-h-screen bg-paper">
+      <WhatsAppButton />
       <Nav profile={profile} onLogout={handleLogout} orgName={orgName} logoUrl={logoUrl} />
 
       <section className="border-b-4 border-seal bg-navy">
@@ -537,41 +537,20 @@ export function LandingPage() {
                   <Mail size={14} /> {siteSettings.contact_email}
                 </a>
               )}
-              {(siteSettings?.social_instagram || siteSettings?.social_x || siteSettings?.social_other_url) && (
-                <div className="mt-3 flex items-center gap-2">
-                  {siteSettings.social_instagram && (
+              {siteSettings && siteSettings.social_links.length > 0 && (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {siteSettings.social_links.map((link, i) => (
                     <a
-                      href={siteSettings.social_instagram}
+                      key={i}
+                      href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      aria-label="Instagram"
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-paper text-ink hover:bg-sealLight hover:text-seal"
+                      aria-label={link.label}
+                      className="flex h-8 items-center gap-1.5 rounded-full bg-paper px-3 text-xs font-bold text-ink hover:bg-sealLight hover:text-seal"
                     >
-                      <Camera size={16} />
+                      <Globe size={14} /> {link.label}
                     </a>
-                  )}
-                  {siteSettings.social_x && (
-                    <a
-                      href={siteSettings.social_x}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="X"
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-paper text-ink hover:bg-sealLight hover:text-seal"
-                    >
-                      <AtSign size={16} />
-                    </a>
-                  )}
-                  {siteSettings.social_other_url && (
-                    <a
-                      href={siteSettings.social_other_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={siteSettings.social_other_label || 'رابط آخر'}
-                      className="flex h-8 w-8 items-center justify-center rounded-full bg-paper text-ink hover:bg-sealLight hover:text-seal"
-                    >
-                      <Globe size={16} />
-                    </a>
-                  )}
+                  ))}
                 </div>
               )}
             </div>

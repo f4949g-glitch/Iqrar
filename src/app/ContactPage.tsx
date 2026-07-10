@@ -22,12 +22,14 @@ export function ContactPage() {
   const [error, setError] = useState('');
   const [contactEmail, setContactEmail] = useState(CONTACT_EMAIL);
   const [contactPhone, setContactPhone] = useState<string | null>(null);
+  const [whatsappNumber, setWhatsappNumber] = useState(WHATSAPP_NUMBER);
 
   useEffect(() => {
     fetchSiteSettings()
       .then((s) => {
         if (s.contact_email) setContactEmail(s.contact_email);
         if (s.contact_phone) setContactPhone(s.contact_phone);
+        if (s.whatsapp_number) setWhatsappNumber(s.whatsapp_number);
       })
       .catch(() => {});
   }, []);
@@ -57,7 +59,7 @@ export function ContactPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <a
-          href={`https://wa.me/${WHATSAPP_NUMBER}`}
+          href={`https://wa.me/${whatsappNumber}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-3 rounded-xl border border-line bg-card p-4 shadow-sm hover:shadow-md"
@@ -68,7 +70,7 @@ export function ContactPage() {
           <div>
             <p className="text-sm font-bold text-ink">واتساب الأعمال</p>
             <p className="text-xs text-slate" dir="ltr">
-              +{WHATSAPP_NUMBER}
+              +{whatsappNumber}
             </p>
           </div>
         </a>
@@ -84,7 +86,7 @@ export function ContactPage() {
           </div>
         </a>
         <a
-          href={`tel:${contactPhone || WHATSAPP_NUMBER}`}
+          href={`tel:${contactPhone || whatsappNumber}`}
           className="flex items-center gap-3 rounded-xl border border-line bg-card p-4 shadow-sm hover:shadow-md"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-clayLight">
@@ -93,7 +95,7 @@ export function ContactPage() {
           <div>
             <p className="text-sm font-bold text-ink">الهاتف</p>
             <p className="text-xs text-slate" dir="ltr">
-              +{contactPhone || WHATSAPP_NUMBER}
+              +{contactPhone || whatsappNumber}
             </p>
           </div>
         </a>

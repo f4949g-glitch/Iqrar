@@ -435,6 +435,45 @@ export type Database = {
         };
         Relationships: [];
       };
+      pricing_change_requests: {
+        Row: {
+          base_amount: number;
+          created_at: string;
+          extra_party_fee: number;
+          id: string;
+          minimum_invoice: number;
+          requested_by: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          status: string;
+          tax_percent: number;
+        };
+        Insert: {
+          base_amount: number;
+          created_at?: string;
+          extra_party_fee: number;
+          id?: string;
+          minimum_invoice: number;
+          requested_by: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: string;
+          tax_percent: number;
+        };
+        Update: {
+          base_amount?: number;
+          created_at?: string;
+          extra_party_fee?: number;
+          id?: string;
+          minimum_invoice?: number;
+          requested_by?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          status?: string;
+          tax_percent?: number;
+        };
+        Relationships: [];
+      };
       site_settings: {
         Row: {
           contact_email: string | null;
@@ -442,11 +481,9 @@ export type Database = {
           id: number;
           logo_data_url: string | null;
           org_name: string;
-          social_instagram: string | null;
-          social_other_label: string | null;
-          social_other_url: string | null;
-          social_x: string | null;
+          social_links: Json;
           updated_at: string;
+          whatsapp_number: string | null;
         };
         Insert: {
           contact_email?: string | null;
@@ -454,11 +491,9 @@ export type Database = {
           id?: number;
           logo_data_url?: string | null;
           org_name?: string;
-          social_instagram?: string | null;
-          social_other_label?: string | null;
-          social_other_url?: string | null;
-          social_x?: string | null;
+          social_links?: Json;
           updated_at?: string;
+          whatsapp_number?: string | null;
         };
         Update: {
           contact_email?: string | null;
@@ -466,11 +501,9 @@ export type Database = {
           id?: number;
           logo_data_url?: string | null;
           org_name?: string;
-          social_instagram?: string | null;
-          social_other_label?: string | null;
-          social_other_url?: string | null;
-          social_x?: string | null;
+          social_links?: Json;
           updated_at?: string;
+          whatsapp_number?: string | null;
         };
         Relationships: [];
       };

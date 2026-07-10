@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Building2 } from 'lucide-react';
+import { Building2, Plus, Trash2 } from 'lucide-react';
 import { Field } from '@/shared/ui/Field';
 import { Button } from '@/shared/ui/Button';
 import { fileToDataUrl } from '@/shared/lib/fileToDataUrl';
-import { fetchSiteSettings, updateSiteSettings, type SiteSettings } from '../api/siteSettingsApi';
+import { fetchSiteSettings, updateSiteSettings, type SiteSettings, type SocialLink } from '../api/siteSettingsApi';
 
 export function OrganizationSettingsPage() {
   const [form, setForm] = useState<SiteSettings | null>(null);
@@ -28,13 +28,26 @@ export function OrganizationSettingsPage() {
     setLogoPreview(dataUrl);
   };
 
+  const updateSocialLink = (index: number, patch: Partial<SocialLink>) => {
+    setForm((f) => f && { ...f, social_links: f.social_links.map((s, i) => (i === index ? { ...s, ...patch } : s)) });
+  };
+
+  const addSocialLink = () => {
+    setForm((f) => f && { ...f, social_links: [...f.social_links, { label: '', url: '' }] });
+  };
+
+  const removeSocialLink = (index: number) => {
+    setForm((f) => f && { ...f, social_links: f.social_links.filter((_, i) => i !== index) });
+  };
+
   const save = async () => {
     if (!form) return;
     setError('');
     setSaved(false);
     setSaving(true);
     try {
-      const updated = await updateSiteSettings({ ...form, logo_data_url: logoPreview });
+      const cleanLinks = form.social_links.filter((s) => s.label.trim() && s.url.trim());
+      const updated = await updateSiteSettings({ ...form, logo_data_url: logoPreview, social_links: cleanLinks });
       setForm(updated);
       setSaved(true);
     } catch (err) {
@@ -103,28 +116,38 @@ export function OrganizationSettingsPage() {
             value={form.contact_phone ?? ''}
             onChange={(v) => setForm((f) => f && { ...f, contact_phone: v || null })}
           />
+          <Field
+            label="رقم واتساب (بدون + أو أصفار، مثال: 966500000000)"
+            value={form.whatsapp_number ?? ''}
+            onChange={(v) => setForm((f) => f && { ...f, whatsapp_number: v || null })}
+            digitsOnly
+            hint="يُستخدم تلقائيًا في زر واتساب العائم بكل صفحات الموقع"
+          />
         </div>
       </div>
 
       <div className="rounded-xl border border-line bg-card p-5">
-        <h2 className="mb-4 font-display text-sm font-bold text-ink">روابط التواصل الاجتماعي</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field
-            label="Instagram (رابط كامل)"
-            value={form.social_instagram ?? ''}
-            onChange={(v) => setForm((f) => f && { ...f, social_instagram: v || null })}
-          />
-          <Field label="X (رابط كامل)" value={form.social_x ?? ''} onChange={(v) => setForm((f) => f && { ...f, social_x: v || null })} />
-          <Field
-            label="اسم منصة أخرى (اختياري)"
-            value={form.social_other_label ?? ''}
-            onChange={(v) => setForm((f) => f && { ...f, social_other_label: v || null })}
-          />
-          <Field
-            label="رابط المنصة الأخرى"
-            value={form.social_other_url ?? ''}
-            onChange={(v) => setForm((f) => f && { ...f, social_other_url: v || null })}
-          />
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-display text-sm font-bold text-ink">حسابات التواصل الاجتماعي</h2>
+          <button type="button" onClick={addSocialLink} className="flex items-center gap-1 rounded-lg bg-sealLight px-2.5 py-1 text-xs font-bold text-seal">
+            <Plus size={14} /> إضافة حساب
+          </button>
+        </div>
+        <div className="space-y-3">
+          {form.social_links.map((link, i) => (
+            <div key={i} className="flex items-end gap-2">
+              <div className="w-32 shrink-0">
+                <Field label="المنصة" value={link.label} onChange={(v) => updateSocialLink(i, { label: v })} placeholder="Instagram" />
+              </div>
+              <div className="flex-1">
+                <Field label="الرابط الكامل" value={link.url} onChange={(v) => updateSocialLink(i, { url: v })} placeholder="https://..." />
+              </div>
+              <button type="button" onClick={() => removeSocialLink(i)} className="mb-2.5 text-clay">
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
+          {form.social_links.length === 0 && <p className="text-sm text-slate">لا توجد حسابات مضافة بعد</p>}
         </div>
       </div>
 

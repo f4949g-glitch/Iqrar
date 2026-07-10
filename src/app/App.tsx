@@ -94,7 +94,15 @@ function AppShell() {
           />
           <Route
             path="/contracts/pricing"
-            element={!profile ? <AuthGate /> : hasAdminPermission(profile, 'manage_pricing') ? <PricingSettingsPage /> : <AdminGate />}
+            element={
+              !profile ? (
+                <AuthGate />
+              ) : hasAdminPermission(profile, 'manage_pricing') || hasAdminPermission(profile, 'manage_pricing_direct') ? (
+                <PricingSettingsPage />
+              ) : (
+                <AdminGate />
+              )
+            }
           />
           <Route
             path="/contracts/reports"

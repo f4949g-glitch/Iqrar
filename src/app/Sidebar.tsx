@@ -81,7 +81,7 @@ function buildAdminGroup(profile: Profile): SidebarGroup | null {
   if (hasAdminPermission(profile, 'create_credit_codes')) {
     links.push({ to: '/app/contracts/credit-codes', label: 'أكواد الشحن', icon: Wallet });
   }
-  if (hasAdminPermission(profile, 'manage_pricing')) {
+  if (hasAdminPermission(profile, 'manage_pricing') || hasAdminPermission(profile, 'manage_pricing_direct')) {
     links.push({ to: '/app/contracts/pricing', label: 'إعدادات التسعير', icon: SlidersHorizontal });
   }
   if (isFullAdmin) {

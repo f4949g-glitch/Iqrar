@@ -4,7 +4,8 @@ export type AdminPermission =
   | 'create_discount_codes_direct'
   | 'create_credit_codes'
   | 'create_credit_codes_direct'
-  | 'manage_pricing';
+  | 'manage_pricing'
+  | 'manage_pricing_direct';
 
 export const ADMIN_PERMISSION_LABELS: Record<AdminPermission, string> = {
   view_reports: 'الاطلاع على التقارير الإحصائية',
@@ -12,7 +13,8 @@ export const ADMIN_PERMISSION_LABELS: Record<AdminPermission, string> = {
   create_discount_codes_direct: 'إنشاء أكواد خصم مباشرة بلا حاجة لموافقة',
   create_credit_codes: 'إنشاء أكواد شحن (تُرسَل لموافقة الأدمن الرئيسي)',
   create_credit_codes_direct: 'إنشاء أكواد شحن مباشرة بلا حاجة لموافقة',
-  manage_pricing: 'تعديل إعدادات التسعير',
+  manage_pricing: 'تعديل إعدادات التسعير (تُرسَل لموافقة الأدمن الرئيسي)',
+  manage_pricing_direct: 'تعديل إعدادات التسعير مباشرة بلا حاجة لموافقة',
 };
 
 export interface Profile {
