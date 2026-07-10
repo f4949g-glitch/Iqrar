@@ -391,7 +391,7 @@ export function ContractDetailPage() {
                     hint="10 أرقام فقط"
                   />
                   <Field label="البريد الإلكتروني" value={p.email ?? ''} onChange={(v) => patchParty(p.id, { email: v })} type="email" />
-                  <Field label="الجوال" value={p.phone ?? ''} onChange={(v) => patchParty(p.id, { phone: v })} digitsOnly maxLength={10} />
+                  <Field label="الجوال" value={p.phone ?? ''} onChange={(v) => patchParty(p.id, { phone: v })} phone />
                 </div>
               </div>
             ) : (

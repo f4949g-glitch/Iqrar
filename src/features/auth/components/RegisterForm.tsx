@@ -4,7 +4,7 @@ import { FileSignature } from 'lucide-react';
 import { requestRegistrationOtp, verifyRegistrationOtp } from '../api/authApi';
 import { signIn } from '../api/authApi';
 import { GregorianDateInput } from '@/shared/ui/GregorianDateInput';
-import { emailError, nationalIdError, passwordError } from '@/shared/lib/validation';
+import { emailError, nationalIdError, passwordError, phoneError } from '@/shared/lib/validation';
 
 const NATIONALITIES = ['سعودي', 'مقيم'];
 
@@ -32,6 +32,11 @@ export function RegisterForm({ onRegistered }: RegisterFormProps) {
     const idError = nationalIdError(nationalId);
     if (idError) {
       setError(idError);
+      return;
+    }
+    const phError = phoneError(phone);
+    if (phError) {
+      setError(phError);
       return;
     }
     const mailError = emailError(email);
@@ -135,19 +140,23 @@ export function RegisterForm({ onRegistered }: RegisterFormProps) {
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-slate">الجوال</label>
-                <input
-                  required
-                  inputMode="numeric"
-                  pattern="05[0-9]{8}"
-                  title="مثال: 05xxxxxxxx"
-                  placeholder="05xxxxxxxx"
-                  maxLength={10}
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
-                  className={inputClass}
-                  style={{ direction: 'ltr' }}
-                />
-                <p className="mt-1 text-xs text-slate">10 أرقام تبدأ بـ 05</p>
+                <div className="flex items-center overflow-hidden rounded-lg border border-line bg-white focus-within:border-seal" dir="ltr">
+                  <span className="border-l border-line bg-paper px-3 py-2.5 text-sm font-bold text-slate">966</span>
+                  <input
+                    required
+                    inputMode="numeric"
+                    title="مثال: 966501234567"
+                    placeholder="5xxxxxxxx"
+                    maxLength={9}
+                    value={phone.startsWith('966') ? phone.slice(3) : phone}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 9);
+                      setPhone(digits ? '966' + digits : '');
+                    }}
+                    className="w-full bg-transparent px-3 py-2.5 text-ink outline-none"
+                  />
+                </div>
+                <p className="mt-1 text-xs text-slate">9 أرقام تبدأ بـ 5</p>
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-slate">البريد الإلكتروني</label>

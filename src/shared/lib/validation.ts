@@ -19,3 +19,9 @@ export function emailError(value: string): string | null {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'أدخل بريدًا إلكترونيًا صحيحًا يحتوي على علامة @';
   return null;
 }
+
+// صيغة دولية بدون "+": 966 ثم 9 أرقام تبدأ بـ5 (مثال: 966501234567).
+export function phoneError(value: string): string | null {
+  if (!/^9665\d{8}$/.test(value)) return 'رقم جوال سعودي غير صحيح (مثال: 966501234567)';
+  return null;
+}

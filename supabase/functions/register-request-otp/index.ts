@@ -14,6 +14,9 @@ function normalizePhone(phone: string): string {
   return phone.trim().replace(/\s|-/g, '');
 }
 
+// صيغة دولية بدون "+": 966 ثم 9 أرقام تبدأ بـ5 (مثال: 966501234567).
+const PHONE_RE = /^9665\d{8}$/;
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
   if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
@@ -32,7 +35,7 @@ Deno.serve(async (req: Request) => {
   const nationalId = String(body.national_id ?? '').trim();
   const email = String(body.email ?? '').trim().toLowerCase();
 
-  if (!/^05\d{8}$/.test(phone)) return jsonResponse({ error: 'رقم جوال سعودي غير صحيح (مثال: 05xxxxxxxx)' }, 400);
+  if (!PHONE_RE.test(phone)) return jsonResponse({ error: 'رقم جوال سعودي غير صحيح (مثال: 966501234567)' }, 400);
   if (!/^[12]\d{9}$/.test(nationalId)) return jsonResponse({ error: 'رقم الهوية غير صحيح' }, 400);
   if (!email) return jsonResponse({ error: 'البريد الإلكتروني مطلوب' }, 400);
 

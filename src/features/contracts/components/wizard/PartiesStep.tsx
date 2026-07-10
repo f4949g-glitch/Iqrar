@@ -528,7 +528,7 @@ export function PartiesStep({
                 <>
                   <Field label="العنوان" value={party.address} onChange={(v) => updateParty(index, { address: v })} />
                   <Field label="البريد الإلكتروني" value={party.email} onChange={(v) => updateParty(index, { email: v })} type="email" />
-                  <Field label="رقم الجوال" value={party.phone} onChange={(v) => updateParty(index, { phone: v })} digitsOnly maxLength={10} />
+                  <Field label="رقم الجوال" value={party.phone} onChange={(v) => updateParty(index, { phone: v })} phone />
                 </>
               )}
             </div>

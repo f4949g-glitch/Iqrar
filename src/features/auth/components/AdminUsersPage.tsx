@@ -102,7 +102,7 @@ export function AdminUsersPage() {
           <Field label="الاسم" value={form.full_name} onChange={(v) => setForm((f) => ({ ...f, full_name: v }))} required />
           <Field label="رقم الهوية" value={form.national_id} onChange={(v) => setForm((f) => ({ ...f, national_id: v }))} digitsOnly maxLength={10} required hint="10 أرقام فقط" />
           <Field label="البريد الإلكتروني" value={form.email} onChange={(v) => setForm((f) => ({ ...f, email: v }))} type="email" required />
-          <Field label="رقم الجوال (اختياري)" value={form.phone} onChange={(v) => setForm((f) => ({ ...f, phone: v }))} digitsOnly maxLength={10} />
+          <Field label="رقم الجوال (اختياري)" value={form.phone} onChange={(v) => setForm((f) => ({ ...f, phone: v }))} phone />
         </div>
         <div className="mt-4">
           <p className="mb-2 text-xs font-bold text-slate">الصلاحيات</p>
