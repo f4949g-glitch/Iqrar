@@ -38,6 +38,7 @@ const PRINT_STYLES = `
   table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 13px; }
   th, td { border: 1px solid #999; padding: 6px 10px; text-align: right; color: #000; }
   th { background: #f0f0f0; }
+  .signature-audit { font-size: 10px; color: #555; }
   .fill-image { max-height: 70px; }
   .verification-footer { display: flex; align-items: center; gap: 16px; margin-top: 24px; padding: 12px 16px; border: 1px solid #999; border-radius: 12px; }
   .verification-qr svg { width: 90px; height: 90px; }

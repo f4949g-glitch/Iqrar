@@ -163,11 +163,39 @@ async function finalizeContract(admin: ReturnType<typeof createClient>, contract
   }
 }
 
+// عرض مبسّط (لاتيني فقط) لمتصفح ونظام تشغيل الطرف من User-Agent الخام؛ خطوط PDF
+// القياسية المستخدمة هنا لا تدعم عرض العربية (انظر الملاحظة في generateFinalPdf.ts).
+function briefUserAgentLatin(ua: string | null): string | null {
+  if (!ua) return null;
+  let os = '';
+  if (/iphone/i.test(ua)) os = 'iPhone';
+  else if (/ipad/i.test(ua)) os = 'iPad';
+  else if (/android/i.test(ua)) os = 'Android';
+  else if (/windows/i.test(ua)) os = 'Windows';
+  else if (/mac os/i.test(ua)) os = 'macOS';
+  else if (/linux/i.test(ua)) os = 'Linux';
+
+  let browser = '';
+  if (/edg\//i.test(ua)) browser = 'Edge';
+  else if (/crios\//i.test(ua) || (/chrome\//i.test(ua) && !/chromium/i.test(ua))) browser = 'Chrome';
+  else if (/fxios\//i.test(ua) || /firefox\//i.test(ua)) browser = 'Firefox';
+  else if (/safari\//i.test(ua)) browser = 'Safari';
+
+  return [browser, os].filter(Boolean).join(' / ') || null;
+}
+
 // deno-lint-ignore no-explicit-any
 async function finalizePdfContract(admin: ReturnType<typeof createClient>, contract: any) {
   if (!contract.original_file_path) return;
 
-  const { data: allFields } = await admin.from('contract_fields').select('*').eq('contract_id', contract.id);
+  const [{ data: allFields }, { data: partiesForAudit }] = await Promise.all([
+    admin.from('contract_fields').select('*').eq('contract_id', contract.id),
+    admin
+      .from('contract_parties')
+      .select('order_index, signed_ip, signed_user_agent, signed_at')
+      .eq('contract_id', contract.id)
+      .order('order_index', { ascending: true }),
+  ]);
   const { data: originalFile } = await admin.storage.from('contracts').download(contract.original_file_path);
   if (!originalFile) return;
 
@@ -191,6 +219,15 @@ async function finalizePdfContract(admin: ReturnType<typeof createClient>, contr
       }
     : undefined;
 
+  const signerAudits = (partiesForAudit ?? [])
+    .filter((p) => p.signed_at)
+    .map((p) => ({
+      partyIndex: (p.order_index as number) + 1,
+      ip: p.signed_ip as string | null,
+      userAgentLabel: briefUserAgentLatin(p.signed_user_agent as string | null),
+      signedAtLabel: p.signed_at ? new Date(p.signed_at as string).toISOString() : null,
+    }));
+
   const finalBytes = await generateFinalPdf(
     originalBytes,
     fieldsToRender,
@@ -200,6 +237,7 @@ async function finalizePdfContract(admin: ReturnType<typeof createClient>, contr
       return new Uint8Array(await data.arrayBuffer());
     },
     verificationStamp,
+    signerAudits,
   );
 
   const finalPath = `${contract.id}/final.pdf`;
@@ -222,7 +260,10 @@ async function finalizeEditorContract(admin: ReturnType<typeof createClient>, co
   if (!contract.body_json) return;
 
   const [{ data: parties }, { data: allFields }] = await Promise.all([
-    admin.from('contract_parties').select('id, role_label, full_name, national_id, email, phone, verification_method').eq('contract_id', contract.id),
+    admin
+      .from('contract_parties')
+      .select('id, role_label, full_name, national_id, email, phone, verification_method, signed_at, signed_ip, signed_user_agent')
+      .eq('contract_id', contract.id),
     admin.from('contract_fields').select('*').eq('contract_id', contract.id),
   ]);
 

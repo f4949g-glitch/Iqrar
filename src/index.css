@@ -117,6 +117,10 @@ body {
   background: var(--color-paper);
   font-weight: 700;
 }
+.signature-audit {
+  font-size: 0.75rem;
+  color: var(--color-slate);
+}
 .fill-image {
   max-height: 70px;
 }

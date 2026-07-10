@@ -18,6 +18,13 @@ export interface VerificationStamp {
   qrPngBytes: Uint8Array;
 }
 
+export interface SignerAudit {
+  partyIndex: number;
+  ip: string | null;
+  userAgentLabel: string | null;
+  signedAtLabel: string | null;
+}
+
 // يدمج قيم الحقول المعبّأة فوق نسخة PDF الأصلية، ويُرجع بايتات النسخة النهائية.
 // الإحداثيات (pos_x/pos_y/width/height) نِسَب مئوية من أبعاد الصفحة، متوافقة بين
 // محرر وضع الحقول في الواجهة وهذا التوليد لأن كليهما يحسبها كنسبة من حجم الصفحة.
@@ -26,6 +33,7 @@ export async function generateFinalPdf(
   fields: FieldToRender[],
   fetchImage: (path: string) => Promise<Uint8Array>,
   verificationStamp?: VerificationStamp,
+  signerAudits?: SignerAudit[],
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(originalBytes);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -99,6 +107,21 @@ export async function generateFinalPdf(
         font,
         color: rgb(0, 0, 0),
       });
+
+      // أثر تدقيق التوقيع (IP والمتصفح/النظام والوقت) لكل طرف، بأرقام الأطراف بدل
+      // أسمائها العربية (خطوط PDF القياسية لا تدعم عرض العربية هنا كما هو موضح أعلاه).
+      let auditY = margin + qrSize - 40;
+      for (const audit of signerAudits ?? []) {
+        const line = `Party #${audit.partyIndex} signed from: ${audit.ip ?? '—'} | ${audit.userAgentLabel ?? '—'} | ${audit.signedAtLabel ?? '—'}`;
+        lastPage.drawText(line, {
+          x: margin + qrSize + 8,
+          y: auditY,
+          size: 7,
+          font,
+          color: rgb(0.3, 0.3, 0.3),
+        });
+        auditY -= 11;
+      }
     } catch (err) {
       console.error('تعذّر إضافة شريط التوثيق للمستند', err);
     }

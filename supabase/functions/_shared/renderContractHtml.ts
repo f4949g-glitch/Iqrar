@@ -1,5 +1,6 @@
-// نسخة مطابقة لـ src/features/contracts/editor/renderContractHtml.ts، مكرَّرة هنا
-// لأن Edge Functions تُنشر كملفات مستقلة (بلا bundler مشترك مع تطبيق العميل).
+// يحوّل مستند Tiptap JSON إلى HTML نصي، مع استبدال حقول الدمج ببيانات الطرف الفعلية
+// وحقول التعبئة بالقيمة المُدخلة (أو عنصر نائب إن لم تُعبّأ بعد). دالة خالصة (بلا DOM)
+// تعمل بنفس الشكل في المتصفح وفي Deno Edge Function عند توليد المستند النهائي.
 
 export interface JsonNode {
   type?: string;
@@ -12,11 +13,35 @@ export interface JsonNode {
 export interface PartyLike {
   id: string;
   role_label: string;
-  full_name: string;
+  full_name: string | null;
   national_id: string | null;
   email: string | null;
   phone: string | null;
   verification_method?: string;
+  signed_at?: string | null;
+  signed_ip?: string | null;
+  signed_user_agent?: string | null;
+}
+
+// عرض مبسّط لمتصفح ونظام تشغيل الطرف من سلسلة User-Agent الخام، ضمن أثر
+// تدقيق التوقيع الظاهر في المستند النهائي (دون الحاجة لمكتبة كاملة لتحليلها).
+function briefUserAgent(ua: string | null | undefined): string {
+  if (!ua) return '';
+  let os = '';
+  if (/iphone/i.test(ua)) os = 'iPhone';
+  else if (/ipad/i.test(ua)) os = 'iPad';
+  else if (/android/i.test(ua)) os = 'Android';
+  else if (/windows/i.test(ua)) os = 'Windows';
+  else if (/mac os/i.test(ua)) os = 'macOS';
+  else if (/linux/i.test(ua)) os = 'Linux';
+
+  let browser = '';
+  if (/edg\//i.test(ua)) browser = 'Edge';
+  else if (/crios\//i.test(ua) || (/chrome\//i.test(ua) && !/chromium/i.test(ua))) browser = 'Chrome';
+  else if (/fxios\//i.test(ua) || /firefox\//i.test(ua)) browser = 'Firefox';
+  else if (/safari\//i.test(ua)) browser = 'Safari';
+
+  return [browser, os].filter(Boolean).join(' · ');
 }
 
 type MergeKey = 'full_name' | 'role_label' | 'national_id' | 'email' | 'phone';
@@ -47,7 +72,11 @@ export interface FillValue {
   resolvedImageUrl?: string;
 }
 
-export function renderContractHtml(doc: JsonNode, parties: PartyLike[], fillValues: Record<string, FillValue> = {}): string {
+export function renderContractHtml(
+  doc: JsonNode,
+  parties: PartyLike[],
+  fillValues: Record<string, FillValue> = {},
+): string {
   const partyById = new Map(parties.map((p) => [p.id, p]));
 
   function renderNode(node: JsonNode): string {
@@ -170,7 +199,7 @@ export function renderSignatureBlockHtml(fields: SignatureFieldLike[], parties: 
       const party = partyById.get(f.party_id);
       const name = escapeHtml(party?.full_name || '—');
       const role = escapeHtml(party?.role_label ?? '');
-      const method = party ? (VERIFICATION_LABEL[(party as unknown as { verification_method?: string }).verification_method ?? 'manual'] ?? VERIFICATION_LABEL.manual) : '';
+      const method = party ? (VERIFICATION_LABEL[party.verification_method ?? 'manual'] ?? VERIFICATION_LABEL.manual) : '';
       let valueHtml: string;
       if (f.resolvedImageUrl) {
         valueHtml = `<img class="fill-image" src="${f.resolvedImageUrl}" alt="${escapeHtml(f.label)}" style="max-height:70px" />`;
@@ -179,8 +208,16 @@ export function renderSignatureBlockHtml(fields: SignatureFieldLike[], parties: 
       } else {
         valueHtml = escapeHtml(String(f.value));
       }
-      return `<tr><td>${name}</td><td>${role}</td><td>${escapeHtml(f.label)}</td><td>${valueHtml}</td><td>${escapeHtml(method)}</td></tr>`;
+      // أثر تدقيق التوقيع (IP والمتصفح/النظام والوقت) يُعرَض تحت التوقيع مباشرة لتقوية
+      // الحجية القانونية للمستند، ولا يُملأ إلا لحقل التوقيع فعليًا لطرف وقّع بالفعل.
+      let auditHtml = '—';
+      if (f.field_type === 'signature' && party?.signed_at) {
+        const parts = [party.signed_ip, briefUserAgent(party.signed_user_agent)].filter(Boolean);
+        const dateLabel = new Date(party.signed_at).toLocaleString('ar-SA-u-ca-gregory');
+        auditHtml = escapeHtml([...parts, dateLabel].join(' · '));
+      }
+      return `<tr><td>${name}</td><td>${role}</td><td>${escapeHtml(f.label)}</td><td>${valueHtml}</td><td>${escapeHtml(method)}</td><td class="signature-audit">${auditHtml}</td></tr>`;
     })
     .join('');
-  return `<div class="signatures-section"><h3>توقيعات الأطراف</h3><table class="signatures-table"><thead><tr><th>الاسم</th><th>الصفة</th><th>الحقل</th><th>القيمة</th><th>طريقة التوثيق</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  return `<div class="signatures-section"><h3>توقيعات الأطراف</h3><table class="signatures-table"><thead><tr><th>الاسم</th><th>الصفة</th><th>الحقل</th><th>القيمة</th><th>طريقة التوثيق</th><th>أثر التوقيع</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
