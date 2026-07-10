@@ -161,7 +161,7 @@ export function LandingPage() {
             منصة توثيق العقود الإلكترونية
           </p>
           <h1 className="mx-auto mb-4 max-w-3xl font-display text-2xl font-extrabold leading-tight text-ink sm:text-3xl md:text-4xl">
-            وثّق عقودك واعتماداتك إلكترونيًا بثقة وسهولة
+            وثّق عقودك إلكترونيًا بثقة وسهولة
           </h1>
           <p className="mx-auto max-w-2xl text-base leading-relaxed text-slate md:text-lg">
             أنشئ عقودًا متعددة الأطراف، أرسلها للتوقيع برابط فريد، وتحقق من هوية الأطراف عبر نفاذ — كل ذلك من مكان
@@ -171,6 +171,18 @@ export function LandingPage() {
       </section>
 
       {showChooser && <DocumentationChooser onClose={() => setShowChooser(false)} />}
+
+      <section className="border-t border-line bg-card">
+        <div className="mx-auto max-w-4xl px-4 py-14 text-center md:px-8">
+          <h2 className="mb-3 font-display text-2xl font-extrabold text-ink md:text-3xl">من نحن</h2>
+          <p className="text-base leading-relaxed text-slate">
+            إقرار منصة سعودية لتوثيق العقود والإقرارات إلكترونيًا، تجمع بين سهولة الاستخدام وقوة التحقق من الهوية
+            الوطنية، لتمنح الأفراد والمنشآت وسيلة موثوقة لإتمام اتفاقياتهم دون الحاجة للقاء الأطراف فعليًا.
+          </p>
+        </div>
+      </section>
+
+      <QuickVerify />
 
       <section className="mx-auto max-w-6xl px-4 py-16 md:px-8">
         <div className="mx-auto mb-10 max-w-2xl text-center">
@@ -190,18 +202,21 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="bg-card py-16 md:py-20">
+      <section className="bg-card py-14 md:py-16">
         <div className="mx-auto max-w-6xl px-4 text-center md:px-8">
           <button
             type="button"
             onClick={() => setShowChooser(true)}
-            className="mx-auto flex w-full max-w-sm flex-col items-center gap-4 rounded-3xl bg-seal p-10 text-white shadow-xl transition hover:-translate-y-0.5 hover:shadow-2xl"
+            className="group mx-auto flex w-full max-w-md items-center gap-4 rounded-2xl bg-seal px-5 py-4 text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
           >
-            <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-white/15">
-              <FileSignature size={40} className="text-white" />
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15">
+              <FileSignature size={20} className="text-white" />
             </div>
-            <span className="font-display text-xl font-extrabold">توثيق العقود</span>
-            <span className="text-sm text-white/80">ابدأ توثيق عقدك الآن</span>
+            <span className="flex-1 text-right">
+              <span className="block font-display text-base font-extrabold">توثيق العقود</span>
+              <span className="block text-xs text-white/80">ابدأ توثيق عقدك الآن</span>
+            </span>
+            <ArrowLeft size={18} className="shrink-0 transition group-hover:-translate-x-1" />
           </button>
 
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -218,8 +233,6 @@ export function LandingPage() {
         </div>
       </section>
 
-      <QuickVerify />
-
       <section className="mx-auto max-w-6xl px-4 py-16 md:px-8 md:py-24">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map(({ icon: Icon, title, desc }) => (
@@ -231,16 +244,6 @@ export function LandingPage() {
               <p className="text-sm leading-relaxed text-slate">{desc}</p>
             </div>
           ))}
-        </div>
-      </section>
-
-      <section className="border-t border-line bg-card">
-        <div className="mx-auto max-w-4xl px-4 py-16 text-center md:px-8">
-          <h2 className="mb-3 font-display text-2xl font-extrabold text-ink md:text-3xl">من نحن</h2>
-          <p className="text-base leading-relaxed text-slate">
-            إقرار منصة سعودية لتوثيق العقود والإقرارات إلكترونيًا، تجمع بين سهولة الاستخدام وقوة التحقق من الهوية
-            الوطنية، لتمنح الأفراد والمنشآت وسيلة موثوقة لإتمام اتفاقياتهم دون الحاجة للقاء الأطراف فعليًا.
-          </p>
         </div>
       </section>
 
