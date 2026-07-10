@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase/client';
 
+export type CreditApprovalStatus = 'approved' | 'pending' | 'rejected';
+
 export interface CreditCode {
   id: string;
   code: string;
@@ -7,7 +9,11 @@ export interface CreditCode {
   max_uses: number | null;
   uses_count: number;
   is_active: boolean;
+  created_by: string;
   created_at: string;
+  approval_status: CreditApprovalStatus;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
 }
 
 export async function listCreditCodes(): Promise<CreditCode[]> {
@@ -16,12 +22,26 @@ export async function listCreditCodes(): Promise<CreditCode[]> {
   return data as CreditCode[];
 }
 
-export async function createCreditCode(input: { code: string; amount: number; max_uses: number | null }): Promise<CreditCode> {
+export interface NewCreditCodeInput {
+  code: string;
+  amount: number;
+  max_uses: number | null;
+}
+
+// نفس منطق أكواد الخصم: أدمن فرعي بلا صلاحية إنشاء مباشرة يُنشئ الكود بحالة
+// "pending" وغير مُفعَّل حتى يوافق عليه الأدمن الرئيسي — القاعدة الفعلية تُفرَض
+// من سياسة RLS نفسها (credit_codes_insert).
+export async function createCreditCode(input: NewCreditCodeInput, needsApproval: boolean): Promise<CreditCode> {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) throw new Error('يلزم تسجيل الدخول');
   const { data, error } = await supabase
     .from('credit_codes')
-    .insert({ ...input, created_by: userData.user.id })
+    .insert({
+      ...input,
+      created_by: userData.user.id,
+      approval_status: needsApproval ? 'pending' : 'approved',
+      is_active: !needsApproval,
+    })
     .select()
     .single();
   if (error) throw error;
@@ -35,6 +55,22 @@ export async function toggleCreditCode(id: string, isActive: boolean): Promise<v
 
 export async function deleteCreditCode(id: string): Promise<void> {
   const { error } = await supabase.from('credit_codes').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// موافقة/رفض الأدمن الرئيسي على كود شحن أنشأه أدمن فرعي بلا صلاحية مباشرة.
+export async function reviewCreditCode(id: string, approve: boolean): Promise<void> {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) throw new Error('غير مسجّل الدخول');
+  const { error } = await supabase
+    .from('credit_codes')
+    .update({
+      approval_status: approve ? 'approved' : 'rejected',
+      is_active: approve,
+      reviewed_by: userData.user.id,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq('id', id);
   if (error) throw error;
 }
 

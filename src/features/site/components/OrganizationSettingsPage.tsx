@@ -1,0 +1,138 @@
+import { useEffect, useState } from 'react';
+import { Building2 } from 'lucide-react';
+import { Field } from '@/shared/ui/Field';
+import { Button } from '@/shared/ui/Button';
+import { fileToDataUrl } from '@/shared/lib/fileToDataUrl';
+import { fetchSiteSettings, updateSiteSettings, type SiteSettings } from '../api/siteSettingsApi';
+
+export function OrganizationSettingsPage() {
+  const [form, setForm] = useState<SiteSettings | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    fetchSiteSettings()
+      .then((s) => {
+        setForm(s);
+        setLogoPreview(s.logo_data_url);
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'تعذّر تحميل إعدادات المنشأة'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const onLogoUpload = async (file: File) => {
+    const dataUrl = await fileToDataUrl(file);
+    setLogoPreview(dataUrl);
+  };
+
+  const save = async () => {
+    if (!form) return;
+    setError('');
+    setSaved(false);
+    setSaving(true);
+    try {
+      const updated = await updateSiteSettings({ ...form, logo_data_url: logoPreview });
+      setForm(updated);
+      setSaved(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'تعذّر حفظ إعدادات المنشأة');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading || !form) return <p className="text-sm text-slate">جارِ التحميل...</p>;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-md bg-sealLight">
+          <Building2 size={20} className="text-seal" />
+        </div>
+        <div>
+          <h1 className="font-display text-2xl font-extrabold text-ink">هوية المنشأة</h1>
+          <p className="text-sm text-slate">الاسم والشعار وبيانات التواصل التي تظهر في الصفحة الرئيسية وصفحة اتصل بنا.</p>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-line bg-card p-5">
+        <h2 className="mb-4 font-display text-sm font-bold text-ink">الشعار والاسم</h2>
+        <div className="mb-4 flex items-center gap-4">
+          {logoPreview ? (
+            <img src={logoPreview} alt="شعار المنشأة" className="h-16 w-16 rounded-lg border border-line bg-white object-contain p-1" />
+          ) : (
+            <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-line text-xs text-slate">لا يوجد</div>
+          )}
+          <div className="flex-1 space-y-2">
+            <label className="text-xs font-bold text-seal">
+              رفع شعار جديد
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onLogoUpload(file);
+                }}
+                className="mt-1.5 block w-full text-xs"
+              />
+            </label>
+            {logoPreview && (
+              <button type="button" onClick={() => setLogoPreview(null)} className="text-xs font-bold text-clay">
+                إزالة الشعار
+              </button>
+            )}
+          </div>
+        </div>
+        <Field label="اسم المنشأة المعروض" value={form.org_name} onChange={(v) => setForm((f) => f && { ...f, org_name: v })} required />
+      </div>
+
+      <div className="rounded-xl border border-line bg-card p-5">
+        <h2 className="mb-4 font-display text-sm font-bold text-ink">بيانات التواصل</h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field
+            label="البريد الإلكتروني"
+            value={form.contact_email ?? ''}
+            onChange={(v) => setForm((f) => f && { ...f, contact_email: v || null })}
+            type="email"
+          />
+          <Field
+            label="رقم الهاتف"
+            value={form.contact_phone ?? ''}
+            onChange={(v) => setForm((f) => f && { ...f, contact_phone: v || null })}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-line bg-card p-5">
+        <h2 className="mb-4 font-display text-sm font-bold text-ink">روابط التواصل الاجتماعي</h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field
+            label="Instagram (رابط كامل)"
+            value={form.social_instagram ?? ''}
+            onChange={(v) => setForm((f) => f && { ...f, social_instagram: v || null })}
+          />
+          <Field label="X (رابط كامل)" value={form.social_x ?? ''} onChange={(v) => setForm((f) => f && { ...f, social_x: v || null })} />
+          <Field
+            label="اسم منصة أخرى (اختياري)"
+            value={form.social_other_label ?? ''}
+            onChange={(v) => setForm((f) => f && { ...f, social_other_label: v || null })}
+          />
+          <Field
+            label="رابط المنصة الأخرى"
+            value={form.social_other_url ?? ''}
+            onChange={(v) => setForm((f) => f && { ...f, social_other_url: v || null })}
+          />
+        </div>
+      </div>
+
+      {error && <p className="text-sm font-bold text-clay">{error}</p>}
+      {saved && <p className="text-sm font-bold text-sage">تم الحفظ بنجاح</p>}
+      <Button onClick={save} disabled={saving}>
+        {saving ? 'جارِ الحفظ...' : 'حفظ الإعدادات'}
+      </Button>
+    </div>
+  );
+}

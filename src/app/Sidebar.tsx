@@ -15,6 +15,8 @@ import {
   SlidersHorizontal,
   BarChart3,
   Users,
+  MessageSquare,
+  Building2,
 } from 'lucide-react';
 import type { Profile } from '@/features/auth';
 import { hasAdminPermission } from '@/features/auth/types';
@@ -76,10 +78,16 @@ function buildAdminGroup(profile: Profile): SidebarGroup | null {
   if (hasAdminPermission(profile, 'create_discount_codes')) {
     links.push({ to: '/app/contracts/discounts', label: 'أكواد الخصم', icon: Percent });
   }
+  if (hasAdminPermission(profile, 'create_credit_codes')) {
+    links.push({ to: '/app/contracts/credit-codes', label: 'أكواد الشحن', icon: Wallet });
+  }
+  if (hasAdminPermission(profile, 'manage_pricing')) {
+    links.push({ to: '/app/contracts/pricing', label: 'إعدادات التسعير', icon: SlidersHorizontal });
+  }
   if (isFullAdmin) {
     links.push(
-      { to: '/app/contracts/credit-codes', label: 'أكواد الشحن', icon: Wallet },
-      { to: '/app/contracts/pricing', label: 'إعدادات التسعير', icon: SlidersHorizontal },
+      { to: '/app/customer-service', label: 'خدمة العملاء', icon: MessageSquare },
+      { to: '/app/org-settings', label: 'هوية المنشأة', icon: Building2 },
       { to: '/app/contracts/admin-users', label: 'مستخدمو الإدارة', icon: Users },
     );
   }
@@ -93,11 +101,11 @@ function NavItem({ link, active, onNavigate }: { link: SidebarLink; active: bool
     <Link
       to={link.to}
       onClick={onNavigate}
-      className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-bold leading-tight transition sm:gap-2.5 sm:px-3 sm:text-sm ${
+      className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-bold leading-tight transition sm:gap-2.5 sm:px-3 sm:text-sm lg:gap-3 lg:px-3.5 lg:py-2.5 lg:text-[15px] ${
         active ? 'bg-sealLight text-seal' : 'text-slate hover:bg-paper hover:text-ink'
       }`}
     >
-      <Icon size={16} className="shrink-0 sm:size-[17px]" />
+      <Icon size={16} className="shrink-0 sm:size-[17px] lg:size-5" />
       <span>{link.label}</span>
     </Link>
   );
@@ -106,7 +114,7 @@ function NavItem({ link, active, onNavigate }: { link: SidebarLink; active: bool
 function NavGroup({ group, isActive, onNavigate }: { group: SidebarGroup; isActive: (to: string) => boolean; onNavigate?: () => void }) {
   return (
     <div className="mb-4 last:mb-0">
-      {group.title && <p className="mb-1 px-3 text-[11px] font-bold text-slate">{group.title}</p>}
+      {group.title && <p className="mb-1 px-3 text-[11px] font-bold text-slate lg:text-xs">{group.title}</p>}
       <nav className="space-y-1">
         {group.links.map((link) => (
           <NavItem key={link.to} link={link} active={isActive(link.to)} onNavigate={onNavigate} />
@@ -136,7 +144,7 @@ export function Sidebar({ profile, mobileOpen = false, onMobileClose }: SidebarP
         <div className="fixed inset-0 z-40 bg-navy/50 md:hidden" onClick={onMobileClose} aria-hidden="true" />
       )}
       <aside
-        className={`fixed inset-y-0 right-0 z-50 flex w-64 shrink-0 flex-col justify-between overflow-y-auto border-e border-line bg-card p-3 shadow-2xl transition-transform duration-200 md:sticky md:top-0 md:z-auto md:h-screen md:w-40 md:translate-x-0 md:p-3 md:shadow-none lg:w-60 lg:p-4 ${
+        className={`fixed inset-y-0 right-0 z-50 flex w-64 shrink-0 flex-col justify-between overflow-y-auto border-e border-line bg-card p-3 shadow-2xl transition-transform duration-200 md:sticky md:top-0 md:z-auto md:h-dvh md:w-40 md:translate-x-0 md:p-3 md:shadow-none lg:w-60 lg:p-4 ${
           mobileOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
         }`}
       >

@@ -20,6 +20,10 @@ const CreditCodesPage = lazy(() => import('@/features/contracts/components/Credi
 const PricingSettingsPage = lazy(() => import('@/features/contracts/components/PricingSettingsPage').then((m) => ({ default: m.PricingSettingsPage })));
 const ReportsPage = lazy(() => import('@/features/contracts/components/ReportsPage').then((m) => ({ default: m.ReportsPage })));
 const AdminUsersPage = lazy(() => import('@/features/auth/components/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage })));
+const CustomerServicePage = lazy(() => import('@/features/site/components/CustomerServicePage').then((m) => ({ default: m.CustomerServicePage })));
+const OrganizationSettingsPage = lazy(() =>
+  import('@/features/site/components/OrganizationSettingsPage').then((m) => ({ default: m.OrganizationSettingsPage })),
+);
 const BalancePage = lazy(() => import('@/features/contracts/components/BalancePage').then((m) => ({ default: m.BalancePage })));
 const ProfilePage = lazy(() => import('@/features/auth/components/ProfilePage').then((m) => ({ default: m.ProfilePage })));
 const SettingsPage = lazy(() => import('@/features/auth/components/SettingsPage').then((m) => ({ default: m.SettingsPage })));
@@ -84,13 +88,21 @@ function AppShell() {
             path="/contracts/discounts"
             element={!profile ? <AuthGate /> : hasAdminPermission(profile, 'create_discount_codes') ? <DiscountCodesPage /> : <AdminGate />}
           />
-          <Route path="/contracts/credit-codes" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <CreditCodesPage /> : <AdminGate />} />
-          <Route path="/contracts/pricing" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <PricingSettingsPage /> : <AdminGate />} />
+          <Route
+            path="/contracts/credit-codes"
+            element={!profile ? <AuthGate /> : hasAdminPermission(profile, 'create_credit_codes') ? <CreditCodesPage /> : <AdminGate />}
+          />
+          <Route
+            path="/contracts/pricing"
+            element={!profile ? <AuthGate /> : hasAdminPermission(profile, 'manage_pricing') ? <PricingSettingsPage /> : <AdminGate />}
+          />
           <Route
             path="/contracts/reports"
             element={!profile ? <AuthGate /> : hasAdminPermission(profile, 'view_reports') ? <ReportsPage /> : <AdminGate />}
           />
           <Route path="/contracts/admin-users" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <AdminUsersPage /> : <AdminGate />} />
+          <Route path="/customer-service" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <CustomerServicePage /> : <AdminGate />} />
+          <Route path="/org-settings" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <OrganizationSettingsPage /> : <AdminGate />} />
         </Routes>
       </Suspense>
     </Layout>

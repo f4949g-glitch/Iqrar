@@ -19,10 +19,17 @@ import {
   ArrowRight,
   Search,
   Stamp,
+  Camera,
+  AtSign,
+  Globe,
+  Mail,
 } from 'lucide-react';
 import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '@/features/contracts/api/pricingApi';
 import { setPendingContractIntent } from '@/features/contracts/lib/pendingIntent';
 import type { DocumentType, VerificationMethod } from '@/features/contracts/types';
+import { fetchSiteSettings, type SiteSettings } from '@/features/site/api/siteSettingsApi';
+
+const DEFAULT_ORG_NAME = 'منصة إقرار لخدمات الأعمال';
 
 const FEATURES = [
   {
@@ -86,17 +93,21 @@ const TRUST_POINTS = [
   { icon: ScanLine, label: 'رقم توثيق ورمز QR على كل مستند' },
 ];
 
-function Nav({ profile, onLogout }: { profile: Profile | null; onLogout: () => void }) {
+function Nav({ profile, onLogout, orgName, logoUrl }: { profile: Profile | null; onLogout: () => void; orgName: string; logoUrl: string | null }) {
   return (
     <header className="border-b border-line bg-card">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 md:px-8">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-seal">
-            <FileSignature size={18} className="text-white" />
-          </div>
+          {logoUrl ? (
+            <img src={logoUrl} alt={orgName} className="h-9 w-9 rounded-md object-contain" />
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-seal">
+              <FileSignature size={18} className="text-white" />
+            </div>
+          )}
           <span className="font-display text-lg font-extrabold text-ink">
             <span className="sm:hidden">إقرار</span>
-            <span className="hidden sm:inline">منصة إقرار لخدمات الأعمال</span>
+            <span className="hidden sm:inline">{orgName}</span>
           </span>
         </div>
         <div className="flex items-center gap-0.5 text-xs font-bold sm:gap-1 sm:text-sm">
@@ -331,7 +342,17 @@ function QuickVerify() {
 export function LandingPage() {
   const [activeFlow, setActiveFlow] = useState<DocumentType | null>(null);
   const [expandedVerification, setExpandedVerification] = useState<string | null>(null);
+  const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
   const { profile, refresh } = useSession();
+
+  useEffect(() => {
+    fetchSiteSettings()
+      .then(setSiteSettings)
+      .catch(() => setSiteSettings(null));
+  }, []);
+
+  const orgName = siteSettings?.org_name || DEFAULT_ORG_NAME;
+  const logoUrl = siteSettings?.logo_data_url ?? null;
 
   const handleLogout = async () => {
     await signOut();
@@ -340,7 +361,7 @@ export function LandingPage() {
 
   return (
     <div dir="rtl" className="min-h-screen bg-paper">
-      <Nav profile={profile} onLogout={handleLogout} />
+      <Nav profile={profile} onLogout={handleLogout} orgName={orgName} logoUrl={logoUrl} />
 
       <section className="border-b-4 border-seal bg-navy">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 md:grid-cols-[1.15fr_0.85fr] md:items-center md:px-8 md:py-20">
@@ -497,12 +518,62 @@ export function LandingPage() {
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
             <div className="col-span-2 sm:col-span-1">
               <div className="mb-3 flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-seal">
-                  <FileSignature size={14} className="text-white" />
-                </div>
-                <span className="font-display font-bold text-ink">منصة إقرار لخدمات الأعمال</span>
+                {logoUrl ? (
+                  <img src={logoUrl} alt={orgName} className="h-7 w-7 rounded-md object-contain" />
+                ) : (
+                  <div className="flex h-7 w-7 items-center justify-center rounded-md bg-seal">
+                    <FileSignature size={14} className="text-white" />
+                  </div>
+                )}
+                <span className="font-display font-bold text-ink">{orgName}</span>
               </div>
               <p className="text-sm leading-relaxed text-slate">منصة سعودية لتوثيق العقود والإقرارات إلكترونيًا.</p>
+              {siteSettings?.contact_email && (
+                <a
+                  href={`mailto:${siteSettings.contact_email}`}
+                  className="mt-2 flex items-center gap-1.5 text-sm font-bold text-ink hover:text-seal"
+                  dir="ltr"
+                >
+                  <Mail size={14} /> {siteSettings.contact_email}
+                </a>
+              )}
+              {(siteSettings?.social_instagram || siteSettings?.social_x || siteSettings?.social_other_url) && (
+                <div className="mt-3 flex items-center gap-2">
+                  {siteSettings.social_instagram && (
+                    <a
+                      href={siteSettings.social_instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Instagram"
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-paper text-ink hover:bg-sealLight hover:text-seal"
+                    >
+                      <Camera size={16} />
+                    </a>
+                  )}
+                  {siteSettings.social_x && (
+                    <a
+                      href={siteSettings.social_x}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="X"
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-paper text-ink hover:bg-sealLight hover:text-seal"
+                    >
+                      <AtSign size={16} />
+                    </a>
+                  )}
+                  {siteSettings.social_other_url && (
+                    <a
+                      href={siteSettings.social_other_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={siteSettings.social_other_label || 'رابط آخر'}
+                      className="flex h-8 w-8 items-center justify-center rounded-full bg-paper text-ink hover:bg-sealLight hover:text-seal"
+                    >
+                      <Globe size={16} />
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <p className="mb-3 text-xs font-bold text-slate">المنصة</p>
@@ -529,7 +600,7 @@ export function LandingPage() {
         </div>
         <div className="border-t border-line">
           <div className="mx-auto max-w-6xl px-4 py-4 text-center text-xs text-slate md:px-8">
-            © {new Date().getFullYear()} إقرار. جميع الحقوق محفوظة.
+            © {new Date().getFullYear()} {orgName}. جميع الحقوق محفوظة.
           </div>
         </div>
       </footer>

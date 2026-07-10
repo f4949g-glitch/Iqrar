@@ -270,32 +270,41 @@ export type Database = {
       credit_codes: {
         Row: {
           amount: number;
+          approval_status: string;
           code: string;
           created_at: string;
           created_by: string;
           id: string;
           is_active: boolean;
           max_uses: number | null;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
           uses_count: number;
         };
         Insert: {
           amount: number;
+          approval_status?: string;
           code: string;
           created_at?: string;
           created_by: string;
           id?: string;
           is_active?: boolean;
           max_uses?: number | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
           uses_count?: number;
         };
         Update: {
           amount?: number;
+          approval_status?: string;
           code?: string;
           created_at?: string;
           created_by?: string;
           id?: string;
           is_active?: boolean;
           max_uses?: number | null;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
           uses_count?: number;
         };
         Relationships: [];
@@ -423,6 +432,81 @@ export type Database = {
           price_per_party?: number;
           tax_percent?: number;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      site_settings: {
+        Row: {
+          contact_email: string | null;
+          contact_phone: string | null;
+          id: number;
+          logo_data_url: string | null;
+          org_name: string;
+          social_instagram: string | null;
+          social_other_label: string | null;
+          social_other_url: string | null;
+          social_x: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          contact_email?: string | null;
+          contact_phone?: string | null;
+          id?: number;
+          logo_data_url?: string | null;
+          org_name?: string;
+          social_instagram?: string | null;
+          social_other_label?: string | null;
+          social_other_url?: string | null;
+          social_x?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          contact_email?: string | null;
+          contact_phone?: string | null;
+          id?: number;
+          logo_data_url?: string | null;
+          org_name?: string;
+          social_instagram?: string | null;
+          social_other_label?: string | null;
+          social_other_url?: string | null;
+          social_x?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      contact_messages: {
+        Row: {
+          category: string;
+          created_at: string;
+          created_by: string | null;
+          email: string | null;
+          id: string;
+          message: string;
+          name: string;
+          phone: string | null;
+          status: string;
+        };
+        Insert: {
+          category: string;
+          created_at?: string;
+          created_by?: string | null;
+          email?: string | null;
+          id?: string;
+          message: string;
+          name: string;
+          phone?: string | null;
+          status?: string;
+        };
+        Update: {
+          category?: string;
+          created_at?: string;
+          created_by?: string | null;
+          email?: string | null;
+          id?: string;
+          message?: string;
+          name?: string;
+          phone?: string | null;
+          status?: string;
         };
         Relationships: [];
       };
