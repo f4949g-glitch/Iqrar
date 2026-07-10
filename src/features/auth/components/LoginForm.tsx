@@ -50,9 +50,8 @@ export function LoginForm({ onSignedIn }: LoginFormProps) {
             <input
               id="national-id"
               inputMode="numeric"
-              maxLength={10}
               value={nationalId}
-              onChange={(e) => setNationalId(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
+              onChange={(e) => setNationalId(e.target.value.replace(/[^0-9]/g, ''))}
               autoComplete="off"
               spellCheck={false}
               className={inputClass}
