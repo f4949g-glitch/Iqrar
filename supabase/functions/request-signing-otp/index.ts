@@ -1,7 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
-import { sendSms } from '../_shared/sms.ts';
+import { sendSms, isSmsConfigured } from '../_shared/sms.ts';
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -56,7 +56,7 @@ Deno.serve(async (req: Request) => {
     .upsert({ party_id: party.id, code, attempts: 0, verified: false, expires_at: expiresAt }, { onConflict: 'party_id' });
   if (upsertError) return jsonResponse({ error: 'تعذّر إنشاء رمز التحقق' }, 500);
 
-  const smsConfigured = Boolean(Deno.env.get('FOURJAWALY_API_KEY') && Deno.env.get('FOURJAWALY_API_KEY') !== '1234');
+  const smsConfigured = isSmsConfigured();
   await sendSms(ownerProfile.phone, `رمز التحقق لاستخدام توقيعك المحفوظ في منصة إقرار: ${code} (صالح لمدة 5 دقائق)`);
 
   return jsonResponse({

@@ -1,7 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
-import { sendSms } from '../_shared/sms.ts';
+import { sendSms, isSmsConfigured } from '../_shared/sms.ts';
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -40,7 +40,7 @@ Deno.serve(async (req: Request) => {
     .upsert({ national_id: nationalId, code, attempts: 0, expires_at: expiresAt }, { onConflict: 'national_id' });
   if (upsertError) return jsonResponse({ error: 'تعذّر إنشاء رمز التحقق' }, 500);
 
-  const smsConfigured = Boolean(Deno.env.get('FOURJAWALY_API_KEY') && Deno.env.get('FOURJAWALY_API_KEY') !== '1234');
+  const smsConfigured = isSmsConfigured();
   await sendSms(profile.phone, `رمز استعادة كلمة المرور في منصة إقرار: ${code} (صالح لمدة 10 دقائق)`);
 
   return jsonResponse({ ok: true, sms_configured: smsConfigured, dev_code: smsConfigured ? undefined : code });
