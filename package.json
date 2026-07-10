@@ -12,6 +12,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/cairo": "^5.2.7",
+    "@fontsource/tajawal": "^5.2.7",
     "@supabase/supabase-js": "^2.110.2",
     "@tiptap/extension-table": "^3.27.3",
     "@tiptap/pm": "^3.27.3",

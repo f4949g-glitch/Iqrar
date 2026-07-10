@@ -7,19 +7,29 @@ const DURATION_MS = 5000;
 export function SplashScreen({ onDone }: { onDone: () => void }) {
   const [visible, setVisible] = useState(true);
 
+  const dismiss = () => {
+    setVisible(false);
+    setTimeout(onDone, 400);
+  };
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setVisible(false);
-      setTimeout(onDone, 400);
-    }, DURATION_MS);
+    const timer = setTimeout(dismiss, DURATION_MS);
     return () => clearTimeout(timer);
-  }, [onDone]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center bg-hero transition-opacity duration-500 ${visible ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
       dir="rtl"
     >
+      <button
+        type="button"
+        onClick={dismiss}
+        className="absolute left-4 top-4 rounded-full bg-white/70 px-4 py-1.5 text-xs font-bold text-ink shadow-sm hover:bg-white sm:left-6 sm:top-6"
+      >
+        تخطّي
+      </button>
       <div className="relative flex flex-col items-center px-4 text-center">
         <div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center">
           <ShieldCheck size={88} className="absolute -left-20 top-0 animate-[iqrar-float_3s_ease-in-out_infinite] text-seal/20 sm:-left-36" />
