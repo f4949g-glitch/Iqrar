@@ -113,6 +113,8 @@ export type Database = {
           reject_resend_count: number;
           role_label: string;
           signed_at: string | null;
+          signed_ip: string | null;
+          signed_user_agent: string | null;
           status: string;
           token: string;
           user_id: string | null;
@@ -140,6 +142,8 @@ export type Database = {
           reject_resend_count?: number;
           role_label: string;
           signed_at?: string | null;
+          signed_ip?: string | null;
+          signed_user_agent?: string | null;
           status?: string;
           token?: string;
           user_id?: string | null;
@@ -167,6 +171,8 @@ export type Database = {
           reject_resend_count?: number;
           role_label?: string;
           signed_at?: string | null;
+          signed_ip?: string | null;
+          signed_user_agent?: string | null;
           status?: string;
           token?: string;
           user_id?: string | null;

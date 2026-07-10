@@ -50,6 +50,11 @@ Deno.serve(async (req: Request) => {
   const reason = String(body.reason ?? '').trim();
   if (!token) return jsonResponse({ error: 'رابط غير صالح' }, 400);
 
+  // أثر تدقيق التوقيع: عنوان IP ومعلومات المتصفح/الجهاز وقت التوقيع، لتقوية
+  // الحجية القانونية للتوثيق الإلكتروني إلى جانب رقم الهوية ووقت التوقيع.
+  const clientIp = (req.headers.get('x-forwarded-for') ?? req.headers.get('cf-connecting-ip') ?? '').split(',')[0].trim() || null;
+  const userAgent = req.headers.get('user-agent') || null;
+
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
   const { data: party, error: partyError } = await admin.from('contract_parties').select('*').eq('token', token).maybeSingle();
@@ -105,7 +110,10 @@ Deno.serve(async (req: Request) => {
     await admin.from('contract_fields').update({ value: storedValue, filled_at: new Date().toISOString() }).eq('id', field.id);
   }
 
-  await admin.from('contract_parties').update({ status: 'signed', signed_at: new Date().toISOString() }).eq('id', party.id);
+  await admin
+    .from('contract_parties')
+    .update({ status: 'signed', signed_at: new Date().toISOString(), signed_ip: clientIp, signed_user_agent: userAgent })
+    .eq('id', party.id);
   await admin
     .from('contract_events')
     .insert({ contract_id: contract.id, party_id: party.id, event_type: 'party_signed', message: `وقّع ${party.full_name} على العقد` });

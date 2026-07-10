@@ -59,6 +59,8 @@ function syntheticContractParties(draftParties: DraftParty[]): ContractParty[] {
     nationality: p.nationality || null,
     address: p.address || null,
     reject_resend_count: 0,
+    signed_ip: null,
+    signed_user_agent: null,
   }));
 }
 

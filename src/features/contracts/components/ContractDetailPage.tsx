@@ -20,6 +20,7 @@ import { supabase } from '@/lib/supabase/client';
 import { renderContractHtml, renderPartiesHeaderHtml, renderTermLineHtml, escapeHtml, type JsonNode } from '../editor/renderContractHtml';
 import { getErrorMessage } from '@/shared/lib/errorMessage';
 import { formatDate, formatDateTime } from '@/shared/lib/formatDate';
+import { parseUserAgent } from '@/shared/lib/parseUserAgent';
 import {
   CONTRACT_STATUS_LABEL,
   PARTY_ROLE_OPTIONS,
@@ -392,6 +393,11 @@ export function ContractDetailPage() {
                     {p.verification_method === 'nafath' && p.nafath_verified_at && ' · وُثّق عبر نفاذ'}
                     {p.signed_at && ` في ${formatDateTime(p.signed_at)}`}
                   </p>
+                  {p.status === 'signed' && (p.signed_ip || p.signed_user_agent) && (
+                    <p className="mt-0.5 text-[11px] text-slate/70">
+                      أثر التوقيع: {p.signed_ip || '—'} · {parseUserAgent(p.signed_user_agent)}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {p.status !== 'signed' && (

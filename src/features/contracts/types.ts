@@ -112,6 +112,8 @@ export interface ContractParty {
   nationality: string | null;
   address: string | null;
   reject_resend_count: number;
+  signed_ip: string | null;
+  signed_user_agent: string | null;
 }
 
 export interface ContractField {
