@@ -48,24 +48,30 @@ const VERIFICATION_TYPES = [
   },
 ];
 
+const TRUST_POINTS = [
+  { icon: ShieldCheck, label: 'تحقق هوية عبر نفاذ الوطنية' },
+  { icon: Lock, label: 'حماية وتشفير لبيانات كل عقد' },
+  { icon: ScanLine, label: 'رقم توثيق ورمز QR على كل مستند' },
+];
+
 function Nav() {
   return (
-    <header className="border-b border-line bg-card/80 backdrop-blur">
+    <header className="border-b border-line bg-card">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 md:px-8">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-seal">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-seal">
             <FileSignature size={18} className="text-white" />
           </div>
           <span className="font-display text-lg font-extrabold text-ink">إقرار</span>
         </div>
-        <div className="flex items-center gap-2">
-          <Link to="/verify" className="hidden items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold text-ink hover:bg-paper sm:flex">
+        <div className="flex items-center gap-1 text-sm font-bold">
+          <Link to="/verify" className="hidden items-center gap-1.5 px-3 py-2 text-ink hover:text-seal sm:flex">
             <ShieldCheck size={16} /> التحقق من وثيقة
           </Link>
-          <Link to="/login" className="rounded-full px-4 py-2 text-sm font-bold text-ink hover:bg-paper">
+          <Link to="/login" className="px-3 py-2 text-ink hover:text-seal">
             تسجيل الدخول
           </Link>
-          <Link to="/register" className="rounded-full bg-seal px-5 py-2 text-sm font-bold text-white hover:opacity-90">
+          <Link to="/register" className="rounded-md bg-seal px-5 py-2 text-white hover:opacity-90">
             إنشاء حساب
           </Link>
         </div>
@@ -76,31 +82,39 @@ function Nav() {
 
 function DocumentationChooser({ onClose }: { onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4" dir="rtl" onClick={onClose}>
-      <div className="relative w-full max-w-sm rounded-2xl bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4" dir="rtl" onClick={onClose}>
+      <div className="relative w-full max-w-sm rounded-md border border-line bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <button type="button" onClick={onClose} aria-label="إغلاق" className="absolute left-4 top-4 text-slate hover:text-ink">
           <X size={20} />
         </button>
         <div className="mb-5 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-sealLight">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-md bg-sealLight">
             <FileSignature size={22} className="text-seal" />
           </div>
           <h3 className="font-display text-lg font-bold text-ink">توثيق العقود</h3>
           <p className="mt-1 text-sm text-slate">كيف تريد المتابعة؟</p>
         </div>
         <div className="space-y-2">
-          <Link to="/login" className="flex items-center gap-2 rounded-lg border border-line px-4 py-3 text-sm font-bold text-ink hover:bg-paper">
+          <Link to="/login" className="flex items-center gap-2 rounded-md border border-line px-4 py-3 text-sm font-bold text-ink hover:bg-paper">
             <LogIn size={16} /> تسجيل الدخول
           </Link>
-          <Link to="/register" className="flex items-center gap-2 rounded-lg bg-seal px-4 py-3 text-sm font-bold text-white hover:opacity-90">
+          <Link to="/register" className="flex items-center gap-2 rounded-md bg-seal px-4 py-3 text-sm font-bold text-white hover:opacity-90">
             <UserPlus size={16} /> إنشاء حساب
           </Link>
-          <Link to="/app/contracts/new" className="flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-bold text-seal hover:bg-sealLight">
+          <Link to="/app/contracts/new" className="flex items-center gap-2 rounded-md px-4 py-3 text-sm font-bold text-seal hover:bg-sealLight">
             <ArrowLeft size={16} /> استمرار كضيف
           </Link>
         </div>
       </div>
     </div>
+  );
+}
+
+function SectionEyebrow({ children }: { children: string }) {
+  return (
+    <p className="mb-2 inline-block border-b-2 border-seal pb-1 text-xs font-bold tracking-wide text-seal">
+      {children}
+    </p>
   );
 }
 
@@ -115,16 +129,18 @@ function QuickVerify() {
   };
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-16 md:px-8">
-      <div className="rounded-3xl border border-line bg-card p-6 shadow-sm md:p-10">
-        <div className="mx-auto max-w-xl text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-sealLight">
-            <Search size={22} className="text-seal" />
+    <section className="border-t border-line bg-paper">
+      <div className="mx-auto max-w-6xl px-4 py-14 md:px-8">
+        <div className="mx-auto max-w-2xl rounded-md border border-line bg-card p-6 md:p-8">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-sealLight">
+              <Search size={20} className="text-seal" />
+            </div>
+            <div>
+              <h2 className="font-display text-lg font-extrabold text-ink">التحقق من العقود الموثّقة</h2>
+              <p className="text-sm text-slate">أدخل رقم التوثيق للتأكد من صحة المستند وأطرافه.</p>
+            </div>
           </div>
-          <h2 className="mb-2 font-display text-xl font-extrabold text-ink md:text-2xl">التحقق من العقود الموثّقة</h2>
-          <p className="mb-6 text-sm leading-relaxed text-slate md:text-base">
-            أدخل رقم التوثيق الموجود على المستند للتأكد من صحته والاطلاع على أطرافه وحالة توقيعهم.
-          </p>
           <form onSubmit={submit} className="flex flex-col gap-3 sm:flex-row">
             <input
               type="text"
@@ -133,12 +149,9 @@ function QuickVerify() {
               value={number}
               onChange={(e) => setNumber(e.target.value)}
               placeholder="رقم التوثيق (10 أرقام)"
-              className="w-full flex-1 rounded-full border border-line bg-paper px-5 py-3 text-center text-sm font-bold text-ink placeholder:text-slate/70 focus:border-seal focus:outline-none"
+              className="w-full flex-1 rounded-md border border-line bg-paper px-4 py-3 text-center text-sm font-bold text-ink placeholder:text-slate/70 focus:border-seal focus:outline-none"
             />
-            <button
-              type="submit"
-              className="rounded-full bg-seal px-8 py-3 text-sm font-bold text-white shadow-sm hover:opacity-90"
-            >
+            <button type="submit" className="rounded-md bg-seal px-8 py-3 text-sm font-bold text-white hover:opacity-90">
               تحقق الآن
             </button>
           </form>
@@ -155,25 +168,48 @@ export function LandingPage() {
     <div dir="rtl" className="min-h-screen bg-paper">
       <Nav />
 
-      <section className="bg-hero">
-        <div className="mx-auto max-w-6xl px-4 py-14 text-center md:px-8 md:py-16">
-          <p className="mb-4 inline-block rounded-full bg-white px-4 py-1.5 text-xs font-bold text-seal shadow-sm">
-            منصة توثيق العقود الإلكترونية
-          </p>
-          <h1 className="mx-auto mb-4 max-w-3xl font-display text-2xl font-extrabold leading-tight text-ink sm:text-3xl md:text-4xl">
-            وثّق عقودك إلكترونيًا بثقة وسهولة
-          </h1>
-          <p className="mx-auto max-w-2xl text-base leading-relaxed text-slate md:text-lg">
-            أنشئ عقودًا متعددة الأطراف، أرسلها للتوقيع برابط فريد، وتحقق من هوية الأطراف عبر نفاذ — كل ذلك من مكان
-            واحد، بدون أوراق وبدون تعقيد.
-          </p>
+      <section className="border-b-4 border-seal bg-ink">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 md:grid-cols-[1.15fr_0.85fr] md:items-center md:px-8 md:py-20">
+          <div>
+            <p className="mb-4 inline-block rounded-md border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-bold text-white/80">
+              منصة توثيق العقود الإلكترونية
+            </p>
+            <h1 className="mb-4 font-display text-2xl font-extrabold leading-tight text-white sm:text-3xl md:text-4xl">
+              وثّق عقودك إلكترونيًا بثقة وسهولة
+            </h1>
+            <p className="mb-8 max-w-xl text-base leading-relaxed text-white/70 md:text-lg">
+              أنشئ عقودًا متعددة الأطراف، أرسلها للتوقيع برابط فريد، وتحقق من هوية الأطراف عبر نفاذ — كل ذلك من مكان
+              واحد، بدون أوراق وبدون تعقيد.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link to="/register" className="w-full rounded-md bg-white px-7 py-3 text-center text-sm font-bold text-ink hover:bg-white/90 sm:w-auto">
+                إنشاء حساب
+              </Link>
+              <Link to="/login" className="w-full rounded-md border border-white/25 px-7 py-3 text-center text-sm font-bold text-white hover:bg-white/10 sm:w-auto">
+                تسجيل الدخول
+              </Link>
+              <Link to="/app" className="w-full px-7 py-3 text-center text-sm font-bold text-white/70 underline-offset-4 hover:text-white hover:underline sm:w-auto">
+                استمرار كضيف
+              </Link>
+            </div>
+          </div>
+
+          <div className="rounded-md border border-white/15 bg-white/5">
+            {TRUST_POINTS.map(({ icon: Icon, label }, i) => (
+              <div key={label} className={`flex items-center gap-3 px-5 py-4 ${i > 0 ? 'border-t border-white/10' : ''}`}>
+                <Icon size={18} className="shrink-0 text-white/80" />
+                <span className="text-sm font-bold text-white/90">{label}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
       {showChooser && <DocumentationChooser onClose={() => setShowChooser(false)} />}
 
-      <section className="border-t border-line bg-card">
+      <section className="border-b border-line bg-card">
         <div className="mx-auto max-w-4xl px-4 py-14 text-center md:px-8">
+          <SectionEyebrow>نبذة عنّا</SectionEyebrow>
           <h2 className="mb-3 font-display text-2xl font-extrabold text-ink md:text-3xl">من نحن</h2>
           <p className="text-base leading-relaxed text-slate">
             إقرار منصة سعودية لتوثيق العقود والإقرارات إلكترونيًا، تجمع بين سهولة الاستخدام وقوة التحقق من الهوية
@@ -186,14 +222,18 @@ export function LandingPage() {
 
       <section className="mx-auto max-w-6xl px-4 py-16 md:px-8">
         <div className="mx-auto mb-10 max-w-2xl text-center">
+          <SectionEyebrow>مستويات التوثيق</SectionEyebrow>
           <h2 className="mb-3 font-display text-2xl font-extrabold text-ink md:text-3xl">أنواع التوثيق</h2>
           <p className="text-base leading-relaxed text-slate">اختر طريقة التوثيق المناسبة لكل طرف في عقدك حسب مستوى التوثيق المطلوب.</p>
         </div>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          {VERIFICATION_TYPES.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:shadow-md">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-sealLight">
-                <Icon size={22} className="text-seal" />
+        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-line bg-line sm:grid-cols-2">
+          {VERIFICATION_TYPES.map(({ icon: Icon, title, desc }, i) => (
+            <div key={title} className="bg-card p-6 transition hover:bg-paper">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-sealLight">
+                  <Icon size={20} className="text-seal" />
+                </div>
+                <span className="font-mono text-xs font-bold text-slate">{`0${i + 1}`}</span>
               </div>
               <h3 className="mb-1.5 font-display text-base font-bold text-ink">{title}</h3>
               <p className="text-sm leading-relaxed text-slate">{desc}</p>
@@ -202,14 +242,14 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="bg-card py-14 md:py-16">
+      <section className="border-y border-line bg-card py-14">
         <div className="mx-auto max-w-6xl px-4 text-center md:px-8">
           <button
             type="button"
             onClick={() => setShowChooser(true)}
-            className="group mx-auto flex w-full max-w-md items-center gap-4 rounded-2xl bg-seal px-5 py-4 text-white shadow-lg transition hover:-translate-y-0.5 hover:shadow-xl"
+            className="group mx-auto flex w-full max-w-md items-center gap-4 rounded-md bg-seal px-5 py-4 text-white transition hover:opacity-90"
           >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-white/15">
               <FileSignature size={20} className="text-white" />
             </div>
             <span className="flex-1 text-right">
@@ -218,27 +258,19 @@ export function LandingPage() {
             </span>
             <ArrowLeft size={18} className="shrink-0 transition group-hover:-translate-x-1" />
           </button>
-
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link to="/register" className="w-full rounded-full bg-seal px-8 py-3.5 text-sm font-bold text-white shadow-lg hover:opacity-90 sm:w-auto">
-              إنشاء حساب
-            </Link>
-            <Link to="/login" className="w-full rounded-full bg-paper px-8 py-3.5 text-sm font-bold text-ink shadow-sm hover:bg-white sm:w-auto">
-              تسجيل الدخول
-            </Link>
-            <Link to="/app" className="w-full rounded-full px-8 py-3.5 text-sm font-bold text-seal hover:underline sm:w-auto">
-              استمرار كضيف
-            </Link>
-          </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-16 md:px-8 md:py-24">
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="mx-auto max-w-6xl px-4 py-16 md:px-8 md:py-20">
+        <div className="mx-auto mb-10 max-w-2xl text-center">
+          <SectionEyebrow>مزايا المنصة</SectionEyebrow>
+          <h2 className="font-display text-2xl font-extrabold text-ink md:text-3xl">كل ما تحتاجه لتوثيق عقودك</h2>
+        </div>
+        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:shadow-md">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-sealLight">
-                <Icon size={22} className="text-seal" />
+            <div key={title} className="bg-card p-6 transition hover:bg-paper">
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-md bg-sealLight">
+                <Icon size={20} className="text-seal" />
               </div>
               <h3 className="mb-1.5 font-display text-base font-bold text-ink">{title}</h3>
               <p className="text-sm leading-relaxed text-slate">{desc}</p>
@@ -247,27 +279,57 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="border-t border-line">
+      <section className="border-t border-line bg-ink">
         <div className="mx-auto max-w-6xl px-4 py-16 text-center md:px-8">
-          <h2 className="mb-3 font-display text-2xl font-extrabold text-ink md:text-3xl">جاهز للبدء؟</h2>
-          <p className="mx-auto mb-8 max-w-xl text-sm text-slate md:text-base">
+          <h2 className="mb-3 font-display text-2xl font-extrabold text-white md:text-3xl">جاهز للبدء؟</h2>
+          <p className="mx-auto mb-8 max-w-xl text-sm text-white/70 md:text-base">
             أنشئ حسابك الآن مجانًا وابدأ بتوثيق عقودك الأولى خلال دقائق.
           </p>
-          <Link to="/register" className="inline-block rounded-full bg-seal px-8 py-3.5 text-sm font-bold text-white shadow-lg hover:opacity-90">
+          <Link to="/register" className="inline-block rounded-md bg-white px-8 py-3.5 text-sm font-bold text-ink hover:bg-white/90">
             إنشاء حساب مجانًا
           </Link>
         </div>
       </section>
 
-      <footer className="border-t border-line">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 text-sm text-slate md:flex-row md:px-8">
-          <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-seal">
-              <FileSignature size={14} className="text-white" />
+      <footer className="border-t border-line bg-card">
+        <div className="mx-auto max-w-6xl px-4 py-12 md:px-8">
+          <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
+            <div className="col-span-2 sm:col-span-1">
+              <div className="mb-3 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-seal">
+                  <FileSignature size={14} className="text-white" />
+                </div>
+                <span className="font-display font-bold text-ink">إقرار</span>
+              </div>
+              <p className="text-sm leading-relaxed text-slate">منصة سعودية لتوثيق العقود والإقرارات إلكترونيًا.</p>
             </div>
-            <span className="font-display font-bold text-ink">إقرار</span>
+            <div>
+              <p className="mb-3 text-xs font-bold text-slate">المنصة</p>
+              <ul className="space-y-2 text-sm font-bold text-ink">
+                <li><Link to="/" className="hover:text-seal">الرئيسية</Link></li>
+                <li><Link to="/verify" className="hover:text-seal">التحقق من وثيقة</Link></li>
+              </ul>
+            </div>
+            <div>
+              <p className="mb-3 text-xs font-bold text-slate">الحساب</p>
+              <ul className="space-y-2 text-sm font-bold text-ink">
+                <li><Link to="/login" className="hover:text-seal">تسجيل الدخول</Link></li>
+                <li><Link to="/register" className="hover:text-seal">إنشاء حساب</Link></li>
+              </ul>
+            </div>
+            <div>
+              <p className="mb-3 text-xs font-bold text-slate">قانوني</p>
+              <ul className="space-y-2 text-sm font-bold text-ink">
+                <li><Link to="/terms" className="hover:text-seal">سياسة الاستخدام والخصوصية</Link></li>
+                <li><Link to="/app/contact" className="hover:text-seal">اتصل بنا</Link></li>
+              </ul>
+            </div>
           </div>
-          <p>© {new Date().getFullYear()} إقرار. جميع الحقوق محفوظة.</p>
+        </div>
+        <div className="border-t border-line">
+          <div className="mx-auto max-w-6xl px-4 py-4 text-center text-xs text-slate md:px-8">
+            © {new Date().getFullYear()} إقرار. جميع الحقوق محفوظة.
+          </div>
         </div>
       </footer>
     </div>
