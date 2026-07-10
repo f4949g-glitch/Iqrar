@@ -220,6 +220,25 @@ export function LandingPage() {
 
       <QuickVerify />
 
+      <section className="border-y border-line bg-card py-14">
+        <div className="mx-auto max-w-6xl px-4 text-center md:px-8">
+          <button
+            type="button"
+            onClick={() => setShowChooser(true)}
+            className="group mx-auto flex w-full max-w-lg items-center gap-5 rounded-md bg-sage px-6 py-6 text-white transition hover:opacity-90"
+          >
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-white/15">
+              <FileSignature size={26} className="text-white" />
+            </div>
+            <span className="flex-1 text-right">
+              <span className="block font-display text-lg font-extrabold">توثيق العقود</span>
+              <span className="block text-sm text-white/80">ابدأ توثيق عقدك الآن</span>
+            </span>
+            <ArrowLeft size={22} className="shrink-0 transition group-hover:-translate-x-1" />
+          </button>
+        </div>
+      </section>
+
       <section className="mx-auto max-w-6xl px-4 py-16 md:px-8">
         <div className="mx-auto mb-10 max-w-2xl text-center">
           <SectionEyebrow>مستويات التوثيق</SectionEyebrow>
@@ -239,25 +258,6 @@ export function LandingPage() {
               <p className="text-sm leading-relaxed text-slate">{desc}</p>
             </div>
           ))}
-        </div>
-      </section>
-
-      <section className="border-y border-line bg-card py-14">
-        <div className="mx-auto max-w-6xl px-4 text-center md:px-8">
-          <button
-            type="button"
-            onClick={() => setShowChooser(true)}
-            className="group mx-auto flex w-full max-w-md items-center gap-4 rounded-md bg-seal px-5 py-4 text-white transition hover:opacity-90"
-          >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-white/15">
-              <FileSignature size={20} className="text-white" />
-            </div>
-            <span className="flex-1 text-right">
-              <span className="block font-display text-base font-extrabold">توثيق العقود</span>
-              <span className="block text-xs text-white/80">ابدأ توثيق عقدك الآن</span>
-            </span>
-            <ArrowLeft size={18} className="shrink-0 transition group-hover:-translate-x-1" />
-          </button>
         </div>
       </section>
 
