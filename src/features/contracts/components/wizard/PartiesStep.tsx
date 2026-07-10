@@ -259,7 +259,7 @@ export function PartiesStep({
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="اسم المنشأة (اختياري)" value={companyName} onChange={onCompanyNameChange} />
-            <Field label="رقم السجل التجاري (اختياري)" value={companyCrNumber} onChange={onCompanyCrNumberChange} />
+            <Field label="رقم السجل التجاري (اختياري)" value={companyCrNumber} onChange={onCompanyCrNumberChange} digitsOnly maxLength={10} />
           </div>
         )}
       </div>
@@ -367,7 +367,7 @@ export function PartiesStep({
             {party.party_type === 'entity' && (
               <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field label="اسم المنشأة" value={party.entity_name} onChange={(v) => updateParty(index, { entity_name: v })} required />
-                <Field label="رقم السجل التجاري" value={party.entity_cr_number} onChange={(v) => updateParty(index, { entity_cr_number: v })} />
+                <Field label="رقم السجل التجاري" value={party.entity_cr_number} onChange={(v) => updateParty(index, { entity_cr_number: v })} digitsOnly maxLength={10} />
               </div>
             )}
 
@@ -415,7 +415,14 @@ export function PartiesStep({
 
               {party.verification_method === 'nafath' && (
                 <>
-                  <Field label="رقم الهوية أو الإقامة (10 أرقام)" value={party.national_id} onChange={(v) => updateParty(index, { national_id: v })} required />
+                  <Field
+                    label="رقم الهوية أو الإقامة (10 أرقام)"
+                    value={party.national_id}
+                    onChange={(v) => updateParty(index, { national_id: v })}
+                    required
+                    digitsOnly
+                    maxLength={10}
+                  />
                   <Field label="تاريخ الميلاد" value={party.date_of_birth} onChange={(v) => updateParty(index, { date_of_birth: v })} type="date" required />
                 </>
               )}
@@ -433,12 +440,18 @@ export function PartiesStep({
                 required
               />
               {party.verification_method === 'manual' && (
-                <Field label="رقم الهوية أو الإقامة" value={party.national_id} onChange={(v) => updateParty(index, { national_id: v })} />
+                <Field
+                  label="رقم الهوية أو الإقامة"
+                  value={party.national_id}
+                  onChange={(v) => updateParty(index, { national_id: v })}
+                  digitsOnly
+                  maxLength={10}
+                />
               )}
               <Field label="الجنسية" value={party.nationality} onChange={(v) => updateParty(index, { nationality: v })} />
               <Field label="العنوان" value={party.address} onChange={(v) => updateParty(index, { address: v })} />
               <Field label="البريد الإلكتروني" value={party.email} onChange={(v) => updateParty(index, { email: v })} type="email" />
-              <Field label="رقم الجوال" value={party.phone} onChange={(v) => updateParty(index, { phone: v })} />
+              <Field label="رقم الجوال" value={party.phone} onChange={(v) => updateParty(index, { phone: v })} digitsOnly maxLength={10} />
             </div>
 
             {party.verification_method === 'nafath' && (

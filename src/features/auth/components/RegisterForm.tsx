@@ -98,8 +98,9 @@ export function RegisterForm({ onRegistered }: RegisterFormProps) {
                     inputMode="numeric"
                     pattern="[12][0-9]{9}"
                     title="10 أرقام تبدأ بـ 1 أو 2"
+                    maxLength={10}
                     value={nationalId}
-                    onChange={(e) => setNationalId(e.target.value)}
+                    onChange={(e) => setNationalId(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
                     className={inputClass}
                     style={{ direction: 'ltr' }}
                   />
@@ -127,8 +128,9 @@ export function RegisterForm({ onRegistered }: RegisterFormProps) {
                   pattern="05[0-9]{8}"
                   title="مثال: 05xxxxxxxx"
                   placeholder="05xxxxxxxx"
+                  maxLength={10}
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
                   className={inputClass}
                   style={{ direction: 'ltr' }}
                 />

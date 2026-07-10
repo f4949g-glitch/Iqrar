@@ -181,17 +181,6 @@ export function LandingPage() {
               أنشئ عقودًا متعددة الأطراف، أرسلها للتوقيع برابط فريد، وتحقق من هوية الأطراف عبر نفاذ — كل ذلك من مكان
               واحد، بدون أوراق وبدون تعقيد.
             </p>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Link to="/register" className="w-full rounded-md bg-white px-7 py-3 text-center text-sm font-bold text-ink hover:bg-white/90 sm:w-auto">
-                إنشاء حساب
-              </Link>
-              <Link to="/login" className="w-full rounded-md border border-white/25 px-7 py-3 text-center text-sm font-bold text-white hover:bg-white/10 sm:w-auto">
-                تسجيل الدخول
-              </Link>
-              <Link to="/app" className="w-full px-7 py-3 text-center text-sm font-bold text-white/70 underline-offset-4 hover:text-white hover:underline sm:w-auto">
-                استمرار كضيف
-              </Link>
-            </div>
           </div>
 
           <div className="rounded-md border border-white/15 bg-white/5">

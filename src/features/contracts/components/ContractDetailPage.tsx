@@ -378,9 +378,9 @@ export function ContractDetailPage() {
                 </div>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <Field label="الاسم" value={p.full_name ?? ''} onChange={(v) => patchParty(p.id, { full_name: v })} />
-                  <Field label="رقم الهوية" value={p.national_id ?? ''} onChange={(v) => patchParty(p.id, { national_id: v })} />
+                  <Field label="رقم الهوية" value={p.national_id ?? ''} onChange={(v) => patchParty(p.id, { national_id: v })} digitsOnly maxLength={10} />
                   <Field label="البريد الإلكتروني" value={p.email ?? ''} onChange={(v) => patchParty(p.id, { email: v })} type="email" />
-                  <Field label="الجوال" value={p.phone ?? ''} onChange={(v) => patchParty(p.id, { phone: v })} />
+                  <Field label="الجوال" value={p.phone ?? ''} onChange={(v) => patchParty(p.id, { phone: v })} digitsOnly maxLength={10} />
                 </div>
               </div>
             ) : (

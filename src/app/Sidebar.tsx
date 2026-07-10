@@ -1,5 +1,19 @@
 import { Link, useLocation } from 'react-router-dom';
-import { User, FileClock, ClipboardCheck, FileX2, Settings, ShieldQuestion, Phone, Percent, Wallet, SlidersHorizontal } from 'lucide-react';
+import {
+  User,
+  Home,
+  FileSignature,
+  FileClock,
+  ClipboardCheck,
+  FileX2,
+  Settings,
+  ShieldQuestion,
+  ShieldCheck,
+  Phone,
+  Percent,
+  Wallet,
+  SlidersHorizontal,
+} from 'lucide-react';
 import type { Profile } from '@/features/auth';
 
 interface SidebarLink {
@@ -9,6 +23,9 @@ interface SidebarLink {
 }
 
 const MAIN_LINKS: SidebarLink[] = [
+  { to: '/app', label: 'الرئيسية', icon: Home },
+  { to: '/app/contracts/new', label: 'توثيق العقود', icon: FileSignature },
+  { to: '/verify', label: 'التحقق من وثيقة موثقة', icon: ShieldCheck },
   { to: '/app/profile', label: 'الملف الشخصي', icon: User },
   { to: '/app/contracts?tab=previous', label: 'عقودي السابقة', icon: FileClock },
   { to: '/app/contracts?tab=awaiting', label: 'طلبات الموافقة', icon: ClipboardCheck },

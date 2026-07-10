@@ -90,7 +90,7 @@ export function VerifyPage() {
 
           {isPoa ? (
             <>
-              <Field label="رقم هوية الطرف" value={nationalId1} onChange={setNationalId1} required />
+              <Field label="رقم هوية الطرف" value={nationalId1} onChange={setNationalId1} required digitsOnly maxLength={10} />
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-slate">تاريخ التوثيق</label>
                 <GregorianDateInput value={completedDate} onChange={setCompletedDate} required />
@@ -98,8 +98,8 @@ export function VerifyPage() {
             </>
           ) : (
             <>
-              <Field label="رقم هوية الطرف الأول" value={nationalId1} onChange={setNationalId1} required />
-              <Field label="رقم هوية الطرف الثاني" value={nationalId2} onChange={setNationalId2} required />
+              <Field label="رقم هوية الطرف الأول" value={nationalId1} onChange={setNationalId1} required digitsOnly maxLength={10} />
+              <Field label="رقم هوية الطرف الثاني" value={nationalId2} onChange={setNationalId2} required digitsOnly maxLength={10} />
             </>
           )}
 
