@@ -34,10 +34,33 @@ export async function generateFinalPdf(
   fetchImage: (path: string) => Promise<Uint8Array>,
   verificationStamp?: VerificationStamp,
   signerAudits?: SignerAudit[],
+  companyLogoBytes?: Uint8Array | null,
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(originalBytes);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const pages = pdfDoc.getPages();
+
+  // شعار المنشأة (اختياري): يُرسَم بارزًا في الزاوية العلوية لكل صفحة من صفحات
+  // المستند، كترويسة (letterhead) ثابتة على مدى المستند بأكمله.
+  if (companyLogoBytes) {
+    try {
+      const logoImage = await pdfDoc.embedPng(companyLogoBytes).catch(() => pdfDoc.embedJpg(companyLogoBytes));
+      const logoSize = 52;
+      const logoMargin = 20;
+      for (const page of pages) {
+        const pageWidth = page.getWidth();
+        const pageHeight = page.getHeight();
+        page.drawImage(logoImage, {
+          x: pageWidth - logoMargin - logoSize,
+          y: pageHeight - logoMargin - logoSize,
+          width: logoSize,
+          height: logoSize,
+        });
+      }
+    } catch (err) {
+      console.error('تعذّر إضافة شعار المنشأة للمستند', err);
+    }
+  }
 
   for (const field of fields) {
     if (field.value == null || field.value === '') continue;

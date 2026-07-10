@@ -143,6 +143,35 @@ export async function getOriginalPdfUrl(path: string): Promise<string> {
   return data.signedUrl;
 }
 
+// شعار المنشأة (اختياري) يُلحَق بالمستند النهائي بصورة بارزة في كل صفحاته إن
+// تعدّدت. يُخزَّن كملف في نفس تخزين الملفات (كالمستند الأصلي)، لا كنص Base64
+// ضخم داخل صف العقد، لذا يُرفع فقط بعد إنشاء العقد فعليًا (له معرّف حقيقي).
+export async function uploadCompanyLogo(contractId: string, dataUrl: string): Promise<Contract> {
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  const path = `${contractId}/company-logo.png`;
+  const { error: uploadError } = await supabase.storage.from('contracts').upload(path, blob, {
+    upsert: true,
+    contentType: blob.type || 'image/png',
+  });
+  if (uploadError) throw uploadError;
+
+  const { data, error } = await supabase
+    .from('contracts')
+    .update({ company_logo_path: path, updated_at: new Date().toISOString() })
+    .eq('id', contractId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Contract;
+}
+
+export async function getCompanyLogoUrl(path: string): Promise<string> {
+  const { data, error } = await supabase.storage.from('contracts').createSignedUrl(path, 3600);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
 export async function listParties(contractId: string): Promise<ContractParty[]> {
   const { data, error } = await supabase
     .from('contract_parties')

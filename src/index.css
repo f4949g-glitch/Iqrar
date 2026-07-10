@@ -157,3 +157,12 @@ body {
 .verification-hint {
   color: var(--color-slate);
 }
+.company-logo {
+  text-align: center;
+  margin-bottom: 16px;
+}
+.company-logo img {
+  max-height: 90px;
+  max-width: 220px;
+  object-fit: contain;
+}

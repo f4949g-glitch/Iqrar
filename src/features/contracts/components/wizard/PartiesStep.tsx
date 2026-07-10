@@ -3,6 +3,7 @@ import { Building2, Plus, ShieldCheck, Trash2, User } from 'lucide-react';
 import { Field } from '@/shared/ui/Field';
 import { Button } from '@/shared/ui/Button';
 import { GregorianDateInput } from '@/shared/ui/GregorianDateInput';
+import { fileToDataUrl } from '@/shared/lib/fileToDataUrl';
 import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '../../api/pricingApi';
 import { addParty as addPartyApi } from '../../api/contractsApi';
 import { initiateNafathVerification, checkNafathStatus } from '../../api/nafathApi';
@@ -77,6 +78,8 @@ interface PartiesStepProps {
   onCompanyNameChange: (v: string) => void;
   companyCrNumber: string;
   onCompanyCrNumberChange: (v: string) => void;
+  companyLogoDataUrl: string | null;
+  onCompanyLogoChange: (v: string | null) => void;
   termMode: TermMode;
   onTermModeChange: (v: TermMode) => void;
   termValue: string;
@@ -103,6 +106,8 @@ export function PartiesStep({
   onCompanyNameChange,
   companyCrNumber,
   onCompanyCrNumberChange,
+  companyLogoDataUrl,
+  onCompanyLogoChange,
   termMode,
   onTermModeChange,
   termValue,
@@ -271,16 +276,44 @@ export function PartiesStep({
               + إرفاق بيانات منشأة صادرة عنها العقد (اختياري)
             </button>
           ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="اسم المنشأة (اختياري)" value={companyName} onChange={onCompanyNameChange} />
-              <Field
-                label="رقم السجل التجاري (اختياري)"
-                value={companyCrNumber}
-                onChange={onCompanyCrNumberChange}
-                digitsOnly
-                maxLength={10}
-                hint="10 أرقام فقط"
-              />
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label="اسم المنشأة (اختياري)" value={companyName} onChange={onCompanyNameChange} />
+                <Field
+                  label="رقم السجل التجاري (اختياري)"
+                  value={companyCrNumber}
+                  onChange={onCompanyCrNumberChange}
+                  digitsOnly
+                  maxLength={10}
+                  hint="10 أرقام فقط"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                {companyLogoDataUrl ? (
+                  <img src={companyLogoDataUrl} alt="شعار المنشأة" className="h-14 w-14 rounded-lg border border-line bg-white object-contain p-1" />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-dashed border-line text-[10px] text-slate">لا يوجد</div>
+                )}
+                <div className="flex-1">
+                  <label className="text-xs font-bold text-seal">
+                    رفع شعار المنشأة (اختياري) — يظهر بارزًا في كل صفحات {docLabel} النهائي
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) onCompanyLogoChange(await fileToDataUrl(file));
+                      }}
+                      className="mt-1.5 block w-full text-xs"
+                    />
+                  </label>
+                  {companyLogoDataUrl && (
+                    <button type="button" onClick={() => onCompanyLogoChange(null)} className="mt-1 text-xs font-bold text-clay">
+                      إزالة الشعار
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>

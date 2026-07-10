@@ -9,7 +9,15 @@ import { UploadStep } from './wizard/UploadStep';
 import { FieldsStep } from './wizard/FieldsStep';
 import { EditorStep } from './wizard/EditorStep';
 import { ReviewStep } from './wizard/ReviewStep';
-import { addParty, createDraftContract, getOriginalPdfUrl, updateContractMeta, updateParty, uploadOriginalPdf } from '../api/contractsApi';
+import {
+  addParty,
+  createDraftContract,
+  getOriginalPdfUrl,
+  updateContractMeta,
+  updateParty,
+  uploadCompanyLogo,
+  uploadOriginalPdf,
+} from '../api/contractsApi';
 import { createFieldsFromScratch } from '../lib/syncEditorContent';
 import { consumePendingContractIntent } from '../lib/pendingIntent';
 import { saveGuestDraft, consumeGuestDraft, type GuestResumeStep } from '../lib/guestDraft';
@@ -95,6 +103,7 @@ export function NewContractWizard() {
   };
   const [companyName, setCompanyName] = useState(guestDraft?.companyName ?? '');
   const [companyCrNumber, setCompanyCrNumber] = useState(guestDraft?.companyCrNumber ?? '');
+  const [companyLogoDataUrl, setCompanyLogoDataUrl] = useState<string | null>(guestDraft?.companyLogoDataUrl ?? null);
   const [termMode, setTermMode] = useState<TermMode>(guestDraft?.termMode ?? 'none');
   const [termValue, setTermValue] = useState(guestDraft?.termValue ?? '');
   const [termUnit, setTermUnit] = useState<TermUnit>(guestDraft?.termUnit ?? 'month');
@@ -128,6 +137,7 @@ export function NewContractWizard() {
       durationDays,
       companyName,
       companyCrNumber,
+      companyLogoDataUrl,
       termMode,
       termValue,
       termUnit,
@@ -148,7 +158,7 @@ export function NewContractWizard() {
   // مسارين: الاختيار المباشر لطريقة الإنشاء، واستكمال مسودة زائر بعد تسجيل دخوله.
   const syncToBackend = async (chosen: 'pdf' | 'editor'): Promise<{ contract: Contract; parties: ContractParty[] }> => {
     const base = await ensureContract();
-    const created = await updateContractMeta(base.id, {
+    let created = await updateContractMeta(base.id, {
       title: title.trim(),
       duration_days: durationDays ? Number(durationDays) : null,
       source_type: chosen,
@@ -159,6 +169,11 @@ export function NewContractWizard() {
       term_unit: termMode === 'duration' && termValue ? termUnit : null,
       term_end_date: termMode === 'date' && termEndDate ? termEndDate : null,
     });
+    // شعار المنشأة اختياري: يُرفَع لتخزين الملفات بعد إنشاء العقد فعليًا (له معرّف
+    // حقيقي)، ويُدرَج بارزًا في كل صفحات المستند النهائي عند التوليد.
+    if (companyLogoDataUrl) {
+      created = await uploadCompanyLogo(created.id, companyLogoDataUrl);
+    }
     const createdParties: ContractParty[] = [];
     for (let i = 0; i < draftParties.length; i++) {
       const p = draftParties[i];
@@ -360,6 +375,8 @@ export function NewContractWizard() {
           onCompanyNameChange={setCompanyName}
           companyCrNumber={companyCrNumber}
           onCompanyCrNumberChange={setCompanyCrNumber}
+          companyLogoDataUrl={companyLogoDataUrl}
+          onCompanyLogoChange={setCompanyLogoDataUrl}
           termMode={termMode}
           onTermModeChange={setTermMode}
           termValue={termValue}
@@ -417,7 +434,15 @@ export function NewContractWizard() {
       )}
 
       {step === 'review' && contract && (
-        <ReviewStep contract={contract} parties={parties} fields={fields} onBack={() => setStep(method === 'editor' ? 'editor' : 'fields')} />
+        <ReviewStep
+          contract={contract}
+          parties={parties}
+          fields={fields}
+          body={body}
+          pdfUrl={pdfUrl}
+          companyLogoDataUrl={companyLogoDataUrl}
+          onBack={() => setStep(method === 'editor' ? 'editor' : 'fields')}
+        />
       )}
 
       {busy && <p className="mt-4 text-sm text-slate">جارِ المعالجة...</p>}

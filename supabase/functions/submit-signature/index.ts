@@ -228,6 +228,12 @@ async function finalizePdfContract(admin: ReturnType<typeof createClient>, contr
       signedAtLabel: p.signed_at ? new Date(p.signed_at as string).toISOString() : null,
     }));
 
+  let companyLogoBytes: Uint8Array | null = null;
+  if (contract.company_logo_path) {
+    const { data: logoFile } = await admin.storage.from('contracts').download(contract.company_logo_path);
+    if (logoFile) companyLogoBytes = new Uint8Array(await logoFile.arrayBuffer());
+  }
+
   const finalBytes = await generateFinalPdf(
     originalBytes,
     fieldsToRender,
@@ -238,6 +244,7 @@ async function finalizePdfContract(admin: ReturnType<typeof createClient>, contr
     },
     verificationStamp,
     signerAudits,
+    companyLogoBytes,
   );
 
   const finalPath = `${contract.id}/final.pdf`;
@@ -289,7 +296,17 @@ async function finalizeEditorContract(admin: ReturnType<typeof createClient>, co
     ? await renderVerificationFooterHtml(contract.verification_number, completedAt)
     : '';
 
+  // شعار المنشأة (اختياري): يُدرَج بارزًا كترويسة أعلى المستند النهائي.
+  let logoHtml = '';
+  if (contract.company_logo_path) {
+    const { data: signed } = await admin.storage.from('contracts').createSignedUrl(contract.company_logo_path, 60 * 60 * 24 * 365);
+    if (signed?.signedUrl) {
+      logoHtml = `<div class="company-logo"><img src="${signed.signedUrl}" alt="شعار المنشأة" /></div>`;
+    }
+  }
+
   const html =
+    logoHtml +
     `<h1 class="contract-title">${escapeHtml(String(contract.title ?? ''))}</h1>` +
     renderTermLineHtml(contract) +
     renderPartiesHeaderHtml(parties ?? []) +

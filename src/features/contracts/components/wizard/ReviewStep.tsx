@@ -1,22 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CreditCard } from 'lucide-react';
+import type { JSONContent } from '@tiptap/react';
+import { CreditCard, Eye, X } from 'lucide-react';
 import { Field } from '@/shared/ui/Field';
 import { Button } from '@/shared/ui/Button';
 import { getErrorMessage } from '@/shared/lib/errorMessage';
 import { sendContract } from '../../api/contractsApi';
 import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '../../api/pricingApi';
 import { previewDiscountCode, setContractDiscountCode, type DiscountPreview } from '../../api/discountCodesApi';
+import { renderContractHtml, renderPartiesHeaderHtml, renderTermLineHtml, escapeHtml, type JsonNode } from '../../editor/renderContractHtml';
 import { DOCUMENT_TYPE_DEFINITE_LABELS, FIELD_TYPE_LABELS, type Contract, type ContractField, type ContractParty } from '../../types';
 
 interface ReviewStepProps {
   contract: Contract;
   parties: ContractParty[];
   fields: ContractField[];
+  body: JSONContent | null;
+  pdfUrl: string;
+  companyLogoDataUrl: string | null;
   onBack: () => void;
 }
 
-export function ReviewStep({ contract: initialContract, parties, fields, onBack }: ReviewStepProps) {
+export function ReviewStep({ contract: initialContract, parties, fields, body, pdfUrl, companyLogoDataUrl, onBack }: ReviewStepProps) {
   const navigate = useNavigate();
   const [contract, setContract] = useState(initialContract);
   const [submitting, setSubmitting] = useState(false);
@@ -26,6 +31,7 @@ export function ReviewStep({ contract: initialContract, parties, fields, onBack 
   const [discountPreview, setDiscountPreview] = useState<DiscountPreview | null>(null);
   const [checkingCode, setCheckingCode] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   // بوابة الدفع الفعلية غير مربوطة بعد؛ بيانات البطاقة أصفار تمهيدية للاختبار
   // فقط، وسيُستبدل هذا الحقل بمُكوّن بوابة الدفع الحقيقي عند توفر بيانات الحساب.
   const [cardNumber] = useState('0000 0000 0000 0000');
@@ -40,6 +46,23 @@ export function ReviewStep({ contract: initialContract, parties, fields, onBack 
   }, []);
 
   const invoice = pricing ? calculateInvoice(parties.length, pricing) : null;
+
+  // معاينة المحتوى قبل الإرسال للتوثيق: للمستندات المكتوبة بالمحرر تُبنى نفس
+  // مكوّنات المستند النهائي (شعار المنشأة، مدة السريان، جدول الأطراف، النص)
+  // محليًا دون حاجة لخادم؛ أما المرفوعة كملف PDF فتُعرض كما رُفعت مباشرة.
+  const editorPreviewHtml = useMemo(() => {
+    if (contract.source_type !== 'editor' || !body) return '';
+    const logoHtml = companyLogoDataUrl
+      ? `<div style="text-align:center;margin-bottom:16px"><img src="${companyLogoDataUrl}" alt="شعار المنشأة" style="max-height:90px;max-width:220px;object-fit:contain" /></div>`
+      : '';
+    return (
+      logoHtml +
+      `<h1 class="contract-title">${escapeHtml(contract.title)}</h1>` +
+      renderTermLineHtml(contract) +
+      renderPartiesHeaderHtml(parties) +
+      renderContractHtml(body as unknown as JsonNode, parties)
+    );
+  }, [contract, parties, body, companyLogoDataUrl]);
 
   const applyDiscountCode = async () => {
     if (!discountCode.trim()) return;
@@ -144,14 +167,46 @@ export function ReviewStep({ contract: initialContract, parties, fields, onBack 
 
       {error && <p className="text-sm font-bold text-clay">{error}</p>}
 
-      <div className="flex justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Button variant="secondary" onClick={onBack} disabled={submitting}>
           السابق
         </Button>
-        <Button onClick={() => setShowPayment(true)} disabled={submitting}>
-          {submitting ? 'جارِ الإرسال...' : `المتابعة للدفع وإرسال ${docLabel}`}
-        </Button>
+        <div className="flex items-center gap-2">
+          {(editorPreviewHtml || pdfUrl) && (
+            <Button variant="secondary" onClick={() => setShowPreview(true)} disabled={submitting}>
+              <span className="flex items-center gap-1.5">
+                <Eye size={16} /> معاينة {docLabel} قبل الإرسال
+              </span>
+            </Button>
+          )}
+          <Button onClick={() => setShowPayment(true)} disabled={submitting}>
+            {submitting ? 'جارِ الإرسال...' : `المتابعة للدفع وإرسال ${docLabel}`}
+          </Button>
+        </div>
       </div>
+
+      {showPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4" dir="rtl" onClick={() => setShowPreview(false)}>
+          <div
+            className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-md border border-line bg-card shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-line p-4">
+              <h3 className="font-display text-sm font-bold text-ink">معاينة {docLabel} قبل الإرسال للتوثيق</h3>
+              <button type="button" onClick={() => setShowPreview(false)} aria-label="إغلاق" className="text-slate hover:text-ink">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-6">
+              {editorPreviewHtml ? (
+                <div className="prose max-w-none text-sm text-ink" dangerouslySetInnerHTML={{ __html: editorPreviewHtml }} />
+              ) : pdfUrl ? (
+                <iframe src={pdfUrl} title="معاينة المستند" className="h-[70vh] w-full rounded-lg border border-line" />
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
 
       {showPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4" dir="rtl" onClick={() => !submitting && setShowPayment(false)}>

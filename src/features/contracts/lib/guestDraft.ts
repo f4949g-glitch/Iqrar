@@ -17,6 +17,7 @@ export interface GuestDraftState {
   durationDays: string;
   companyName: string;
   companyCrNumber: string;
+  companyLogoDataUrl: string | null;
   termMode: TermMode;
   termValue: string;
   termUnit: TermUnit;

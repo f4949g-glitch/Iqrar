@@ -43,6 +43,8 @@ const PRINT_STYLES = `
   .verification-footer { display: flex; align-items: center; gap: 16px; margin-top: 24px; padding: 12px 16px; border: 1px solid #999; border-radius: 12px; }
   .verification-qr svg { width: 90px; height: 90px; }
   .verification-info p { margin: 2px 0; font-size: 12px; }
+  .company-logo { text-align: center; margin-bottom: 16px; }
+  .company-logo img { max-height: 90px; max-width: 220px; object-fit: contain; }
 `;
 
 const PARTY_STATUS_LABEL: Record<string, string> = {
