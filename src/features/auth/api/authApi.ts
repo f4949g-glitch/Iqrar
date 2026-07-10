@@ -7,15 +7,16 @@ async function invokeAuthFunction<T>(name: string, body: object): Promise<T> {
   const { data, error } = await supabase.functions.invoke<T & { error?: string }>(name, { body });
   if (error) {
     const context = (error as { context?: Response }).context;
+    let specificMessage: string | undefined;
     if (context) {
       try {
         const parsed = await context.clone().json();
-        if (parsed?.error) throw new Error(parsed.error);
+        if (parsed?.error) specificMessage = parsed.error;
       } catch {
         // تجاهل فشل التحليل والانتقال إلى الرسالة العامة أدناه
       }
     }
-    throw new Error(error.message);
+    throw new Error(specificMessage ?? error.message);
   }
   if (data && (data as { error?: string }).error) throw new Error((data as { error: string }).error);
   return data as T;

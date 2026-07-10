@@ -23,15 +23,16 @@ export async function createSubAdmin(input: CreateSubAdminInput): Promise<Create
   });
   if (error) {
     const context = (error as { context?: Response }).context;
+    let specificMessage: string | undefined;
     if (context) {
       try {
         const parsed = await context.clone().json();
-        if (parsed?.error) throw new Error(parsed.error);
+        if (parsed?.error) specificMessage = parsed.error;
       } catch {
         // تجاهل فشل التحليل والانتقال إلى الرسالة العامة أدناه
       }
     }
-    throw new Error(error.message);
+    throw new Error(specificMessage ?? error.message);
   }
   if (data && 'error' in data && data.error) throw new Error(data.error);
   return data as CreateSubAdminResult;
