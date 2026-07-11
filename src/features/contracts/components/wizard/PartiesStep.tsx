@@ -4,6 +4,7 @@ import { Field } from '@/shared/ui/Field';
 import { Button } from '@/shared/ui/Button';
 import { GregorianDateInput } from '@/shared/ui/GregorianDateInput';
 import { fileToDataUrl } from '@/shared/lib/fileToDataUrl';
+import { NATIONALITIES } from '@/shared/lib/nationalities';
 import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '../../api/pricingApi';
 import { addParty as addPartyApi } from '../../api/contractsApi';
 import { initiateNafathVerification, checkNafathStatus } from '../../api/nafathApi';
@@ -52,7 +53,7 @@ function emptyParty(): DraftParty {
     custom_role: '',
     full_name: '',
     national_id: '',
-    nationality: '',
+    nationality: NATIONALITIES[0],
     address: '',
     email: '',
     phone: '',
@@ -214,12 +215,13 @@ export function PartiesStep({
       setError('حدد صلاحية التوثيق كعدد صحيح من الأيام بين 1 و14');
       return;
     }
-    if (parties.length === 0) {
-      setError('أضف طرفًا واحدًا على الأقل');
-      return;
-    }
-    if (poaMode && parties.length > 1) {
-      setError('لا يمكن أن يتضمن التفويض أكثر من طرف واحد');
+    if (poaMode) {
+      if (parties.length !== 1) {
+        setError('لا يمكن أن يتضمن التفويض أكثر من طرف واحد');
+        return;
+      }
+    } else if (parties.length < 2) {
+      setError('يلزم طرفان على الأقل لإنشاء عقد');
       return;
     }
     for (const p of parties) {
@@ -383,7 +385,14 @@ export function PartiesStep({
       )}
 
       <div className="space-y-4">
-        {parties.map((party, index) => (
+        {parties.map((party, index) => {
+          // الطرف الأول في عقد (لا تفويض) يمثّل صاحب الحساب نفسه: هويته وجنسيته
+          // ثابتة من بيانات حسابه المُتحقَّق منها بصرف النظر عن الصفة المختارة له
+          // (بائع، مشترٍ...) أو تحوّله لتمثيل منشأة. في التفويض الطرف الوحيد هو
+          // المفوَّض (شخص آخر يُمنح الصلاحية)، فلا يُقفَل. الزائر بلا حساب بعد لا
+          // توجد له بيانات ليُقفَل عليها، فتبقى حقوله قابلة للتعديل كسابقًا حتى يسجّل الدخول.
+          const isFirstPartyLocked = index === 0 && !poaMode && !isGuest;
+          return (
           <div key={index} className="rounded-xl border border-line bg-card p-4">
             <div className="mb-3 flex items-center justify-between">
               <p className="font-display text-sm font-bold text-ink">{poaMode ? 'بيانات المفوَّض' : `الطرف ${index + 1}`}</p>
@@ -484,12 +493,19 @@ export function PartiesStep({
               {party.verification_method === 'nafath' && (
                 <>
                   <Field
-                    label={poaMode ? 'رقم هوية المفوَّض (10 أرقام)' : 'رقم الهوية أو الإقامة (10 أرقام)'}
+                    label={
+                      poaMode
+                        ? 'رقم هوية المفوَّض (10 أرقام)'
+                        : isFirstPartyLocked
+                          ? 'رقم الهوية أو الإقامة (بيانات حسابك، غير قابلة للتعديل)'
+                          : 'رقم الهوية أو الإقامة (10 أرقام)'
+                    }
                     value={party.national_id}
                     onChange={(v) => updateParty(index, { national_id: v })}
                     required
                     digitsOnly
                     maxLength={10}
+                    disabled={isFirstPartyLocked}
                   />
                   <Field label="تاريخ الميلاد" value={party.date_of_birth} onChange={(v) => updateParty(index, { date_of_birth: v })} type="date" required />
                 </>
@@ -499,31 +515,55 @@ export function PartiesStep({
                 label={
                   poaMode
                     ? 'اسم المفوَّض'
-                    : party.party_type === 'entity'
-                      ? 'اسم الممثل'
-                      : party.verification_method === 'nafath'
-                        ? 'الاسم (يُملأ تلقائيًا بعد التحقق، أو أدخله مؤقتًا)'
-                        : 'الاسم'
+                    : isFirstPartyLocked
+                      ? party.party_type === 'entity'
+                        ? 'اسم الممثل (بيانات حسابك، غير قابلة للتعديل)'
+                        : 'الاسم (بيانات حسابك، غير قابلة للتعديل)'
+                      : party.party_type === 'entity'
+                        ? 'اسم الممثل'
+                        : party.verification_method === 'nafath'
+                          ? 'الاسم (يُملأ تلقائيًا بعد التحقق، أو أدخله مؤقتًا)'
+                          : 'الاسم'
                 }
                 value={party.full_name}
                 onChange={(v) => updateParty(index, { full_name: v })}
                 required
+                disabled={isFirstPartyLocked}
               />
               {party.verification_method === 'manual' && (
                 <Field
-                  label={poaMode ? 'رقم هوية المفوَّض' : 'رقم الهوية أو الإقامة'}
+                  label={
+                    poaMode
+                      ? 'رقم هوية المفوَّض'
+                      : isFirstPartyLocked
+                        ? 'رقم الهوية أو الإقامة (بيانات حسابك، غير قابلة للتعديل)'
+                        : 'رقم الهوية أو الإقامة'
+                  }
                   value={party.national_id}
                   onChange={(v) => updateParty(index, { national_id: v })}
                   digitsOnly
                   maxLength={10}
                   hint="10 أرقام فقط"
+                  disabled={isFirstPartyLocked}
                 />
               )}
-              <Field
-                label={poaMode ? 'جنسية المفوَّض' : 'الجنسية'}
-                value={party.nationality}
-                onChange={(v) => updateParty(index, { nationality: v })}
-              />
+              <label className="block text-sm">
+                <span className="mb-1 block font-bold text-ink">
+                  {poaMode ? 'جنسية المفوَّض' : isFirstPartyLocked ? 'الجنسية (بيانات حسابك، غير قابلة للتعديل)' : 'الجنسية'}
+                </span>
+                <select
+                  value={party.nationality}
+                  onChange={(e) => updateParty(index, { nationality: e.target.value })}
+                  disabled={isFirstPartyLocked}
+                  className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal disabled:cursor-not-allowed disabled:bg-paper disabled:text-slate"
+                >
+                  {NATIONALITIES.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </label>
               {!poaMode && (
                 <>
                   <Field label="العنوان" value={party.address} onChange={(v) => updateParty(index, { address: v })} />
@@ -574,7 +614,8 @@ export function PartiesStep({
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {!poaMode && (

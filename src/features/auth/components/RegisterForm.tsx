@@ -5,8 +5,7 @@ import { requestRegistrationOtp, verifyRegistrationOtp } from '../api/authApi';
 import { signIn } from '../api/authApi';
 import { GregorianDateInput } from '@/shared/ui/GregorianDateInput';
 import { emailError, nationalIdError, passwordError, phoneError } from '@/shared/lib/validation';
-
-const NATIONALITIES = ['سعودي', 'مقيم'];
+import { NATIONALITIES } from '@/shared/lib/nationalities';
 
 interface RegisterFormProps {
   onRegistered: () => void;

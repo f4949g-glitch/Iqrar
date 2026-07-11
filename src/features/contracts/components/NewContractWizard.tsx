@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { JSONContent } from '@tiptap/react';
 import { Link } from 'react-router-dom';
 import { Lock } from 'lucide-react';
@@ -88,8 +88,9 @@ export function NewContractWizard() {
   const [title, setTitle] = useState(guestDraft?.title ?? '');
   const [documentType] = useState<DocumentType>(guestDraft?.documentType ?? pendingIntent?.documentType ?? 'contract');
   const poaMode = documentType === 'power_of_attorney';
-  // مدة توثيق التفويض ثابتة عند 7 أيام ولا تُعرض للاختيار (بخلاف العقد القابل للتخصيص).
-  const [durationDays, setDurationDays] = useState(guestDraft?.durationDays ?? (poaMode ? '7' : ''));
+  // مدة توثيق التفويض ثابتة عند 7 أيام ولا تُعرض للاختيار؛ مدة توثيق العقد تبدأ
+  // بـ3 أيام افتراضيًا وتبقى قابلة للتعديل زيادةً أو نقصانًا (1-14 يومًا).
+  const [durationDays, setDurationDays] = useState(guestDraft?.durationDays ?? (poaMode ? '7' : '3'));
   const docLabel = DOCUMENT_TYPE_DEFINITE_LABELS[documentType];
   const stepLabels: Record<Step, string> = {
     parties: 'بيانات الأطراف',
@@ -110,14 +111,39 @@ export function NewContractWizard() {
   const [termEndDate, setTermEndDate] = useState(guestDraft?.termEndDate ?? '');
   const [draftParties, setDraftParties] = useState<DraftParty[]>(() => {
     if (guestDraft) return guestDraft.parties;
-    if (!pendingIntent) return [emptyParty()];
-    const count = pendingIntent.documentType === 'power_of_attorney' ? 1 : Math.max(pendingIntent.partyCount, 1);
+    // العقد يتطلب طرفين على الأقل (تفويض هو الاستثناء الوحيد بطرف واحد)، فتُهيَّأ
+    // خانتان افتراضيًا بدل واحدة كي لا يفاجَأ المستخدم بخطأ التحقق لاحقًا.
+    if (!pendingIntent) return poaMode ? [emptyParty()] : [emptyParty(), emptyParty()];
+    const count = pendingIntent.documentType === 'power_of_attorney' ? 1 : Math.max(pendingIntent.partyCount, 2);
     return Array.from({ length: count }, () => ({
       ...emptyParty(),
       verification_method: pendingIntent.verificationDefault,
       role_label: pendingIntent.documentType === 'power_of_attorney' ? 'المفوض' : 'الطرف الأول',
     }));
   });
+  // الطرف الأول لعقد (لا تفويض) يمثّل صاحب الحساب نفسه، فتُملأ بياناته الشخصية
+  // تلقائيًا من الحساب فور توفّرها (مرة واحدة فقط كي لا تُطمَس تعديلات لاحقة على
+  // الجوال/البريد، والاسم/الهوية/الجنسية مقفلة أصلًا في PartiesStep فلا تُعدَّل يدويًا).
+  const profileAppliedToPartyOneRef = useRef(false);
+  useEffect(() => {
+    if (poaMode || !profile || profileAppliedToPartyOneRef.current) return;
+    profileAppliedToPartyOneRef.current = true;
+    setDraftParties((prev) => {
+      if (prev.length === 0) return prev;
+      return prev.map((p, i) =>
+        i === 0
+          ? {
+              ...p,
+              full_name: profile.full_name || p.full_name,
+              national_id: profile.national_id || p.national_id,
+              nationality: profile.nationality || p.nationality,
+              phone: profile.phone || p.phone,
+              email: profile.email || p.email,
+            }
+          : p,
+      );
+    });
+  }, [poaMode, profile]);
   const [contract, setContract] = useState<Contract | null>(null);
   const [parties, setParties] = useState<ContractParty[]>([]);
   const [file, setFile] = useState<File | null>(null);

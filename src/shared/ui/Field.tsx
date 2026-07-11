@@ -16,6 +16,8 @@ interface FieldProps {
   maxLength?: number;
   /** حقل جوال بصيغة دولية: بادئة "966" ثابتة + حتى 9 أرقام بعدها (مثال: 966501234567). */
   phone?: boolean;
+  /** يُعطَّل الحقل ويظهر بمظهر مقفل (مثال: بيانات هوية مُستمَدة من الحساب لا يجوز تعديلها). */
+  disabled?: boolean;
 }
 
 const PHONE_PREFIX = '966';
@@ -34,6 +36,7 @@ export function Field({
   digitsOnly,
   maxLength,
   phone,
+  disabled,
 }: FieldProps) {
   const handleChange = (raw: string) => {
     let next = raw;
@@ -64,8 +67,9 @@ export function Field({
             required={required}
             placeholder="5xxxxxxxx"
             maxLength={9}
+            disabled={disabled}
             onChange={(e) => handlePhoneChange(e.target.value)}
-            className="w-full bg-transparent px-3 py-2 text-ink outline-none"
+            className="w-full bg-transparent px-3 py-2 text-ink outline-none disabled:cursor-not-allowed disabled:text-slate"
           />
         </div>
         {hint && !error && <span className="mt-1 block text-xs text-slate">{hint}</span>}
@@ -89,8 +93,9 @@ export function Field({
           min={min}
           max={max}
           maxLength={maxLength}
+          disabled={disabled}
           onChange={(e) => handleChange(e.target.value)}
-          className="w-full rounded-lg border bg-white px-3 py-2 text-ink outline-none focus:border-seal"
+          className="w-full rounded-lg border bg-white px-3 py-2 text-ink outline-none focus:border-seal disabled:cursor-not-allowed disabled:bg-paper disabled:text-slate"
           style={{ borderColor: error ? '#B5533C' : '#E5E1D6' }}
         />
       )}
