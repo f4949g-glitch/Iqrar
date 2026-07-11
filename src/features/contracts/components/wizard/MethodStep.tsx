@@ -6,9 +6,10 @@ interface MethodStepProps {
   documentType: DocumentType;
   onSelect: (method: 'pdf' | 'editor') => void;
   onBack: () => void;
+  busy?: boolean;
 }
 
-export function MethodStep({ documentType, onSelect, onBack }: MethodStepProps) {
+export function MethodStep({ documentType, onSelect, onBack, busy = false }: MethodStepProps) {
   const docLabel = DOCUMENT_TYPE_DEFINITE_LABELS[documentType];
   return (
     <div className="space-y-6">
@@ -17,7 +18,8 @@ export function MethodStep({ documentType, onSelect, onBack }: MethodStepProps) 
         <button
           type="button"
           onClick={() => onSelect('editor')}
-          className="flex flex-col items-start gap-3 rounded-2xl border border-line bg-card p-6 text-right shadow-sm transition hover:shadow-md"
+          disabled={busy}
+          className="flex flex-col items-start gap-3 rounded-2xl border border-line bg-card p-6 text-right shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-sm"
         >
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sealLight">
             <PenLine size={20} className="text-seal" />
@@ -30,7 +32,8 @@ export function MethodStep({ documentType, onSelect, onBack }: MethodStepProps) 
         <button
           type="button"
           onClick={() => onSelect('pdf')}
-          className="flex flex-col items-start gap-3 rounded-2xl border border-line bg-card p-6 text-right shadow-sm transition hover:shadow-md"
+          disabled={busy}
+          className="flex flex-col items-start gap-3 rounded-2xl border border-line bg-card p-6 text-right shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-sm"
         >
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sageLight">
             <FileText size={20} className="text-sage" />
@@ -41,7 +44,7 @@ export function MethodStep({ documentType, onSelect, onBack }: MethodStepProps) 
           </div>
         </button>
       </div>
-      <Button variant="secondary" onClick={onBack}>
+      <Button variant="secondary" onClick={onBack} disabled={busy}>
         السابق
       </Button>
     </div>

@@ -153,6 +153,7 @@ export function NewContractWizard() {
   const [fields, setFields] = useState<ContractField[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const syncInFlightRef = useRef(false);
 
   const persistGuestDraft = (resumeStep: GuestResumeStep, chosenMethod: 'pdf' | 'editor') => {
     saveGuestDraft({
@@ -201,6 +202,7 @@ export function NewContractWizard() {
       created = await uploadCompanyLogo(created.id, companyLogoDataUrl);
     }
     const createdParties: ContractParty[] = [];
+    const newPartyIds: Record<number, string> = {};
     for (let i = 0; i < draftParties.length; i++) {
       const p = draftParties[i];
       const role = p.role_label === 'أخرى' ? p.custom_role.trim() : p.role_label;
@@ -224,9 +226,16 @@ export function NewContractWizard() {
       const isRealPartyId = Boolean(p.partyId) && !p.partyId!.startsWith('guest-temp-');
       const party = isRealPartyId ? await updateParty(p.partyId!, payload) : await addParty(created.id, payload);
       createdParties.push(party);
+      if (!isRealPartyId) newPartyIds[i] = party.id;
     }
     setContract(created);
     setParties(createdParties);
+    // نُثبِّت معرّفات الأطراف الحقيقية المُنشأة للتو داخل draftParties، حتى لو
+    // استُدعيت syncToBackend مرة أخرى لاحقًا (نقر مزدوج على زر طريقة الإنشاء، أو
+    // تنقّل للخلف ثم إعادة اختيارها) فلا تُنشأ صفوف أطراف مكرَّرة بنفس البيانات.
+    if (Object.keys(newPartyIds).length > 0) {
+      setDraftParties((prev) => prev.map((dp, i) => (newPartyIds[i] ? { ...dp, partyId: newPartyIds[i] } : dp)));
+    }
     return { contract: created, parties: createdParties };
   };
 
@@ -295,6 +304,11 @@ export function NewContractWizard() {
       return;
     }
 
+    // حارس صريح إضافةً لتعطيل الزرّين في MethodStep: حالة busy تتحدّث عبر React
+    // state (غير متزامنة)، فقد تفلت نقرة ثانية قبل أن يُعاد الرسم فعليًا وتُنشئ
+    // طرفًا مكررًا في القاعدة — هذا المرجع يمنع الدخول المتزامن بغضّ النظر عن التوقيت.
+    if (syncInFlightRef.current) return;
+    syncInFlightRef.current = true;
     setBusy(true);
     try {
       await syncToBackend(chosen);
@@ -303,6 +317,7 @@ export function NewContractWizard() {
       setError(err instanceof Error ? err.message : `تعذّر إنشاء ${docLabel}`);
     } finally {
       setBusy(false);
+      syncInFlightRef.current = false;
     }
   };
 
@@ -418,7 +433,7 @@ export function NewContractWizard() {
         />
       )}
 
-      {step === 'method' && <MethodStep documentType={documentType} onSelect={selectMethod} onBack={() => setStep('parties')} />}
+      {step === 'method' && <MethodStep documentType={documentType} onSelect={selectMethod} onBack={() => setStep('parties')} busy={busy} />}
 
       {step === 'upload' && contract && (
         <UploadStep
