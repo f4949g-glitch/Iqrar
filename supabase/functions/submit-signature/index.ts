@@ -141,10 +141,18 @@ async function finalizeContract(admin: ReturnType<typeof createClient>, contract
   });
   contract.verification_number = verificationNumber;
 
-  if (contract.source_type === 'editor') {
-    await finalizeEditorContract(admin, contract);
-  } else {
-    await finalizePdfContract(admin, contract);
+  const finalized = contract.source_type === 'editor' ? await finalizeEditorContract(admin, contract) : await finalizePdfContract(admin, contract);
+
+  if (!finalized) {
+    // فشل التوثيق النهائي (مثلًا عقد PDF أُرسل دون رفع ملف، أو تعذّر تحميل الملف
+    // من التخزين) — لا نُرسل إشعارات "اكتمل التوثيق" الكاذبة، ونسجّل الخلل ليراجعه
+    // الأدمن بدل ترك العقد عالقًا بصمت عند حالة "مكتمل جزئيًا".
+    await admin.from('contract_events').insert({
+      contract_id: contractId,
+      event_type: 'completion_failed',
+      message: 'وقّع جميع الأطراف لكن تعذّر إتمام توثيق العقد نهائيًا (تحقّق من وجود محتوى العقد)، يلزم تدخّل الأدمن',
+    });
+    return;
   }
 
   await admin.from('contract_events').insert({ contract_id: contractId, event_type: 'completed', message: 'تم توثيق العقد بنجاح واكتمل توقيع جميع الأطراف' });
@@ -192,8 +200,8 @@ function briefUserAgentLatin(ua: string | null): string | null {
 }
 
 // deno-lint-ignore no-explicit-any
-async function finalizePdfContract(admin: ReturnType<typeof createClient>, contract: any) {
-  if (!contract.original_file_path) return;
+async function finalizePdfContract(admin: ReturnType<typeof createClient>, contract: any): Promise<boolean> {
+  if (!contract.original_file_path) return false;
 
   const [{ data: allFields }, { data: partiesForAudit }] = await Promise.all([
     admin.from('contract_fields').select('*').eq('contract_id', contract.id),
@@ -204,7 +212,7 @@ async function finalizePdfContract(admin: ReturnType<typeof createClient>, contr
       .order('order_index', { ascending: true }),
   ]);
   const { data: originalFile } = await admin.storage.from('contracts').download(contract.original_file_path);
-  if (!originalFile) return;
+  if (!originalFile) return false;
 
   const originalBytes = new Uint8Array(await originalFile.arrayBuffer());
   const fieldsToRender: FieldToRender[] = (allFields ?? []).map((f) => ({
@@ -280,11 +288,12 @@ async function finalizePdfContract(admin: ReturnType<typeof createClient>, contr
       updated_at: completedAt,
     })
     .eq('id', contract.id);
+  return true;
 }
 
 // deno-lint-ignore no-explicit-any
-async function finalizeEditorContract(admin: ReturnType<typeof createClient>, contract: any) {
-  if (!contract.body_json) return;
+async function finalizeEditorContract(admin: ReturnType<typeof createClient>, contract: any): Promise<boolean> {
+  if (!contract.body_json) return false;
 
   const [{ data: parties }, { data: allFields }] = await Promise.all([
     admin
@@ -344,4 +353,5 @@ async function finalizeEditorContract(admin: ReturnType<typeof createClient>, co
       updated_at: completedAt,
     })
     .eq('id', contract.id);
+  return true;
 }
