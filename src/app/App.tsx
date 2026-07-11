@@ -21,6 +21,9 @@ const ReportsPage = lazy(() => import('@/features/contracts/components/ReportsPa
 const AdminUsersPage = lazy(() => import('@/features/auth/components/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage })));
 const CustomerServicePage = lazy(() => import('@/features/site/components/CustomerServicePage').then((m) => ({ default: m.CustomerServicePage })));
 const SendSmsPage = lazy(() => import('@/features/sms/components/SendSmsPage').then((m) => ({ default: m.SendSmsPage })));
+const VerificationReprintPage = lazy(() =>
+  import('@/features/verification/components/VerificationReprintPage').then((m) => ({ default: m.VerificationReprintPage })),
+);
 const OrganizationSettingsPage = lazy(() =>
   import('@/features/site/components/OrganizationSettingsPage').then((m) => ({ default: m.OrganizationSettingsPage })),
 );
@@ -118,6 +121,10 @@ function AppShell() {
           <Route
             path="/legal/privacy-policy"
             element={!profile ? <AuthGate /> : profile.role === 'admin' ? <PrivacyPolicyEditPage /> : <AdminGate />}
+          />
+          <Route
+            path="/contracts/reprint-verification"
+            element={!profile ? <AuthGate /> : profile.role === 'admin' ? <VerificationReprintPage /> : <AdminGate />}
           />
         </Routes>
       </Suspense>

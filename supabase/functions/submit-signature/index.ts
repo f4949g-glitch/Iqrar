@@ -4,7 +4,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/email.ts';
 import { sendSms } from '../_shared/sms.ts';
 import { renderSmsTemplate } from '../_shared/templates.ts';
-import { generateFinalPdf, type FieldToRender } from '../_shared/generateFinalPdf.ts';
+import { generateFinalPdf, type FieldToRender, type PartyForVerificationPage } from '../_shared/generateFinalPdf.ts';
 import {
   renderContractHtml,
   renderPartiesHeaderHtml,
@@ -199,7 +199,7 @@ async function finalizePdfContract(admin: ReturnType<typeof createClient>, contr
     admin.from('contract_fields').select('*').eq('contract_id', contract.id),
     admin
       .from('contract_parties')
-      .select('order_index, signed_ip, signed_user_agent, signed_at')
+      .select('order_index, signed_ip, signed_user_agent, signed_at, role_label, full_name, national_id, party_type, entity_name, status')
       .eq('contract_id', contract.id)
       .order('order_index', { ascending: true }),
   ]);
@@ -235,6 +235,17 @@ async function finalizePdfContract(admin: ReturnType<typeof createClient>, contr
       signedAtLabel: p.signed_at ? new Date(p.signed_at as string).toISOString() : null,
     }));
 
+  // بيانات الأطراف كاملة لصفحة التوثيق الجديدة المُلحَقة بنهاية المستند (اسم
+  // المنشأة بدل اسم الشخص لأطراف المنشآت، وبالعربية الصحيحة عبر arabicShaper.ts).
+  const partiesForVerificationPage: PartyForVerificationPage[] = (partiesForAudit ?? []).map((p) => ({
+    orderIndex: (p.order_index as number) + 1,
+    roleLabel: String(p.role_label ?? ''),
+    fullName: p.party_type === 'company' ? String(p.entity_name ?? p.full_name ?? '') : String(p.full_name ?? ''),
+    nationalId: (p.national_id as string | null) ?? null,
+    status: String(p.status ?? ''),
+    signedAtLabel: p.signed_at ? new Date(p.signed_at as string).toISOString().slice(0, 16).replace('T', ' ') : null,
+  }));
+
   let companyLogoBytes: Uint8Array | null = null;
   if (contract.company_logo_path) {
     const { data: logoFile } = await admin.storage.from('contracts').download(contract.company_logo_path);
@@ -252,6 +263,8 @@ async function finalizePdfContract(admin: ReturnType<typeof createClient>, contr
     verificationStamp,
     signerAudits,
     companyLogoBytes,
+    partiesForVerificationPage,
+    String(contract.title ?? ''),
   );
 
   const finalPath = `${contract.id}/final.pdf`;
