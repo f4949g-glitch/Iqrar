@@ -238,6 +238,19 @@ export function PartiesStep({
         return;
       }
     }
+    // لا يجوز أن يتكرر رقم الهوية بين طرفين مختلفين في نفس العقد (نفس الشخص لا
+    // يمكن أن يكون طرفًا أول وطرفًا ثانيًا معًا مثلًا).
+    const nationalIdOwners = new Map<string, number>();
+    for (let i = 0; i < parties.length; i++) {
+      const nid = parties[i].national_id.trim();
+      if (!nid) continue;
+      const ownerIndex = nationalIdOwners.get(nid);
+      if (ownerIndex !== undefined) {
+        setError(`رقم الهوية مكرر بين الطرف ${ownerIndex + 1} والطرف ${i + 1} — لا يمكن أن يتطابق رقم الهوية بين طرفين مختلفين`);
+        return;
+      }
+      nationalIdOwners.set(nid, i);
+    }
     onNext();
   };
 

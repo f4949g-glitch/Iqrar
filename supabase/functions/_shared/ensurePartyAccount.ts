@@ -11,16 +11,30 @@ interface PartyLike {
   email: string | null;
   full_name: string;
   user_id: string | null;
+  national_id?: string | null;
 }
 
 // ينشئ حساب Auth (بدور "member") لطرف عقد لا يملك حسابًا بعد، ويربطه بصف الطرف —
-// يمنح "عضوية عادية" تسمح له لاحقًا برؤية عقوده تحت تبويب "عقود تتطلب التوثيق" دون
+// يمنح "عضوية عادية" تسمح له لاحقًا برؤية عقوده تحت تبويب "طلبات الموافقة" دون
 // انتظار توقيعه الفعلي. يُعيد كلمة المرور المؤقتة فقط عند إنشاء حساب جديد فعليًا.
 export async function ensurePartyAccount(
   admin: AdminClient,
   party: PartyLike,
 ): Promise<{ created: boolean; tempPassword?: string }> {
-  if (party.user_id || !party.email) return { created: false };
+  if (party.user_id) return { created: false };
+
+  // الأولوية لمطابقة رقم الهوية: إن كان لدى هذا الشخص حساب مسجَّل بالفعل (حتى لو
+  // ببريد إلكتروني مختلف عن البريد المُدخَل لهذا الطرف)، نربط العقد بحسابه القائم
+  // بدل إنشاء حساب مكرر — رقم الهوية هو المعرّف الموثوق لدى المنصة، لا البريد.
+  if (party.national_id) {
+    const { data: existingProfile } = await admin.from('profiles').select('id').eq('national_id', party.national_id).maybeSingle();
+    if (existingProfile) {
+      await admin.from('contract_parties').update({ user_id: existingProfile.id }).eq('id', party.id);
+      return { created: false };
+    }
+  }
+
+  if (!party.email) return { created: false };
 
   const tempPassword = generateTempPassword();
   const { data: created, error } = await admin.auth.admin.createUser({

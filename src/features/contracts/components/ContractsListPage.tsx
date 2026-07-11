@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { FileText, Plus, ShieldCheck, TrendingUp } from 'lucide-react';
+import { FileText, Plus, ShieldCheck, Trash2, TrendingUp } from 'lucide-react';
 import { StatusPill } from '@/shared/ui/StatusPill';
 import { Button } from '@/shared/ui/Button';
 import {
+  deleteDraftContract,
   listActiveContracts,
   listContractsAwaitingMySignature,
   listPreviousContracts,
@@ -22,7 +23,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'rejected', label: 'عقود مرفوضة' },
 ];
 
-function ContractCard({ contract }: { contract: ContractListItem }) {
+function ContractCard({ contract, onDelete }: { contract: ContractListItem; onDelete: (id: string) => void }) {
   const info = CONTRACT_STATUS_LABEL[contract.status];
   return (
     <Link
@@ -35,7 +36,23 @@ function ContractCard({ contract }: { contract: ContractListItem }) {
           {contract.signed_count} / {contract.parties_count} أطراف وقّعوا · {formatDate(contract.created_at)}
         </p>
       </div>
-      <StatusPill label={info.label} bg={info.bg} fg={info.fg} />
+      <div className="flex items-center gap-2">
+        <StatusPill label={info.label} bg={info.bg} fg={info.fg} />
+        {contract.status === 'draft' && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDelete(contract.id);
+            }}
+            title="حذف المسودة"
+            className="rounded-lg p-1.5 text-slate hover:bg-clayLight hover:text-clay"
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
+      </div>
     </Link>
   );
 }
@@ -98,6 +115,16 @@ export function ContractsListPage() {
   useEffect(() => {
     load(tab);
   }, [tab, load]);
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذه المسودة؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+    try {
+      await deleteDraftContract(id);
+      setContracts((prev) => prev.filter((c) => c.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'تعذّر حذف العقد');
+    }
+  };
 
   useEffect(() => {
     Promise.all([listActiveContracts(), listPreviousContracts()])
@@ -164,7 +191,7 @@ export function ContractsListPage() {
       )}
       <div className="space-y-3">
         {contracts.map((c) => (
-          <ContractCard key={c.id} contract={c} />
+          <ContractCard key={c.id} contract={c} onDelete={handleDelete} />
         ))}
       </div>
     </div>
