@@ -33,32 +33,54 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: 'بيانات غير صالحة' }, 400);
   }
 
-  const targetUserId = String(body.user_id ?? callerData.user.id);
-  const editingSelf = targetUserId === callerData.user.id;
-
-  // تعديل بيانات مستخدم آخر متاح للأدمن الكامل فقط — التحقق يتم خادميًا دومًا
-  // بدل الوثوق بأي دور يُرسله العميل.
-  if (!editingSelf) {
-    const { data: callerProfile } = await admin.from('profiles').select('role').eq('id', callerData.user.id).maybeSingle();
-    if (callerProfile?.role !== 'admin') return jsonResponse({ error: 'هذا الإجراء متاح لمدير المنصة فقط' }, 403);
-  }
+  // نميّز "تعديل ذاتي من صفحة الملف الشخصي" (لا يُرسل user_id إطلاقًا) عن "تعديل
+  // من لوحة الأدمن" (يُرسل user_id دومًا، حتى لو كان الأدمن يعدّل صفّه هو) —
+  // القيود (بريد/جوال عبر OTP، رقم الهوية والاسم غير قابلين للتعديل) تنطبق فقط
+  // على المسار الأول، كي لا يُحرَم الأدمن من تصحيح بياناته هو عبر أداته نفسها.
+  const explicitTargetUserId = typeof body.user_id === 'string' && body.user_id.length > 0 ? body.user_id : null;
+  const targetUserId = explicitTargetUserId ?? callerData.user.id;
+  const isSelfServiceEdit = explicitTargetUserId === null;
 
   const { data: target } = await admin.from('profiles').select('*').eq('id', targetUserId).maybeSingle();
   if (!target) return jsonResponse({ error: 'المستخدم غير موجود' }, 404);
 
+  const nationality = String(body.nationality ?? '').trim();
+  const dateOfBirth = body.date_of_birth ? String(body.date_of_birth).trim() : null;
+  if (!NATIONALITIES.has(nationality)) return jsonResponse({ error: 'الجنسية غير صالحة' }, 400);
+  if (dateOfBirth && !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) return jsonResponse({ error: 'تاريخ الميلاد غير صالح' }, 400);
+
+  if (isSelfServiceEdit) {
+    // الاسم ورقم الهوية والبريد الإلكتروني ورقم الجوال لم تعد قابلة للتعديل
+    // الذاتي المباشر من هنا: البريد والجوال يمرّان عبر تحقق برمز يُرسل للقيمة
+    // القديمة أولًا (انظر request-profile-change-otp وconfirm-profile-change)،
+    // رقم الهوية لا يعدّله إلا الأدمن لحالات الأعطال التقنية، والاسم يتطلب رفع
+    // تذكرة يراجعها الأدمن. هذه الدالة تسمح لصاحب الحساب بتعديل الجنسية وتاريخ
+    // الميلاد فقط.
+    const { data: updated, error: updateError } = await admin
+      .from('profiles')
+      .update({ nationality, date_of_birth: dateOfBirth })
+      .eq('id', targetUserId)
+      .select('*')
+      .single();
+    if (updateError) return jsonResponse({ error: 'تعذّر حفظ البيانات: ' + updateError.message }, 500);
+    return jsonResponse({ ok: true, profile: updated });
+  }
+
+  // تعديل بيانات مستخدم آخر متاح للأدمن الكامل فقط — التحقق يتم خادميًا دومًا
+  // بدل الوثوق بأي دور يُرسله العميل. الأدمن وحده يملك صلاحية تعديل رقم الهوية
+  // أو الاسم أو البريد مباشرة (لحالات الأعطال التقنية)، دون المرور بتحقق OTP.
+  const { data: callerProfile } = await admin.from('profiles').select('role').eq('id', callerData.user.id).maybeSingle();
+  if (callerProfile?.role !== 'admin') return jsonResponse({ error: 'هذا الإجراء متاح لمدير المنصة فقط' }, 403);
+
   const fullName = String(body.full_name ?? '').trim();
   const nationalId = String(body.national_id ?? '').trim();
   const email = String(body.email ?? '').trim().toLowerCase();
-  const nationality = String(body.nationality ?? '').trim();
-  const dateOfBirth = body.date_of_birth ? String(body.date_of_birth).trim() : null;
   const phoneRaw = body.phone ? String(body.phone).trim() : '';
 
   if (!fullName) return jsonResponse({ error: 'الاسم مطلوب' }, 400);
   if (!/^\d{10}$/.test(nationalId)) return jsonResponse({ error: 'رقم الهوية يجب أن يتكون من 10 أرقام فقط' }, 400);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return jsonResponse({ error: 'أدخل بريدًا إلكترونيًا صحيحًا' }, 400);
-  if (!NATIONALITIES.has(nationality)) return jsonResponse({ error: 'الجنسية غير صالحة' }, 400);
   if (phoneRaw && !/^9665\d{8}$/.test(phoneRaw)) return jsonResponse({ error: 'رقم جوال سعودي غير صحيح (مثال: 966501234567)' }, 400);
-  if (dateOfBirth && !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) return jsonResponse({ error: 'تاريخ الميلاد غير صالح' }, 400);
 
   if (nationalId !== target.national_id) {
     const { data: existingNid } = await admin.from('profiles').select('id').eq('national_id', nationalId).neq('id', targetUserId).maybeSingle();

@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase/client';
 import { translateErrorMessage } from '@/shared/lib/errorMessage';
 
-export type ContactCategory = 'suggestion' | 'complaint' | 'technical_issue';
+export type ContactCategory = 'suggestion' | 'complaint' | 'technical_issue' | 'name_change_request';
 export type ContactStatus = 'new' | 'read';
 
 export interface ContactMessage {

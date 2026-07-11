@@ -113,11 +113,12 @@ export interface UpdateProfileInput {
   phone: string;
 }
 
-// دالة خادمية موحّدة لتعديل بيانات الحساب (الاسم، رقم الهوية، البريد، الجنسية،
-// تاريخ الميلاد، الجوال) — تُستخدم لتعديل الملف الشخصي للمستخدم نفسه، وأيضًا
-// من لوحة الأدمن لتعديل بيانات أي مستخدم آخر (بتمرير user_id). التحقق من صلاحية
-// تعديل مستخدم آخر يتم خادميًا فقط، وتغيير البريد يُطبَّق على حساب الدخول في
-// Supabase Auth مباشرة كي لا يفترق عن البريد المعروض في الملف الشخصي.
+// دالة خادمية موحّدة لتعديل الملف الشخصي. عند تعديل المستخدم لبياناته هو (بلا
+// user_id) تُطبَّق الجنسية وتاريخ الميلاد فقط — الاسم ورقم الهوية والبريد والجوال
+// لم تعد قابلة للتعديل الذاتي المباشر من هنا (انظر requestProfileChangeOtp
+// لتغيير البريد/الجوال، وsubmitContactMessage بفئة name_change_request لطلب
+// تغيير الاسم؛ رقم الهوية لا يعدّله إلا الأدمن). عند تمرير user_id لمستخدم آخر،
+// الدالة تتحقق خادميًا أن الطالب أدمن كامل، وعندها تُطبَّق كل الحقول كاملة.
 export async function updateProfile(input: UpdateProfileInput): Promise<Profile> {
   const { data, error } = await supabase.functions.invoke<{ ok: boolean; profile: Profile; error?: string }>('update-profile', {
     body: input,
@@ -125,4 +126,23 @@ export async function updateProfile(input: UpdateProfileInput): Promise<Profile>
   if (error) throw await extractFunctionError(error);
   if (data && 'error' in data && data.error) throw new Error(data.error);
   return (data as { profile: Profile }).profile;
+}
+
+export type ProfileChangeField = 'email' | 'phone';
+
+export interface RequestProfileChangeOtpResult {
+  ok: boolean;
+  sms_configured?: boolean;
+  email_configured?: boolean;
+  dev_code?: string;
+}
+
+// يطلب رمز تحقق يُرسَل إلى البريد/الجوال الحالي (القديم) لإثبات ملكيته، تمهيدًا
+// لتغييره إلى القيمة الجديدة المطلوبة (تُرسَل هنا) بعد التحقق عبر confirmProfileChange.
+export async function requestProfileChangeOtp(field: ProfileChangeField, newValue: string): Promise<RequestProfileChangeOtpResult> {
+  return invokeAuthFunction<RequestProfileChangeOtpResult>('request-profile-change-otp', { field, new_value: newValue });
+}
+
+export async function confirmProfileChange(field: ProfileChangeField, code: string): Promise<{ ok: boolean; new_value: string }> {
+  return invokeAuthFunction<{ ok: boolean; new_value: string }>('confirm-profile-change', { field, code });
 }

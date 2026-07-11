@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Lightbulb, AlertTriangle, Wrench, Mail } from 'lucide-react';
+import { Lightbulb, AlertTriangle, Wrench, Mail, UserCog } from 'lucide-react';
 import { formatDate } from '@/shared/lib/formatDate';
 import { listContactMessages, markContactMessageRead, type ContactCategory, type ContactMessage } from '../api/contactMessagesApi';
 
@@ -7,6 +7,7 @@ const CATEGORY_META: Record<ContactCategory, { label: string; icon: typeof Light
   suggestion: { label: 'اقتراح', icon: Lightbulb, className: 'bg-sageLight text-sage' },
   complaint: { label: 'شكوى', icon: AlertTriangle, className: 'bg-clayLight text-clay' },
   technical_issue: { label: 'مشكلة تقنية', icon: Wrench, className: 'bg-sealLight text-seal' },
+  name_change_request: { label: 'طلب تغيير اسم', icon: UserCog, className: 'bg-sealLight text-seal' },
 };
 
 export function CustomerServicePage() {
