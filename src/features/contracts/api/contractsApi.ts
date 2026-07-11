@@ -23,47 +23,66 @@ async function withPartyCounts(contracts: Contract[]): Promise<ContractListItem[
   });
 }
 
-export async function listActiveContracts(): Promise<ContractListItem[]> {
-  const { data, error } = await supabase
-    .from('contracts')
-    .select('*')
-    .in('status', ['draft', 'pending', 'partially_completed'])
-    .order('created_at', { ascending: false });
+export async function listDraftContracts(): Promise<ContractListItem[]> {
+  const { data, error } = await supabase.from('contracts').select('*').eq('status', 'draft').order('updated_at', { ascending: false });
   if (error) throw new Error(translateErrorMessage(error.message));
   return withPartyCounts((data ?? []) as Contract[]);
 }
 
-export async function listPreviousContracts(): Promise<ContractListItem[]> {
-  const { data, error } = await supabase
-    .from('contracts')
-    .select('*')
-    .in('status', ['completed', 'expired', 'rejected', 'cancelled'])
-    .order('created_at', { ascending: false });
+export async function listApprovedContracts(): Promise<ContractListItem[]> {
+  const { data, error } = await supabase.from('contracts').select('*').eq('status', 'completed').order('updated_at', { ascending: false });
   if (error) throw new Error(translateErrorMessage(error.message));
   return withPartyCounts((data ?? []) as Contract[]);
 }
 
 export async function listRejectedContracts(): Promise<ContractListItem[]> {
-  const { data, error } = await supabase.from('contracts').select('*').eq('status', 'rejected').order('updated_at', { ascending: false });
+  const { data, error } = await supabase
+    .from('contracts')
+    .select('*')
+    .in('status', ['rejected', 'expired', 'cancelled'])
+    .order('updated_at', { ascending: false });
   if (error) throw new Error(translateErrorMessage(error.message));
   return withPartyCounts((data ?? []) as Contract[]);
 }
 
-export async function listContractsAwaitingMySignature(): Promise<ContractListItem[]> {
+// عقود بانتظار الموافقة: تجمع عقودًا أنشأتها ولا تزال بانتظار توقيع بقية الأطراف
+// (pending/partially_completed)، وعقودًا أنت طرف فيها بانتظار توقيعك أنت تحديدًا —
+// في تبويب واحد بدل تبويبين منفصلين، لأن كليهما بمعنى "لم تكتمل الموافقة بعد".
+export async function listAwaitingApprovalContracts(): Promise<ContractListItem[]> {
   const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) return [];
 
-  const { data: parties, error: partiesError } = await supabase
-    .from('contract_parties')
-    .select('contract_id')
-    .eq('user_id', userData.user.id)
-    .in('status', ['pending', 'viewed']);
+  const [{ data: sentByMe, error: sentError }, { data: awaitingMineParties, error: partiesError }] = await Promise.all([
+    supabase.from('contracts').select('*').in('status', ['pending', 'partially_completed']),
+    userData.user
+      ? supabase.from('contract_parties').select('contract_id').eq('user_id', userData.user.id).in('status', ['pending', 'viewed'])
+      : Promise.resolve({ data: [] as { contract_id: string }[], error: null }),
+  ]);
+  if (sentError) throw new Error(translateErrorMessage(sentError.message));
   if (partiesError) throw partiesError;
 
-  const contractIds = [...new Set((parties ?? []).map((p) => p.contract_id))];
-  if (contractIds.length === 0) return [];
+  const byId = new Map<string, Contract>((sentByMe ?? []).map((c) => [c.id, c as Contract]));
+  const awaitingMineIds = [...new Set((awaitingMineParties ?? []).map((p) => p.contract_id))].filter((id) => !byId.has(id));
+  if (awaitingMineIds.length > 0) {
+    const { data: extra, error: extraError } = await supabase.from('contracts').select('*').in('id', awaitingMineIds);
+    if (extraError) throw new Error(translateErrorMessage(extraError.message));
+    for (const c of extra ?? []) byId.set(c.id, c as Contract);
+  }
 
-  const { data, error } = await supabase.from('contracts').select('*').in('id', contractIds);
+  const merged = [...byId.values()].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+  return withPartyCounts(merged);
+}
+
+// بحث بعنوان العقد عبر كل العقود التي يستطيع المستخدم رؤيتها (أنشأها، أو طرف
+// فيها، أو أدمن) بصرف النظر عن حالتها — لا يُقيَّد بالتبويب الحالي.
+export async function searchContracts(query: string): Promise<ContractListItem[]> {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+  const { data, error } = await supabase
+    .from('contracts')
+    .select('*')
+    .ilike('title', `%${trimmed}%`)
+    .order('updated_at', { ascending: false })
+    .limit(50);
   if (error) throw new Error(translateErrorMessage(error.message));
   return withPartyCounts((data ?? []) as Contract[]);
 }

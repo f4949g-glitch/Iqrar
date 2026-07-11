@@ -48,9 +48,10 @@ const USER_GROUPS: SidebarGroup[] = [
   {
     title: 'عقودي',
     links: [
-      { to: '/app/contracts?tab=previous', label: 'عقودي السابقة', icon: FileClock },
-      { to: '/app/contracts?tab=awaiting', label: 'طلبات الموافقة', icon: ClipboardCheck },
-      { to: '/app/contracts?tab=rejected', label: 'عقود مرفوضة', icon: FileX2 },
+      { to: '/app/contracts?tab=draft', label: 'مسودة', icon: FileClock },
+      { to: '/app/contracts?tab=awaiting', label: 'انتظار الموافقة', icon: ClipboardCheck },
+      { to: '/app/contracts?tab=approved', label: 'موافق عليها', icon: ShieldCheck },
+      { to: '/app/contracts?tab=rejected', label: 'مرفوض', icon: FileX2 },
     ],
   },
   {
