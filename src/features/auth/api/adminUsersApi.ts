@@ -68,3 +68,21 @@ export interface AdminUpdateUserProfileInput {
 export async function adminUpdateUserProfile(userId: string, input: AdminUpdateUserProfileInput): Promise<Profile> {
   return updateProfile({ user_id: userId, ...input });
 }
+
+export type ManageUserAction = 'suspend' | 'reactivate' | 'delete' | 'reset_password';
+
+export interface ManageUserResult {
+  temp_password?: string;
+}
+
+// إدارة حساب عميل من طرف الأدمن: إيقاف/إعادة تفعيل/حذف/إعادة تعيين كلمة مرور.
+// عملية خادمية بالكامل لأنها تتطلب صلاحيات Auth Admin (حظر الحساب، حذفه،
+// تغيير كلمة المرور مباشرة) لا يمكن تنفيذها من العميل.
+export async function manageUserAccount(userId: string, action: ManageUserAction): Promise<ManageUserResult> {
+  const { data, error } = await supabase.functions.invoke<ManageUserResult & { error?: string }>('admin-manage-user', {
+    body: { user_id: userId, action },
+  });
+  if (error) throw await extractFunctionError(error);
+  if (data && 'error' in data && data.error) throw new Error(data.error);
+  return (data ?? {}) as ManageUserResult;
+}

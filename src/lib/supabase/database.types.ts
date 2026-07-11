@@ -674,6 +674,7 @@ export type Database = {
           phone: string | null;
           role: string;
           signature_data_url: string | null;
+          suspended_at: string | null;
         };
         Insert: {
           admin_permissions?: string[];
@@ -690,6 +691,7 @@ export type Database = {
           phone?: string | null;
           role?: string;
           signature_data_url?: string | null;
+          suspended_at?: string | null;
         };
         Update: {
           admin_permissions?: string[];
@@ -706,6 +708,7 @@ export type Database = {
           phone?: string | null;
           role?: string;
           signature_data_url?: string | null;
+          suspended_at?: string | null;
         };
         Relationships: [];
       };

@@ -5,7 +5,15 @@ import { Button } from '@/shared/ui/Button';
 import { formatDate } from '@/shared/lib/formatDate';
 import { NATIONALITIES } from '@/shared/lib/nationalities';
 import { emailError, nationalIdError, phoneError } from '@/shared/lib/validation';
-import { adminUpdateUserProfile, createSubAdmin, listAdminUsers, listAllUsers, updateSubAdminPermissions } from '../api/adminUsersApi';
+import {
+  adminUpdateUserProfile,
+  createSubAdmin,
+  listAdminUsers,
+  listAllUsers,
+  manageUserAccount,
+  updateSubAdminPermissions,
+  type ManageUserAction,
+} from '../api/adminUsersApi';
 import { ADMIN_PERMISSION_LABELS, type AdminPermission, type Profile } from '../types';
 
 const ALL_PERMISSIONS = Object.keys(ADMIN_PERMISSION_LABELS) as AdminPermission[];
@@ -31,7 +39,81 @@ function toEditableUserFields(user: Profile): EditableUserFields {
   };
 }
 
-function UserEditRow({ user, onSaved }: { user: Profile; onSaved: (updated: Profile) => void }) {
+const MANAGE_ACTION_CONFIRM: Record<ManageUserAction, string | null> = {
+  suspend: 'هل تريد إيقاف حساب هذا العميل؟ لن يتمكن من تسجيل الدخول حتى تُعيد تفعيله.',
+  reactivate: null,
+  delete: 'هل أنت متأكد من حذف هذا الحساب نهائيًا؟ لا يمكن التراجع عن هذا الإجراء.',
+  reset_password: 'سيتم إنشاء كلمة مرور مؤقتة جديدة لهذا الحساب ويُطلب منه تغييرها عند الدخول. هل تريد المتابعة؟',
+};
+
+// إجراءات إدارة حساب عميل: إيقاف/إعادة تفعيل/حذف/إعادة تعيين كلمة مرور —
+// متاحة فقط لحسابات العملاء (role === 'member')، إذ لا تنطبق على حسابات الإدارة.
+function CustomerAccountActions({
+  user,
+  onPatched,
+  onDeleted,
+}: {
+  user: Profile;
+  onPatched: (patch: Partial<Profile>) => void;
+  onDeleted: () => void;
+}) {
+  const [busy, setBusy] = useState<ManageUserAction | null>(null);
+  const [error, setError] = useState('');
+  const [tempPassword, setTempPassword] = useState('');
+
+  const run = async (action: ManageUserAction) => {
+    const confirmMsg = MANAGE_ACTION_CONFIRM[action];
+    if (confirmMsg && !window.confirm(confirmMsg)) return;
+    setError('');
+    setBusy(action);
+    try {
+      const result = await manageUserAccount(user.id, action);
+      if (action === 'suspend') onPatched({ suspended_at: new Date().toISOString() });
+      else if (action === 'reactivate') onPatched({ suspended_at: null });
+      else if (action === 'delete') onDeleted();
+      else if (action === 'reset_password' && result.temp_password) {
+        onPatched({ must_change_password: true });
+        setTempPassword(result.temp_password);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'تعذّر تنفيذ الإجراء');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="mt-2 border-t border-line pt-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {user.suspended_at ? (
+          <button type="button" onClick={() => run('reactivate')} disabled={busy !== null} className="text-xs font-bold text-sage">
+            {busy === 'reactivate' ? 'جارِ إعادة التفعيل...' : 'إعادة تفعيل الحساب'}
+          </button>
+        ) : (
+          <button type="button" onClick={() => run('suspend')} disabled={busy !== null} className="text-xs font-bold text-clay">
+            {busy === 'suspend' ? 'جارِ الإيقاف...' : 'إيقاف الحساب'}
+          </button>
+        )}
+        <button type="button" onClick={() => run('reset_password')} disabled={busy !== null} className="text-xs font-bold text-seal">
+          {busy === 'reset_password' ? 'جارِ إعادة التعيين...' : 'إعادة تعيين كلمة المرور'}
+        </button>
+        <button type="button" onClick={() => run('delete')} disabled={busy !== null} className="text-xs font-bold text-clay">
+          {busy === 'delete' ? 'جارِ الحذف...' : 'حذف الحساب'}
+        </button>
+        {user.suspended_at && <span className="text-xs text-slate">موقوف منذ {formatDate(user.suspended_at)}</span>}
+      </div>
+      {error && <p className="mt-2 text-xs font-bold text-clay">{error}</p>}
+      {tempPassword && (
+        <div className="mt-2 rounded-lg bg-sealLight p-2.5 text-xs font-bold text-seal">
+          كلمة المرور المؤقتة الجديدة: <span dir="ltr">{tempPassword}</span> — أرسلها للعميل يدويًا (رسالة نصية أو رابط خارج
+          النظام)، وسيُطلب منه تغييرها عند أول دخول باستخدامها.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function UserEditRow({ user, onSaved, onDeleted }: { user: Profile; onSaved: (updated: Profile) => void; onDeleted: (id: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [fields, setFields] = useState<EditableUserFields>(() => toEditableUserFields(user));
   const [saving, setSaving] = useState(false);
@@ -79,7 +161,9 @@ function UserEditRow({ user, onSaved }: { user: Profile; onSaved: (updated: Prof
       <div className="rounded-lg border border-line p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-sm font-bold text-ink">{user.full_name || user.email}</p>
+            <p className="text-sm font-bold text-ink">
+              {user.full_name || user.email} {user.suspended_at && <span className="text-clay">(موقوف)</span>}
+            </p>
             <p className="text-xs text-slate">
               {ROLE_LABEL[user.role] ?? user.role} · {user.national_id || '—'} · {user.email} · منذ {formatDate(user.created_at)}
             </p>
@@ -88,6 +172,13 @@ function UserEditRow({ user, onSaved }: { user: Profile; onSaved: (updated: Prof
             تعديل البيانات
           </button>
         </div>
+        {user.role === 'member' && (
+          <CustomerAccountActions
+            user={user}
+            onPatched={(patch) => onSaved({ ...user, ...patch })}
+            onDeleted={() => onDeleted(user.id)}
+          />
+        )}
       </div>
     );
   }
@@ -300,7 +391,12 @@ export function AdminUsersPage() {
         {allUsersError && <p className="text-sm font-bold text-clay">{allUsersError}</p>}
         <div className="space-y-3">
           {allUsers.map((u) => (
-            <UserEditRow key={u.id} user={u} onSaved={(updated) => setAllUsers((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))} />
+            <UserEditRow
+              key={u.id}
+              user={u}
+              onSaved={(updated) => setAllUsers((prev) => prev.map((x) => (x.id === updated.id ? updated : x)))}
+              onDeleted={(id) => setAllUsers((prev) => prev.filter((x) => x.id !== id))}
+            />
           ))}
           {!allUsersLoading && allUsers.length === 0 && <p className="text-sm text-slate">لا يوجد مستخدمون بعد</p>}
         </div>

@@ -30,6 +30,7 @@ export interface Profile {
   notifications_seen_at: string | null;
   signature_data_url: string | null;
   admin_permissions: AdminPermission[];
+  suspended_at: string | null;
   created_at: string;
 }
 
