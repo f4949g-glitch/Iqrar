@@ -47,6 +47,15 @@ export async function listAllUsers(): Promise<Profile[]> {
   return data as Profile[];
 }
 
+// يجلب ملف مستخدم واحد بمعرّفه — تُستخدم لتطبيق طلب تغيير اسم (خدمة العملاء)
+// دون الحاجة لجلب كل المستخدمين، وتُحمَّل بقية بياناته الحالية قبل استدعاء
+// adminUpdateUserProfile لأن الدالة الخادمية تستبدل كل الحقول معًا.
+export async function getUserProfile(userId: string): Promise<Profile | null> {
+  const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+  if (error) throw new Error(translateErrorMessage(error.message));
+  return data as Profile | null;
+}
+
 export interface AdminUpdateUserProfileInput {
   full_name: string;
   national_id: string;

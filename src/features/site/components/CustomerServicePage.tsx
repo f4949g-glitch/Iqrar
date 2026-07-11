@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { Lightbulb, AlertTriangle, Wrench, Mail, UserCog } from 'lucide-react';
 import { formatDate } from '@/shared/lib/formatDate';
 import { listContactMessages, markContactMessageRead, type ContactCategory, type ContactMessage } from '../api/contactMessagesApi';
+import { getUserProfile, adminUpdateUserProfile } from '@/features/auth/api/adminUsersApi';
+import { Field } from '@/shared/ui/Field';
+import { Button } from '@/shared/ui/Button';
 
 const CATEGORY_META: Record<ContactCategory, { label: string; icon: typeof Lightbulb; className: string }> = {
   suggestion: { label: 'اقتراح', icon: Lightbulb, className: 'bg-sageLight text-sage' },
@@ -9,6 +12,78 @@ const CATEGORY_META: Record<ContactCategory, { label: string; icon: typeof Light
   technical_issue: { label: 'مشكلة تقنية', icon: Wrench, className: 'bg-sealLight text-seal' },
   name_change_request: { label: 'طلب تغيير اسم', icon: UserCog, className: 'bg-sealLight text-seal' },
 };
+
+// يستخرج الاسم الجديد المطلوب من نص التذكرة (بصيغة NameChangeRequest في
+// ProfilePage.tsx: 'طلب تغيير الاسم من "القديم" إلى "الجديد"') كقيمة مبدئية
+// قابلة للتعديل، وليس مصدرًا موثوقًا نهائيًا — الأدمن يراجعها قبل التطبيق.
+function extractRequestedName(message: string): string {
+  const match = message.match(/إلى "([^"]*)"/);
+  return match ? match[1] : '';
+}
+
+// تطبيق مباشر لطلب تغيير الاسم (خدمة العملاء): يجلب بيانات صاحب الحساب الحالية
+// كاملة (الدالة الخادمية تستبدل كل الحقول معًا)، يستبدل الاسم فقط، ويحفظ.
+function NameChangeAction({ message, onApplied }: { message: ContactMessage; onApplied: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [newName, setNewName] = useState(() => extractRequestedName(message.message));
+  const [applying, setApplying] = useState(false);
+  const [error, setError] = useState('');
+  const [applied, setApplied] = useState(false);
+
+  if (!message.created_by) {
+    return <p className="mt-2 text-xs text-slate">لا يوجد حساب مرتبط بهذا الطلب — لا يمكن التطبيق التلقائي.</p>;
+  }
+
+  const apply = async () => {
+    setError('');
+    if (!newName.trim()) return setError('أدخل الاسم الجديد');
+    setApplying(true);
+    try {
+      const current = await getUserProfile(message.created_by!);
+      if (!current) throw new Error('تعذّر العثور على حساب صاحب الطلب');
+      await adminUpdateUserProfile(current.id, {
+        full_name: newName.trim(),
+        national_id: current.national_id ?? '',
+        email: current.email,
+        nationality: current.nationality ?? 'سعودي',
+        date_of_birth: current.date_of_birth,
+        phone: current.phone ?? '',
+      });
+      setApplied(true);
+      setOpen(false);
+      onApplied();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'تعذّر تطبيق التغيير');
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  if (applied) return <p className="mt-2 text-xs font-bold text-sage">✓ تم تطبيق الاسم الجديد</p>;
+
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="mt-3 rounded-lg bg-seal px-2.5 py-1 text-xs font-bold text-white hover:opacity-90">
+        تطبيق التغيير
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-3 max-w-sm rounded-lg border border-dashed border-seal bg-sealLight/30 p-3">
+      <Field label="الاسم الجديد" value={newName} onChange={setNewName} required />
+      {error && <p className="mt-2 text-xs font-bold text-clay">{error}</p>}
+      <div className="mt-3 flex items-center gap-2">
+        <Button onClick={apply} disabled={applying}>
+          {applying ? 'جارِ التطبيق...' : 'تأكيد وتطبيق'}
+        </Button>
+        <Button variant="secondary" onClick={() => setOpen(false)} disabled={applying}>
+          إلغاء
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export function CustomerServicePage() {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
@@ -47,7 +122,7 @@ export function CustomerServicePage() {
       </div>
 
       <div className="flex flex-wrap gap-1.5 rounded-lg bg-paper p-1">
-        {(['all', 'suggestion', 'complaint', 'technical_issue'] as const).map((f) => (
+        {(['all', 'suggestion', 'complaint', 'technical_issue', 'name_change_request'] as const).map((f) => (
           <button
             key={f}
             type="button"
@@ -84,6 +159,7 @@ export function CustomerServicePage() {
                 </a>
               )}
               <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ink">{m.message}</p>
+              {m.category === 'name_change_request' && <NameChangeAction message={m} onApplied={() => markRead(m.id)} />}
               {m.status === 'new' && (
                 <button
                   type="button"
