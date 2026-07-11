@@ -2,6 +2,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { sendSms, isSmsConfigured } from '../_shared/sms.ts';
+import { generateOtpCode } from '../_shared/otp.ts';
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -45,14 +46,17 @@ Deno.serve(async (req: Request) => {
   const { data: existingEmail } = await admin.from('profiles').select('id').eq('email', email).maybeSingle();
   if (existingEmail) return jsonResponse({ error: 'يوجد حساب مسجَّل بهذا البريد الإلكتروني بالفعل' }, 409);
 
-  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const code = generateOtpCode();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
   const { error: upsertError } = await admin.rpc('rpc_upsert_registration_otp', { p_phone: phone, p_code: code, p_expires_at: expiresAt });
   if (upsertError) return jsonResponse({ error: 'تعذّر إنشاء رمز التحقق' }, 500);
 
   const smsConfigured = isSmsConfigured();
-  await sendSms(phone, `رمز التحقق لإنشاء حساب إقرار: ${code} (صالح لمدة 10 دقائق)`);
+  if (smsConfigured) {
+    const sendResult = await sendSms(phone, `رمز التحقق لإنشاء حساب إقرار: ${code} (صالح لمدة 10 دقائق)`);
+    if (!sendResult.ok) return jsonResponse({ error: 'تعذّر إرسال رمز التحقق عبر الرسائل، حاول مرة أخرى' }, 502);
+  }
 
   return jsonResponse({ ok: true, sms_configured: smsConfigured, dev_code: smsConfigured ? undefined : code });
 });

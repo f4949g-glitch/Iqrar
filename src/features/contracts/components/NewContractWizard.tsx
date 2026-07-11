@@ -250,6 +250,11 @@ export function NewContractWizard() {
       setResuming(false);
       return;
     }
+    // نفس الحارس المتزامن المستخدَم في selectMethod، كي لا يُنشئ استدعاء ثانٍ لهذا
+    // المسار (مثلًا إعادة تشغيل الأثر بسبب تغيّر sessionLoading أثناء التنفيذ) أطرافًا
+    // مكرَّرة بالتوازي مع الاستدعاء الأول.
+    if (syncInFlightRef.current) return;
+    syncInFlightRef.current = true;
     (async () => {
       setBusy(true);
       setError('');
@@ -274,6 +279,7 @@ export function NewContractWizard() {
       } finally {
         setBusy(false);
         setResuming(false);
+        syncInFlightRef.current = false;
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps

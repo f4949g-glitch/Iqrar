@@ -55,7 +55,11 @@ Deno.serve(async (req: Request) => {
   const { data: parties, error: partiesError } = await partiesQuery;
   if (partiesError) return jsonResponse({ error: 'تعذّر تحميل أطراف العقد' }, 500);
 
-  const origin = req.headers.get('origin') ?? Deno.env.get('APP_ORIGIN') ?? '';
+  // نُفضّل دومًا نطاق المنصة الرسمي المضبوط في أسرار المشروع على ترويسة Origin
+  // القادمة مع الطلب — هذه الدالة تُستدعى برمز دخول مستخدم عادي عبر أي عميل HTTP
+  // (وليس متصفحًا فقط)، فلا يجوز الوثوق بـ Origin لبناء روابط تُرسَل باسم المنصة
+  // الموثوق به عبر SMS/بريد، وإلا أمكن توجيه أطراف العقد لرابط تصيّد مزوَّر.
+  const origin = Deno.env.get('APP_ORIGIN') ?? req.headers.get('origin') ?? '';
   let sent = 0;
 
   for (const party of parties ?? []) {
