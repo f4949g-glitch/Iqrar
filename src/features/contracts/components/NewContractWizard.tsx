@@ -113,12 +113,12 @@ export function NewContractWizard() {
     if (guestDraft) return guestDraft.parties;
     // العقد يتطلب طرفين على الأقل (تفويض هو الاستثناء الوحيد بطرف واحد)، فتُهيَّأ
     // خانتان افتراضيًا بدل واحدة كي لا يفاجَأ المستخدم بخطأ التحقق لاحقًا.
-    if (!pendingIntent) return poaMode ? [emptyParty()] : [emptyParty(), emptyParty()];
+    if (!pendingIntent) return poaMode ? [emptyParty()] : [emptyParty(0), emptyParty(1)];
     const count = pendingIntent.documentType === 'power_of_attorney' ? 1 : Math.max(pendingIntent.partyCount, 2);
-    return Array.from({ length: count }, () => ({
-      ...emptyParty(),
+    return Array.from({ length: count }, (_, i) => ({
+      ...emptyParty(i),
       verification_method: pendingIntent.verificationDefault,
-      role_label: pendingIntent.documentType === 'power_of_attorney' ? 'المفوض' : 'الطرف الأول',
+      role_label: pendingIntent.documentType === 'power_of_attorney' ? 'المفوض' : emptyParty(i).role_label,
     }));
   });
   // الطرف الأول لعقد (لا تفويض) يمثّل صاحب الحساب نفسه، فتُملأ بياناته الشخصية

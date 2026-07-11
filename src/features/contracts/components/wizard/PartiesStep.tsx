@@ -45,12 +45,15 @@ export interface DraftParty {
   randomCode: string;
 }
 
-function emptyParty(): DraftParty {
+// صفة الطرف الافتراضية حسب ترتيبه (الطرف الأول/الثاني) بدل "الطرف الأول" ثابتة
+// للجميع — كان هذا يجعل كل الأطراف تظهر بنفس الصفة افتراضيًا منذ إضافة تهيئة
+// طرفين تلقائيًا عند بدء عقد جديد.
+function emptyParty(index = 0): DraftParty {
   return {
     party_type: 'individual',
     entity_name: '',
     entity_cr_number: '',
-    role_label: 'الطرف الأول',
+    role_label: index === 1 ? 'الطرف الثاني' : 'الطرف الأول',
     custom_role: '',
     full_name: '',
     national_id: '',
@@ -139,7 +142,7 @@ export function PartiesStep({
     onPartiesChange(next);
   };
 
-  const addParty = () => onPartiesChange([...parties, emptyParty()]);
+  const addParty = () => onPartiesChange([...parties, emptyParty(parties.length)]);
   const removeParty = (index: number) => onPartiesChange(parties.filter((_, i) => i !== index));
 
   const startNafathVerification = async (index: number) => {
