@@ -1,6 +1,8 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { sendSms } from '../_shared/sms.ts';
+import { renderSmsTemplate } from '../_shared/templates.ts';
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -84,6 +86,14 @@ Deno.serve(async (req: Request) => {
   }
 
   await admin.rpc('rpc_delete_registration_otp', { p_phone: phone });
+
+  const welcomeText = await renderSmsTemplate(
+    admin,
+    'welcome',
+    { name: fullName },
+    `مرحبًا ${fullName}، تم إنشاء حسابك في منصة إقرار بنجاح.`,
+  );
+  await sendSms(phone, welcomeText);
 
   return jsonResponse({ ok: true });
 });

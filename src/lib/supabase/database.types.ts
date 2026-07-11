@@ -1,11 +1,63 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: '14.5';
+    PostgrestVersion: "14.5";
   };
   public: {
     Tables: {
+      contact_messages: {
+        Row: {
+          category: string;
+          created_at: string;
+          created_by: string | null;
+          email: string | null;
+          id: string;
+          message: string;
+          name: string;
+          phone: string | null;
+          status: string;
+        };
+        Insert: {
+          category: string;
+          created_at?: string;
+          created_by?: string | null;
+          email?: string | null;
+          id?: string;
+          message: string;
+          name: string;
+          phone?: string | null;
+          status?: string;
+        };
+        Update: {
+          category?: string;
+          created_at?: string;
+          created_by?: string | null;
+          email?: string | null;
+          id?: string;
+          message?: string;
+          name?: string;
+          phone?: string | null;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "contact_messages_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       contract_events: {
         Row: {
           contract_id: string;
@@ -31,7 +83,22 @@ export type Database = {
           message?: string | null;
           party_id?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "contract_events_contract_id_fkey";
+            columns: ["contract_id"];
+            isOneToOne: false;
+            referencedRelation: "contracts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "contract_events_party_id_fkey";
+            columns: ["party_id"];
+            isOneToOne: false;
+            referencedRelation: "contract_parties";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       contract_fields: {
         Row: {
@@ -88,7 +155,22 @@ export type Database = {
           value?: Json | null;
           width?: number | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "contract_fields_contract_id_fkey";
+            columns: ["contract_id"];
+            isOneToOne: false;
+            referencedRelation: "contracts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "contract_fields_party_id_fkey";
+            columns: ["party_id"];
+            isOneToOne: false;
+            referencedRelation: "contract_parties";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       contract_parties: {
         Row: {
@@ -178,7 +260,15 @@ export type Database = {
           user_id?: string | null;
           verification_method?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "contract_parties_contract_id_fkey";
+            columns: ["contract_id"];
+            isOneToOne: false;
+            referencedRelation: "contracts";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       contracts: {
         Row: {
@@ -265,7 +355,47 @@ export type Database = {
           updated_at?: string;
           verification_number?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "contracts_discount_code_id_fkey";
+            columns: ["discount_code_id"];
+            isOneToOne: false;
+            referencedRelation: "discount_codes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      credit_code_redemptions: {
+        Row: {
+          amount: number;
+          created_at: string;
+          credit_code_id: string;
+          id: string;
+          redeemed_by: string;
+        };
+        Insert: {
+          amount: number;
+          created_at?: string;
+          credit_code_id: string;
+          id?: string;
+          redeemed_by: string;
+        };
+        Update: {
+          amount?: number;
+          created_at?: string;
+          credit_code_id?: string;
+          id?: string;
+          redeemed_by?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "credit_code_redemptions_credit_code_id_fkey";
+            columns: ["credit_code_id"];
+            isOneToOne: false;
+            referencedRelation: "credit_codes";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       credit_codes: {
         Row: {
@@ -307,31 +437,15 @@ export type Database = {
           reviewed_by?: string | null;
           uses_count?: number;
         };
-        Relationships: [];
-      };
-      credit_code_redemptions: {
-        Row: {
-          amount: number;
-          created_at: string;
-          credit_code_id: string;
-          id: string;
-          redeemed_by: string;
-        };
-        Insert: {
-          amount: number;
-          created_at?: string;
-          credit_code_id: string;
-          id?: string;
-          redeemed_by: string;
-        };
-        Update: {
-          amount?: number;
-          created_at?: string;
-          credit_code_id?: string;
-          id?: string;
-          redeemed_by?: string;
-        };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "credit_codes_reviewed_by_fkey";
+            columns: ["reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       discount_code_uses: {
         Row: {
@@ -355,7 +469,22 @@ export type Database = {
           id?: string;
           used_by?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "discount_code_uses_contract_id_fkey";
+            columns: ["contract_id"];
+            isOneToOne: false;
+            referencedRelation: "contracts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "discount_code_uses_discount_code_id_fkey";
+            columns: ["discount_code_id"];
+            isOneToOne: false;
+            referencedRelation: "discount_codes";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       discount_codes: {
         Row: {
@@ -403,37 +532,47 @@ export type Database = {
           reviewed_by?: string | null;
           starts_at?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "discount_codes_reviewed_by_fkey";
+            columns: ["reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
-      pricing_settings: {
+      legal_pages: {
         Row: {
-          base_amount: number;
-          extra_party_fee: number;
-          id: number;
-          minimum_invoice: number;
-          price_per_party: number;
-          tax_percent: number;
+          content: string;
+          key: string;
+          title: string;
           updated_at: string;
+          updated_by: string | null;
         };
         Insert: {
-          base_amount?: number;
-          extra_party_fee?: number;
-          id?: number;
-          minimum_invoice?: number;
-          price_per_party?: number;
-          tax_percent?: number;
+          content: string;
+          key: string;
+          title: string;
           updated_at?: string;
+          updated_by?: string | null;
         };
         Update: {
-          base_amount?: number;
-          extra_party_fee?: number;
-          id?: number;
-          minimum_invoice?: number;
-          price_per_party?: number;
-          tax_percent?: number;
+          content?: string;
+          key?: string;
+          title?: string;
           updated_at?: string;
+          updated_by?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "legal_pages_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       pricing_change_requests: {
         Row: {
@@ -472,74 +611,50 @@ export type Database = {
           status?: string;
           tax_percent?: number;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "pricing_change_requests_requested_by_fkey";
+            columns: ["requested_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "pricing_change_requests_reviewed_by_fkey";
+            columns: ["reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
-      site_settings: {
+      pricing_settings: {
         Row: {
-          contact_email: string | null;
-          contact_phone: string | null;
+          base_amount: number;
+          extra_party_fee: number;
           id: number;
-          logo_data_url: string | null;
-          org_name: string;
-          social_links: Json;
+          minimum_invoice: number;
+          price_per_party: number;
+          tax_percent: number;
           updated_at: string;
-          whatsapp_number: string | null;
         };
         Insert: {
-          contact_email?: string | null;
-          contact_phone?: string | null;
+          base_amount?: number;
+          extra_party_fee?: number;
           id?: number;
-          logo_data_url?: string | null;
-          org_name?: string;
-          social_links?: Json;
+          minimum_invoice?: number;
+          price_per_party?: number;
+          tax_percent?: number;
           updated_at?: string;
-          whatsapp_number?: string | null;
         };
         Update: {
-          contact_email?: string | null;
-          contact_phone?: string | null;
+          base_amount?: number;
+          extra_party_fee?: number;
           id?: number;
-          logo_data_url?: string | null;
-          org_name?: string;
-          social_links?: Json;
+          minimum_invoice?: number;
+          price_per_party?: number;
+          tax_percent?: number;
           updated_at?: string;
-          whatsapp_number?: string | null;
-        };
-        Relationships: [];
-      };
-      contact_messages: {
-        Row: {
-          category: string;
-          created_at: string;
-          created_by: string | null;
-          email: string | null;
-          id: string;
-          message: string;
-          name: string;
-          phone: string | null;
-          status: string;
-        };
-        Insert: {
-          category: string;
-          created_at?: string;
-          created_by?: string | null;
-          email?: string | null;
-          id?: string;
-          message: string;
-          name: string;
-          phone?: string | null;
-          status?: string;
-        };
-        Update: {
-          category?: string;
-          created_at?: string;
-          created_by?: string | null;
-          email?: string | null;
-          id?: string;
-          message?: string;
-          name?: string;
-          phone?: string | null;
-          status?: string;
         };
         Relationships: [];
       };
@@ -594,6 +709,112 @@ export type Database = {
         };
         Relationships: [];
       };
+      site_settings: {
+        Row: {
+          contact_email: string | null;
+          contact_phone: string | null;
+          id: number;
+          logo_data_url: string | null;
+          org_name: string;
+          social_links: Json;
+          updated_at: string;
+          whatsapp_number: string | null;
+        };
+        Insert: {
+          contact_email?: string | null;
+          contact_phone?: string | null;
+          id?: number;
+          logo_data_url?: string | null;
+          org_name?: string;
+          social_links?: Json;
+          updated_at?: string;
+          whatsapp_number?: string | null;
+        };
+        Update: {
+          contact_email?: string | null;
+          contact_phone?: string | null;
+          id?: number;
+          logo_data_url?: string | null;
+          org_name?: string;
+          social_links?: Json;
+          updated_at?: string;
+          whatsapp_number?: string | null;
+        };
+        Relationships: [];
+      };
+      sms_messages: {
+        Row: {
+          created_at: string;
+          error_detail: string | null;
+          id: string;
+          message: string;
+          recipient_phone: string;
+          sent_by: string | null;
+          status: string;
+        };
+        Insert: {
+          created_at?: string;
+          error_detail?: string | null;
+          id?: string;
+          message: string;
+          recipient_phone: string;
+          sent_by?: string | null;
+          status: string;
+        };
+        Update: {
+          created_at?: string;
+          error_detail?: string | null;
+          id?: string;
+          message?: string;
+          recipient_phone?: string;
+          sent_by?: string | null;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sms_messages_sent_by_fkey";
+            columns: ["sent_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      sms_templates: {
+        Row: {
+          body: string;
+          description: string | null;
+          key: string;
+          label: string;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          body: string;
+          description?: string | null;
+          key: string;
+          label: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          body?: string;
+          description?: string | null;
+          key?: string;
+          label?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sms_templates_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -603,44 +824,207 @@ export type Database = {
         Args: { p_national_id: string };
         Returns: string;
       };
-      redeem_credit_code: {
-        Args: { p_code: string };
-        Returns: number;
-      };
-      verify_document: {
-        Args: { p_verification_number: string; p_national_id_1: string; p_national_id_2?: string; p_completed_date?: string };
-        Returns: {
-          title: string;
-          document_type: string;
-          verification_number: string;
-          completed_at: string;
-          party_full_name: string | null;
-          party_role_label: string;
-          party_status: string;
-          party_signed_at: string | null;
-        }[];
-      };
       preview_discount_code: {
         Args: { p_code: string; p_party_count: number };
         Returns: {
           base_amount: number;
-          discount_code_id: string | null;
-          discount_percent: number | null;
+          discount_code_id: string;
+          discount_percent: number;
           final_amount: number;
-          message: string | null;
+          message: string;
         }[];
       };
+      redeem_credit_code: { Args: { p_code: string }; Returns: number };
       resend_to_rejected_party: {
         Args: { p_party_id: string };
-        Returns: Database['public']['Tables']['contract_parties']['Row'];
+        Returns: {
+          address: string | null;
+          contract_id: string;
+          created_at: string;
+          date_of_birth: string | null;
+          email: string | null;
+          entity_cr_number: string | null;
+          entity_name: string | null;
+          full_name: string | null;
+          id: string;
+          nafath_random_code: string | null;
+          nafath_status: string | null;
+          nafath_trans_id: string | null;
+          nafath_verified_at: string | null;
+          national_id: string | null;
+          nationality: string | null;
+          order_index: number;
+          party_type: string;
+          phone: string | null;
+          reject_resend_count: number;
+          role_label: string;
+          signed_at: string | null;
+          signed_ip: string | null;
+          signed_user_agent: string | null;
+          status: string;
+          token: string;
+          user_id: string | null;
+          verification_method: string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "contract_parties";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      rpc_delete_password_reset_otp: {
+        Args: { p_national_id: string };
+        Returns: undefined;
+      };
+      rpc_delete_registration_otp: {
+        Args: { p_phone: string };
+        Returns: undefined;
+      };
+      rpc_get_password_reset_otp: {
+        Args: { p_national_id: string };
+        Returns: {
+          attempts: number;
+          code: string;
+          expires_at: string;
+        }[];
+      };
+      rpc_get_registration_otp: {
+        Args: { p_phone: string };
+        Returns: {
+          attempts: number;
+          code: string;
+          expires_at: string;
+        }[];
+      };
+      rpc_get_signing_otp: {
+        Args: { p_party_id: string };
+        Returns: {
+          attempts: number;
+          code: string;
+          expires_at: string;
+          verified: boolean;
+        }[];
+      };
+      rpc_increment_password_reset_otp_attempts: {
+        Args: { p_national_id: string };
+        Returns: undefined;
+      };
+      rpc_increment_registration_otp_attempts: {
+        Args: { p_phone: string };
+        Returns: undefined;
+      };
+      rpc_increment_signing_otp_attempts: {
+        Args: { p_party_id: string };
+        Returns: undefined;
+      };
+      rpc_mark_signing_otp_verified: {
+        Args: { p_party_id: string };
+        Returns: undefined;
+      };
+      rpc_upsert_password_reset_otp: {
+        Args: { p_code: string; p_expires_at: string; p_national_id: string };
+        Returns: undefined;
+      };
+      rpc_upsert_registration_otp: {
+        Args: { p_code: string; p_expires_at: string; p_phone: string };
+        Returns: undefined;
+      };
+      rpc_upsert_signing_otp: {
+        Args: { p_code: string; p_expires_at: string; p_party_id: string };
+        Returns: undefined;
       };
       send_contract: {
         Args: { p_contract_id: string };
-        Returns: Database['public']['Tables']['contracts']['Row'];
+        Returns: {
+          body_json: Json | null;
+          company_cr_number: string | null;
+          company_logo_path: string | null;
+          company_name: string | null;
+          completed_at: string | null;
+          created_at: string;
+          created_by: string;
+          discount_code_id: string | null;
+          document_type: string;
+          duration_days: number | null;
+          expires_at: string | null;
+          final_file_path: string | null;
+          final_html: string | null;
+          id: string;
+          invoice_amount: number | null;
+          original_file_path: string | null;
+          page_count: number;
+          sent_at: string | null;
+          source_type: string;
+          status: string;
+          term_end_date: string | null;
+          term_unit: string | null;
+          term_value: number | null;
+          title: string;
+          updated_at: string;
+          verification_number: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "contracts";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       set_contract_discount_code: {
         Args: { p_code: string; p_contract_id: string };
-        Returns: Database['public']['Tables']['contracts']['Row'];
+        Returns: {
+          body_json: Json | null;
+          company_cr_number: string | null;
+          company_logo_path: string | null;
+          company_name: string | null;
+          completed_at: string | null;
+          created_at: string;
+          created_by: string;
+          discount_code_id: string | null;
+          document_type: string;
+          duration_days: number | null;
+          expires_at: string | null;
+          final_file_path: string | null;
+          final_html: string | null;
+          id: string;
+          invoice_amount: number | null;
+          original_file_path: string | null;
+          page_count: number;
+          sent_at: string | null;
+          source_type: string;
+          status: string;
+          term_end_date: string | null;
+          term_unit: string | null;
+          term_value: number | null;
+          title: string;
+          updated_at: string;
+          verification_number: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "contracts";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      verify_document: {
+        Args: {
+          p_completed_date?: string;
+          p_national_id_1: string;
+          p_national_id_2?: string;
+          p_verification_number: string;
+        };
+        Returns: {
+          completed_at: string;
+          document_type: string;
+          party_full_name: string;
+          party_role_label: string;
+          party_signed_at: string;
+          party_status: string;
+          title: string;
+          verification_number: string;
+        }[];
       };
     };
     Enums: {
@@ -651,3 +1035,129 @@ export type Database = {
     };
   };
 };
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<
+  keyof Database,
+  "public"
+>];
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R;
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R;
+      }
+      ? R
+      : never
+    : never;
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I;
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I;
+      }
+      ? I
+      : never
+    : never;
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U;
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U;
+      }
+      ? U
+      : never
+    : never;
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never;
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals;
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never;
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const;

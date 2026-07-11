@@ -17,6 +17,7 @@ import {
   Users,
   MessageSquare,
   Building2,
+  Send,
 } from 'lucide-react';
 import type { Profile } from '@/features/auth';
 import { hasAdminPermission } from '@/features/auth/types';
@@ -56,43 +57,53 @@ const USER_GROUPS: SidebarGroup[] = [
     links: [
       { to: '/app/profile', label: 'الملف الشخصي', icon: User },
       { to: '/app/balance', label: 'رصيدي', icon: Wallet },
+      { to: '/app/settings', label: 'الإعدادات', icon: Settings },
+      { to: '/terms', label: 'سياسة الاستخدام والخصوصية', icon: ShieldQuestion },
+      { to: '/app/contact', label: 'اتصل بنا', icon: Phone },
     ],
   },
 ];
 
-const FOOTER_LINKS: SidebarLink[] = [
-  { to: '/app/settings', label: 'الإعدادات', icon: Settings },
-  { to: '/terms', label: 'سياسة الاستخدام والخصوصية', icon: ShieldQuestion },
-  { to: '/app/contact', label: 'اتصل بنا', icon: Phone },
-];
-
 // روابط الإدارة تُبنى ديناميكيًا حسب دور المستخدم وصلاحياته: الأدمن الكامل يرى
-// الكل، والأدمن الفرعي يرى فقط ما يملك صلاحيته تحديدًا.
-function buildAdminGroup(profile: Profile): SidebarGroup | null {
+// الكل، والأدمن الفرعي يرى فقط ما يملك صلاحيته تحديدًا. تُقسَّم إلى مجموعتين:
+// "إدارة العملاء" لما يخص التواصل المباشر مع العملاء، و"إعدادات النظام" لما
+// يخص ضبط المنصة نفسها.
+function buildAdminGroups(profile: Profile): SidebarGroup[] {
   const isFullAdmin = profile.role === 'admin';
-  const links: SidebarLink[] = [];
+  const customerLinks: SidebarLink[] = [];
+  const systemLinks: SidebarLink[] = [];
 
-  if (hasAdminPermission(profile, 'view_reports')) {
-    links.push({ to: '/app/contracts/reports', label: 'التقارير الإحصائية', icon: BarChart3 });
-  }
-  if (hasAdminPermission(profile, 'create_discount_codes')) {
-    links.push({ to: '/app/contracts/discounts', label: 'أكواد الخصم', icon: Percent });
-  }
-  if (hasAdminPermission(profile, 'create_credit_codes')) {
-    links.push({ to: '/app/contracts/credit-codes', label: 'أكواد الشحن', icon: Wallet });
-  }
-  if (hasAdminPermission(profile, 'manage_pricing') || hasAdminPermission(profile, 'manage_pricing_direct')) {
-    links.push({ to: '/app/contracts/pricing', label: 'إعدادات التسعير', icon: SlidersHorizontal });
-  }
   if (isFullAdmin) {
-    links.push(
+    customerLinks.push(
       { to: '/app/customer-service', label: 'خدمة العملاء', icon: MessageSquare },
-      { to: '/app/org-settings', label: 'هوية المنشأة', icon: Building2 },
-      { to: '/app/contracts/admin-users', label: 'مستخدمو الإدارة', icon: Users },
+      { to: '/app/sms', label: 'إرسال رسائل SMS', icon: Send },
     );
   }
 
-  return links.length > 0 ? { title: 'الإدارة', links } : null;
+  if (hasAdminPermission(profile, 'view_reports')) {
+    systemLinks.push({ to: '/app/contracts/reports', label: 'التقارير الإحصائية', icon: BarChart3 });
+  }
+  if (hasAdminPermission(profile, 'create_discount_codes')) {
+    systemLinks.push({ to: '/app/contracts/discounts', label: 'أكواد الخصم', icon: Percent });
+  }
+  if (hasAdminPermission(profile, 'create_credit_codes')) {
+    systemLinks.push({ to: '/app/contracts/credit-codes', label: 'أكواد الشحن', icon: Wallet });
+  }
+  if (hasAdminPermission(profile, 'manage_pricing') || hasAdminPermission(profile, 'manage_pricing_direct')) {
+    systemLinks.push({ to: '/app/contracts/pricing', label: 'إعدادات التسعير', icon: SlidersHorizontal });
+  }
+  if (isFullAdmin) {
+    systemLinks.push(
+      { to: '/app/org-settings', label: 'هوية المنشأة', icon: Building2 },
+      { to: '/app/contracts/admin-users', label: 'مستخدمو الإدارة', icon: Users },
+      { to: '/app/legal/privacy-policy', label: 'تعديل سياسة الخصوصية', icon: ShieldQuestion },
+    );
+  }
+
+  const groups: SidebarGroup[] = [];
+  if (customerLinks.length > 0) groups.push({ title: 'إدارة العملاء', links: customerLinks });
+  if (systemLinks.length > 0) groups.push({ title: 'إعدادات النظام', links: systemLinks });
+  return groups;
 }
 
 function NavItem({ link, active, onNavigate }: { link: SidebarLink; active: boolean; onNavigate?: () => void }) {
@@ -144,7 +155,7 @@ export function Sidebar({ profile, mobileOpen = false, onMobileClose }: SidebarP
         <div className="fixed inset-0 z-40 bg-navy/50 md:hidden" onClick={onMobileClose} aria-hidden="true" />
       )}
       <aside
-        className={`fixed inset-y-0 right-0 z-50 flex w-64 shrink-0 flex-col justify-between overflow-y-auto border-e border-line bg-card p-3 shadow-2xl transition-transform duration-200 md:sticky md:top-0 md:z-auto md:h-dvh md:w-40 md:translate-x-0 md:p-3 md:shadow-none lg:w-60 lg:p-4 ${
+        className={`fixed inset-y-0 right-0 z-50 flex w-64 shrink-0 flex-col overflow-y-auto border-e border-line bg-card p-3 shadow-2xl transition-transform duration-200 md:sticky md:top-0 md:z-auto md:h-dvh md:w-40 md:translate-x-0 md:p-3 md:shadow-none lg:w-60 lg:p-4 ${
           mobileOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'
         }`}
       >
@@ -153,17 +164,10 @@ export function Sidebar({ profile, mobileOpen = false, onMobileClose }: SidebarP
             <NavGroup key={group.title ?? 'main'} group={group} isActive={isActive} onNavigate={onMobileClose} />
           ))}
 
-          {(() => {
-            const adminGroup = buildAdminGroup(profile);
-            return adminGroup && <NavGroup group={adminGroup} isActive={isActive} onNavigate={onMobileClose} />;
-          })()}
-        </div>
-
-        <nav className="space-y-1 border-t border-line pt-3">
-          {FOOTER_LINKS.map((link) => (
-            <NavItem key={link.to} link={link} active={isActive(link.to)} onNavigate={onMobileClose} />
+          {buildAdminGroups(profile).map((group) => (
+            <NavGroup key={group.title} group={group} isActive={isActive} onNavigate={onMobileClose} />
           ))}
-        </nav>
+        </div>
       </aside>
     </>
   );

@@ -4,6 +4,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/email.ts';
 import { sendSms } from '../_shared/sms.ts';
 import { ensurePartyAccount } from '../_shared/ensurePartyAccount.ts';
+import { renderSmsTemplate } from '../_shared/templates.ts';
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -77,7 +78,23 @@ Deno.serve(async (req: Request) => {
       sent += 1;
     }
     if (party.phone) {
-      await sendSms(party.phone, `لديك طلب توثيق جديد من (${creatorName}) عبر منصة إقرار. رابط العقد: ${link}`);
+      const requestText = await renderSmsTemplate(
+        admin,
+        'contract_request',
+        { creator: creatorName, link },
+        `لديك طلب توثيق جديد من (${creatorName}) عبر منصة إقرار. رابط العقد: ${link}`,
+      );
+      await sendSms(party.phone, requestText);
+
+      if (account.created && party.email) {
+        const accountText = await renderSmsTemplate(
+          admin,
+          'auto_account',
+          { email: party.email, password: account.tempPassword ?? '' },
+          `تم فتح حساب تلقائي لك في منصة إقرار. البريد: ${party.email} — كلمة المرور المؤقتة: ${account.tempPassword}`,
+        );
+        await sendSms(party.phone, accountText);
+      }
     }
   }
 

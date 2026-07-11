@@ -20,8 +20,12 @@ const PricingSettingsPage = lazy(() => import('@/features/contracts/components/P
 const ReportsPage = lazy(() => import('@/features/contracts/components/ReportsPage').then((m) => ({ default: m.ReportsPage })));
 const AdminUsersPage = lazy(() => import('@/features/auth/components/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage })));
 const CustomerServicePage = lazy(() => import('@/features/site/components/CustomerServicePage').then((m) => ({ default: m.CustomerServicePage })));
+const SendSmsPage = lazy(() => import('@/features/sms/components/SendSmsPage').then((m) => ({ default: m.SendSmsPage })));
 const OrganizationSettingsPage = lazy(() =>
   import('@/features/site/components/OrganizationSettingsPage').then((m) => ({ default: m.OrganizationSettingsPage })),
+);
+const PrivacyPolicyEditPage = lazy(() =>
+  import('@/features/site/components/PrivacyPolicyEditPage').then((m) => ({ default: m.PrivacyPolicyEditPage })),
 );
 const BalancePage = lazy(() => import('@/features/contracts/components/BalancePage').then((m) => ({ default: m.BalancePage })));
 const ProfilePage = lazy(() => import('@/features/auth/components/ProfilePage').then((m) => ({ default: m.ProfilePage })));
@@ -110,6 +114,11 @@ function AppShell() {
           <Route path="/contracts/admin-users" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <AdminUsersPage /> : <AdminGate />} />
           <Route path="/customer-service" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <CustomerServicePage /> : <AdminGate />} />
           <Route path="/org-settings" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <OrganizationSettingsPage /> : <AdminGate />} />
+          <Route path="/sms" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <SendSmsPage /> : <AdminGate />} />
+          <Route
+            path="/legal/privacy-policy"
+            element={!profile ? <AuthGate /> : profile.role === 'admin' ? <PrivacyPolicyEditPage /> : <AdminGate />}
+          />
         </Routes>
       </Suspense>
     </Layout>

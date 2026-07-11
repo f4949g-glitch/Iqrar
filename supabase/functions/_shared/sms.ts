@@ -18,30 +18,45 @@ function toInternational(phone: string): string {
   return digits;
 }
 
-export async function sendSms(to: string, message: string): Promise<void> {
+export interface SendSmsResult {
+  ok: boolean;
+  detail?: string;
+}
+
+export async function sendSms(to: string, message: string): Promise<SendSmsResult> {
   const apiKey = Deno.env.get('FOURJAWALY_API_KEY');
   const apiSecret = Deno.env.get('FOURJAWALY_API_SECRET');
   const sender = Deno.env.get('FOURJAWALY_SENDER');
 
   if (!isSmsConfigured()) {
-    console.warn(`بيانات 4jawaly غير مضبوطة بعد — تم تخطي إرسال SMS إلى ${to}: ${message}`);
-    return;
+    const detail = 'بوابة الرسائل غير مُفعّلة بعد (بيانات 4jawaly غير مضبوطة)';
+    console.warn(`${detail} — تم تخطي إرسال SMS إلى ${to}: ${message}`);
+    return { ok: false, detail };
   }
 
   const token = btoa(`${apiKey}:${apiSecret}`);
-  const res = await fetch('https://api-sms.4jawaly.com/api/v1/account/area/sms/send', {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${token}`,
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      messages: [{ text: message, numbers: [toInternational(to)], sender }],
-    }),
-  });
+  try {
+    const res = await fetch('https://api-sms.4jawaly.com/api/v1/account/area/sms/send', {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${token}`,
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages: [{ text: message, numbers: [toInternational(to)], sender }],
+      }),
+    });
 
-  if (!res.ok) {
-    console.error('فشل إرسال الرسالة عبر فور جوالي', await res.text());
+    if (!res.ok) {
+      const detail = await res.text();
+      console.error('فشل إرسال الرسالة عبر فور جوالي', detail);
+      return { ok: false, detail: detail.slice(0, 500) };
+    }
+    return { ok: true };
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : 'خطأ غير معروف عند الاتصال ببوابة الرسائل';
+    console.error('فشل الاتصال ببوابة فور جوالي', detail);
+    return { ok: false, detail };
   }
 }

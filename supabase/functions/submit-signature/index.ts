@@ -3,6 +3,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { sendEmail } from '../_shared/email.ts';
 import { sendSms } from '../_shared/sms.ts';
+import { renderSmsTemplate } from '../_shared/templates.ts';
 import { generateFinalPdf, type FieldToRender } from '../_shared/generateFinalPdf.ts';
 import {
   renderContractHtml,
@@ -158,7 +159,13 @@ async function finalizeContract(admin: ReturnType<typeof createClient>, contract
       );
     }
     if (p.phone) {
-      await sendSms(p.phone, 'نفيدكم بأنه تم توثيق العقد بنجاح عبر منصة إقرار لخدمات الأعمال.');
+      const completionText = await renderSmsTemplate(
+        admin,
+        'completion',
+        { title: String(contract.title ?? ''), verification_number: String(contract.verification_number ?? '') },
+        `نفيدكم بأنه تم توثيق "${contract.title}" بنجاح عبر منصة إقرار. رقم التوثيق: ${contract.verification_number ?? ''}`,
+      );
+      await sendSms(p.phone, completionText);
     }
   }
 }
