@@ -6,14 +6,21 @@ import { CONTRACT_STATUS_LABEL, DOCUMENT_TYPE_LABELS, type ContractStatus, type 
 import {
   fetchUsersReport,
   fetchPendingContractsReport,
+  fetchPowerOfAttorneyReport,
   fetchPaymentsReport,
+  fetchRevenueByDocumentType,
+  fetchContractsBreakdown,
   fetchDiscountCodesReport,
+  fetchDiscountFinancialImpact,
   fetchCreditCodesReport,
   fetchOverviewStats,
   type UserReportRow,
   type PendingContractRow,
   type PaymentsReport,
+  type RevenueByDocumentTypeRow,
+  type ContractsBreakdownRow,
   type DiscountCodeReportRow,
+  type DiscountFinancialImpact,
   type CreditCodesReportResult,
   type OverviewStats,
 } from '../api/reportsApi';
@@ -47,13 +54,79 @@ function KpiTile({ label, value }: { label: string; value: string }) {
   );
 }
 
+// عرض قائمة عقود بأطرافها الكاملة — مشترك بين تقرير العقود المعلّقة وتقرير
+// التفويضات لتفادي تكرار نفس القالب مرتين.
+function ContractsWithPartiesList({ contracts, emptyLabel }: { contracts: PendingContractRow[]; emptyLabel: string }) {
+  return (
+    <div className="space-y-3">
+      {contracts.map((c) => (
+        <div key={c.id} className="rounded-lg border border-line p-3">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-bold text-ink">
+              {c.title} <span className="text-xs font-normal text-slate">({DOCUMENT_TYPE_LABELS[c.document_type as DocumentType]})</span>
+            </p>
+            <span
+              className="rounded-full px-2 py-0.5 text-[11px] font-bold"
+              style={{ background: CONTRACT_STATUS_LABEL[c.status as ContractStatus]?.bg, color: CONTRACT_STATUS_LABEL[c.status as ContractStatus]?.fg }}
+            >
+              {CONTRACT_STATUS_LABEL[c.status as ContractStatus]?.label ?? c.status}
+            </span>
+          </div>
+          <p className="mb-2 text-xs text-slate">
+            المنشئ: {c.creator_name || '—'} · القيمة: {c.invoice_amount?.toFixed(2) ?? '—'} ريال
+            {c.sent_at && ` · أُرسل في ${formatDateTime(c.sent_at)}`}
+          </p>
+          <table className="w-full border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-line text-right text-slate">
+                <th className="py-1.5 pe-3 font-bold">الطرف</th>
+                <th className="py-1.5 pe-3 font-bold">الصفة</th>
+                <th className="py-1.5 pe-3 font-bold">الجوال</th>
+                <th className="py-1.5 pe-3 font-bold">رقم الهوية</th>
+                <th className="py-1.5 font-bold">الحالة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {c.parties.map((p, i) => (
+                <tr key={i} className="border-b border-line text-ink last:border-0">
+                  <td className="py-1.5 pe-3">{p.full_name || '—'}</td>
+                  <td className="py-1.5 pe-3">{p.role_label}</td>
+                  <td className="py-1.5 pe-3" dir="ltr">
+                    {p.phone || '—'}
+                  </td>
+                  <td className="py-1.5 pe-3" dir="ltr">
+                    {p.national_id || '—'}
+                  </td>
+                  <td className="py-1.5">{p.status === 'signed' ? 'وقّع' : p.status === 'viewed' ? 'شاهد' : p.status === 'rejected' ? 'رفض' : 'بانتظار'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+      {contracts.length === 0 && <p className="text-sm text-slate">{emptyLabel}</p>}
+    </div>
+  );
+}
+
+type ReportsTab = 'financial' | 'other';
+const TABS: { key: ReportsTab; label: string }[] = [
+  { key: 'financial', label: 'التقارير المالية' },
+  { key: 'other', label: 'تقارير أخرى' },
+];
+
 export function ReportsPage() {
+  const [tab, setTab] = useState<ReportsTab>('financial');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [overview, setOverview] = useState<OverviewStats | null>(null);
   const [users, setUsers] = useState<UserReportRow[]>([]);
   const [pendingContracts, setPendingContracts] = useState<PendingContractRow[]>([]);
+  const [poaContracts, setPoaContracts] = useState<PendingContractRow[]>([]);
+  const [contractsBreakdown, setContractsBreakdown] = useState<ContractsBreakdownRow[]>([]);
+  const [revenueByType, setRevenueByType] = useState<RevenueByDocumentTypeRow[]>([]);
   const [discountCodes, setDiscountCodes] = useState<DiscountCodeReportRow[]>([]);
+  const [discountImpact, setDiscountImpact] = useState<DiscountFinancialImpact | null>(null);
   const [creditReport, setCreditReport] = useState<CreditCodesReportResult | null>(null);
   const [paymentsFrom, setPaymentsFrom] = useState(firstOfMonthIso());
   const [paymentsTo, setPaymentsTo] = useState(todayIso());
@@ -76,17 +149,25 @@ export function ReportsPage() {
       setLoading(true);
       setError('');
       try {
-        const [ov, u, pc, dc, cc] = await Promise.all([
+        const [ov, u, pc, poa, cb, rt, dc, di, cc] = await Promise.all([
           fetchOverviewStats(),
           fetchUsersReport(),
           fetchPendingContractsReport(),
+          fetchPowerOfAttorneyReport(),
+          fetchContractsBreakdown(),
+          fetchRevenueByDocumentType(),
           fetchDiscountCodesReport(),
+          fetchDiscountFinancialImpact(),
           fetchCreditCodesReport(),
         ]);
         setOverview(ov);
         setUsers(u);
         setPendingContracts(pc);
+        setPoaContracts(poa);
+        setContractsBreakdown(cb);
+        setRevenueByType(rt);
         setDiscountCodes(dc);
+        setDiscountImpact(di);
         setCreditReport(cc);
         await loadPayments();
       } catch (err) {
@@ -101,12 +182,17 @@ export function ReportsPage() {
 
   if (loading) return <p className="text-sm text-slate">جارِ تحميل التقارير...</p>;
 
+  const documentTypes: DocumentType[] = ['contract', 'power_of_attorney'];
+  const statuses: ContractStatus[] = ['draft', 'pending', 'partially_completed', 'completed', 'expired', 'rejected', 'cancelled'];
+  const breakdownCount = (status: ContractStatus, docType: DocumentType) =>
+    contractsBreakdown.find((r) => r.status === status && r.document_type === docType)?.count ?? 0;
+
   return (
     <div className="space-y-6">
       <div className="no-print flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-extrabold text-ink">التقارير الإحصائية</h1>
-          <p className="mt-1 text-sm text-slate">نظرة شاملة على المستخدمين والعقود والمدفوعات وأكواد الخصم والشحن</p>
+          <p className="mt-1 text-sm text-slate">نظرة شاملة على الجوانب المالية والمستخدمين والعقود والتفويضات</p>
         </div>
         <Button variant="secondary" onClick={() => window.print()}>
           <span className="flex items-center gap-1.5">
@@ -121,276 +207,358 @@ export function ReportsPage() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           <KpiTile label="إجمالي المستخدمين" value={String(overview.usersCount)} />
           <KpiTile label="عقود موثّقة" value={String(overview.contractsByStatus.completed ?? 0)} />
-          <KpiTile label="عقود معلّقة" value={String((overview.contractsByStatus.pending ?? 0) + (overview.contractsByStatus.partially_completed ?? 0)) } />
+          <KpiTile label="عقود معلّقة" value={String((overview.contractsByStatus.pending ?? 0) + (overview.contractsByStatus.partially_completed ?? 0))} />
           <KpiTile label="عقود مسودة" value={String(overview.contractsByStatus.draft ?? 0)} />
           <KpiTile label="إجمالي الإيرادات" value={`${overview.totalRevenue.toFixed(2)} ريال`} />
           <KpiTile label="أكواد خصم/شحن نشطة" value={`${overview.activeDiscountCodes} / ${overview.activeCreditCodes}`} />
         </div>
       )}
 
-      <Card title="المدفوعات حسب نطاق تاريخ">
-        <div className="no-print mb-4 flex flex-wrap items-end gap-3">
-          <label className="text-sm">
-            <span className="mb-1 block text-xs font-bold text-slate">من تاريخ</span>
-            <input
-              type="date"
-              value={paymentsFrom}
-              onChange={(e) => setPaymentsFrom(e.target.value)}
-              className="rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
-            />
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-xs font-bold text-slate">إلى تاريخ</span>
-            <input
-              type="date"
-              value={paymentsTo}
-              onChange={(e) => setPaymentsTo(e.target.value)}
-              className="rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
-            />
-          </label>
-          <Button variant="secondary" onClick={loadPayments} disabled={loadingPayments}>
-            {loadingPayments ? 'جارِ التحديث...' : 'تحديث'}
-          </Button>
-        </div>
-        {payments && (
-          <>
-            <p className="mb-3 text-sm font-bold text-seal">
-              إجمالي الفترة: {payments.total.toFixed(2)} ريال ({payments.count} عملية دفع)
-            </p>
+      <div className="no-print flex gap-1 overflow-x-auto rounded-lg bg-card p-1 shadow-sm">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setTab(t.key)}
+            className={`shrink-0 rounded-md px-4 py-2 text-sm font-bold transition ${tab === t.key ? 'bg-seal text-white' : 'text-slate hover:bg-paper'}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'financial' && (
+        <>
+          <Card title="المدفوعات حسب نطاق تاريخ">
+            <div className="no-print mb-4 flex flex-wrap items-end gap-3">
+              <label className="text-sm">
+                <span className="mb-1 block text-xs font-bold text-slate">من تاريخ</span>
+                <input
+                  type="date"
+                  value={paymentsFrom}
+                  onChange={(e) => setPaymentsFrom(e.target.value)}
+                  className="rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-xs font-bold text-slate">إلى تاريخ</span>
+                <input
+                  type="date"
+                  value={paymentsTo}
+                  onChange={(e) => setPaymentsTo(e.target.value)}
+                  className="rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
+                />
+              </label>
+              <Button variant="secondary" onClick={loadPayments} disabled={loadingPayments}>
+                {loadingPayments ? 'جارِ التحديث...' : 'تحديث'}
+              </Button>
+            </div>
+            {payments && (
+              <>
+                <p className="mb-3 text-sm font-bold text-seal">
+                  إجمالي الفترة: {payments.total.toFixed(2)} ريال ({payments.count} عملية دفع)
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[400px] border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-line text-right text-slate">
+                        <th className="py-2 pe-3 font-bold">التاريخ</th>
+                        <th className="py-2 pe-3 font-bold">عدد العمليات</th>
+                        <th className="py-2 font-bold">الإجمالي (ريال)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.daily.map((d) => (
+                        <tr key={d.date} className="border-b border-line text-ink">
+                          <td className="py-2 pe-3">{formatDate(d.date)}</td>
+                          <td className="py-2 pe-3">{d.count}</td>
+                          <td className="py-2">{d.total.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                      {payments.daily.length === 0 && (
+                        <tr>
+                          <td colSpan={3} className="py-3 text-center text-slate">
+                            لا توجد مدفوعات ضمن هذا النطاق
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </Card>
+
+          <Card title="الإيرادات حسب نوع الوثيقة">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[400px] border-collapse text-xs">
+              <table className="w-full min-w-[360px] border-collapse text-xs">
                 <thead>
                   <tr className="border-b border-line text-right text-slate">
-                    <th className="py-2 pe-3 font-bold">التاريخ</th>
-                    <th className="py-2 pe-3 font-bold">عدد العمليات</th>
+                    <th className="py-2 pe-3 font-bold">نوع الوثيقة</th>
+                    <th className="py-2 pe-3 font-bold">عدد الفواتير</th>
                     <th className="py-2 font-bold">الإجمالي (ريال)</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {payments.daily.map((d) => (
-                    <tr key={d.date} className="border-b border-line text-ink">
-                      <td className="py-2 pe-3">{formatDate(d.date)}</td>
-                      <td className="py-2 pe-3">{d.count}</td>
-                      <td className="py-2">{d.total.toFixed(2)}</td>
+                  {documentTypes.map((dt) => {
+                    const row = revenueByType.find((r) => r.document_type === dt);
+                    return (
+                      <tr key={dt} className="border-b border-line text-ink">
+                        <td className="py-2 pe-3 font-bold">{DOCUMENT_TYPE_LABELS[dt]}</td>
+                        <td className="py-2 pe-3">{row?.count ?? 0}</td>
+                        <td className="py-2">{(row?.total ?? 0).toFixed(2)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          <Card title="الأثر المالي لأكواد الخصم">
+            {discountImpact && (
+              <p className="mb-3 text-sm font-bold text-seal">
+                إجمالي قيمة الخصومات الممنوحة: {discountImpact.totalDiscountGiven.toFixed(2)} ريال · الإيراد الفعلي بعد الخصم:{' '}
+                {discountImpact.totalRevenueAfterDiscount.toFixed(2)} ريال
+              </p>
+            )}
+            <div className="overflow-x-auto mb-5">
+              <table className="w-full min-w-[560px] border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-line text-right text-slate">
+                    <th className="py-2 pe-3 font-bold">الكود</th>
+                    <th className="py-2 pe-3 font-bold">نسبة الخصم</th>
+                    <th className="py-2 pe-3 font-bold">عدد العقود</th>
+                    <th className="py-2 pe-3 font-bold">الإيراد بعد الخصم</th>
+                    <th className="py-2 font-bold">قيمة الخصم الممنوح</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(discountImpact?.byCode ?? []).map((r) => (
+                    <tr key={r.id} className="border-b border-line text-ink">
+                      <td className="py-2 pe-3 font-mono font-bold" dir="ltr">
+                        {r.code}
+                      </td>
+                      <td className="py-2 pe-3">{r.discount_percent}%</td>
+                      <td className="py-2 pe-3">{r.contracts_used_on}</td>
+                      <td className="py-2 pe-3">{r.revenue_after_discount.toFixed(2)}</td>
+                      <td className="py-2">{r.discount_given.toFixed(2)}</td>
                     </tr>
                   ))}
-                  {payments.daily.length === 0 && (
+                  {(discountImpact?.byCode.length ?? 0) === 0 && (
                     <tr>
-                      <td colSpan={3} className="py-3 text-center text-slate">
-                        لا توجد مدفوعات ضمن هذا النطاق
+                      <td colSpan={5} className="py-3 text-center text-slate">
+                        لا توجد أكواد خصم استُخدمت بعد
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
-          </>
-        )}
-      </Card>
 
-      <Card title={`المستخدمون (${users.length})`}>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-line text-right text-slate">
-                <th className="py-2 pe-3 font-bold">الاسم</th>
-                <th className="py-2 pe-3 font-bold">رقم الهوية</th>
-                <th className="py-2 pe-3 font-bold">الجوال</th>
-                <th className="py-2 pe-3 font-bold">البريد</th>
-                <th className="py-2 pe-3 font-bold">الصفة</th>
-                <th className="py-2 pe-3 font-bold">عقود موثّقة</th>
-                <th className="py-2 pe-3 font-bold">وقّع كطرف</th>
-                <th className="py-2 pe-3 font-bold">الرصيد</th>
-                <th className="py-2 font-bold">تاريخ التسجيل</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className="border-b border-line text-ink">
-                  <td className="py-2 pe-3 font-bold">{u.full_name || '—'}</td>
-                  <td className="py-2 pe-3" dir="ltr">
-                    {u.national_id || '—'}
-                  </td>
-                  <td className="py-2 pe-3" dir="ltr">
-                    {u.phone || '—'}
-                  </td>
-                  <td className="py-2 pe-3" dir="ltr">
-                    {u.email}
-                  </td>
-                  <td className="py-2 pe-3">{ROLE_LABEL[u.role] ?? u.role}</td>
-                  <td className="py-2 pe-3">{u.contracts_completed}</td>
-                  <td className="py-2 pe-3">{u.contracts_signed_as_party}</td>
-                  <td className="py-2 pe-3">{u.credit_balance.toFixed(2)}</td>
-                  <td className="py-2">{formatDate(u.created_at)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      <Card title={`العقود المعلّقة (${pendingContracts.length})`}>
-        <div className="space-y-3">
-          {pendingContracts.map((c) => (
-            <div key={c.id} className="rounded-lg border border-line p-3">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-bold text-ink">
-                  {c.title} <span className="text-xs font-normal text-slate">({DOCUMENT_TYPE_LABELS[c.document_type as DocumentType]})</span>
-                </p>
-                <span className="rounded-full px-2 py-0.5 text-[11px] font-bold" style={{ background: CONTRACT_STATUS_LABEL[c.status as ContractStatus]?.bg, color: CONTRACT_STATUS_LABEL[c.status as ContractStatus]?.fg }}>
-                  {CONTRACT_STATUS_LABEL[c.status as ContractStatus]?.label ?? c.status}
-                </span>
-              </div>
-              <p className="mb-2 text-xs text-slate">
-                المنشئ: {c.creator_name || '—'} · القيمة: {c.invoice_amount?.toFixed(2) ?? '—'} ريال
-                {c.sent_at && ` · أُرسل في ${formatDateTime(c.sent_at)}`}
-              </p>
-              <table className="w-full border-collapse text-xs">
+            <h3 className="mb-3 font-display text-xs font-bold text-ink">كل أكواد الخصم الصادرة ({discountCodes.length})</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] border-collapse text-xs">
                 <thead>
                   <tr className="border-b border-line text-right text-slate">
-                    <th className="py-1.5 pe-3 font-bold">الطرف</th>
-                    <th className="py-1.5 pe-3 font-bold">الصفة</th>
-                    <th className="py-1.5 pe-3 font-bold">الجوال</th>
-                    <th className="py-1.5 pe-3 font-bold">رقم الهوية</th>
-                    <th className="py-1.5 font-bold">الحالة</th>
+                    <th className="py-2 pe-3 font-bold">الكود</th>
+                    <th className="py-2 pe-3 font-bold">الخصم</th>
+                    <th className="py-2 pe-3 font-bold">الحالة</th>
+                    <th className="py-2 pe-3 font-bold">مرات الاستخدام</th>
+                    <th className="py-2 pe-3 font-bold">الانتهاء</th>
+                    <th className="py-2 font-bold">مُنتهٍ؟</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {c.parties.map((p, i) => (
-                    <tr key={i} className="border-b border-line text-ink last:border-0">
-                      <td className="py-1.5 pe-3">{p.full_name || '—'}</td>
-                      <td className="py-1.5 pe-3">{p.role_label}</td>
-                      <td className="py-1.5 pe-3" dir="ltr">
-                        {p.phone || '—'}
+                  {discountCodes.map((c) => (
+                    <tr key={c.id} className="border-b border-line text-ink">
+                      <td className="py-2 pe-3 font-mono font-bold" dir="ltr">
+                        {c.code}
                       </td>
-                      <td className="py-1.5 pe-3" dir="ltr">
-                        {p.national_id || '—'}
+                      <td className="py-2 pe-3">{c.discount_percent}%</td>
+                      <td className="py-2 pe-3">{c.approval_status === 'approved' ? (c.is_active ? 'مُفعَّل' : 'مُعطَّل') : c.approval_status === 'pending' ? 'بانتظار الموافقة' : 'مرفوض'}</td>
+                      <td className="py-2 pe-3">
+                        {c.uses_count}
+                        {c.max_uses !== null && ` / ${c.max_uses}`}
                       </td>
-                      <td className="py-1.5">{p.status === 'signed' ? 'وقّع' : p.status === 'viewed' ? 'شاهد' : p.status === 'rejected' ? 'رفض' : 'بانتظار'}</td>
+                      <td className="py-2 pe-3">{c.ends_at ? formatDate(c.ends_at) : '—'}</td>
+                      <td className="py-2">{c.is_expired ? 'نعم' : 'لا'}</td>
+                    </tr>
+                  ))}
+                  {discountCodes.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="py-3 text-center text-slate">
+                        لا توجد أكواد خصم
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          <Card title={`أكواد الشحن / المحفظة (${creditReport?.codes.length ?? 0})`}>
+            <div className="overflow-x-auto mb-5">
+              <table className="w-full min-w-[480px] border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-line text-right text-slate">
+                    <th className="py-2 pe-3 font-bold">الكود</th>
+                    <th className="py-2 pe-3 font-bold">القيمة</th>
+                    <th className="py-2 pe-3 font-bold">الحالة</th>
+                    <th className="py-2 font-bold">مرات الاستخدام</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(creditReport?.codes ?? []).map((c) => (
+                    <tr key={c.id} className="border-b border-line text-ink">
+                      <td className="py-2 pe-3 font-mono font-bold" dir="ltr">
+                        {c.code}
+                      </td>
+                      <td className="py-2 pe-3">{c.amount.toFixed(2)} ريال</td>
+                      <td className="py-2 pe-3">{c.is_active ? 'مُفعَّل' : 'مُعطَّل'}</td>
+                      <td className="py-2">
+                        {c.uses_count}
+                        {c.max_uses !== null && ` / ${c.max_uses}`}
+                      </td>
+                    </tr>
+                  ))}
+                  {(creditReport?.codes.length ?? 0) === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-3 text-center text-slate">
+                        لا توجد أكواد شحن
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <h3 className="mb-3 font-display text-xs font-bold text-ink">المستخدمون المستفيدون من الشحن</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[480px] border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-line text-right text-slate">
+                    <th className="py-2 pe-3 font-bold">المستخدم</th>
+                    <th className="py-2 pe-3 font-bold">الجوال</th>
+                    <th className="py-2 pe-3 font-bold">الكود</th>
+                    <th className="py-2 pe-3 font-bold">المبلغ</th>
+                    <th className="py-2 font-bold">التاريخ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(creditReport?.redemptions ?? []).map((r) => (
+                    <tr key={r.id} className="border-b border-line text-ink">
+                      <td className="py-2 pe-3">{r.user_name || '—'}</td>
+                      <td className="py-2 pe-3" dir="ltr">
+                        {r.user_phone || '—'}
+                      </td>
+                      <td className="py-2 pe-3 font-mono" dir="ltr">
+                        {r.code}
+                      </td>
+                      <td className="py-2 pe-3">{r.amount.toFixed(2)} ريال</td>
+                      <td className="py-2">{formatDateTime(r.created_at)}</td>
+                    </tr>
+                  ))}
+                  {(creditReport?.redemptions.length ?? 0) === 0 && (
+                    <tr>
+                      <td colSpan={5} className="py-3 text-center text-slate">
+                        لا توجد عمليات شحن بعد
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </>
+      )}
+
+      {tab === 'other' && (
+        <>
+          <Card title={`المستخدمون وأعمالهم (${users.length})`}>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-line text-right text-slate">
+                    <th className="py-2 pe-3 font-bold">الاسم</th>
+                    <th className="py-2 pe-3 font-bold">رقم الهوية</th>
+                    <th className="py-2 pe-3 font-bold">الجوال</th>
+                    <th className="py-2 pe-3 font-bold">البريد</th>
+                    <th className="py-2 pe-3 font-bold">الصفة</th>
+                    <th className="py-2 pe-3 font-bold">عقود موثّقة</th>
+                    <th className="py-2 pe-3 font-bold">وقّع كطرف</th>
+                    <th className="py-2 pe-3 font-bold">الرصيد</th>
+                    <th className="py-2 font-bold">تاريخ التسجيل</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u) => (
+                    <tr key={u.id} className="border-b border-line text-ink">
+                      <td className="py-2 pe-3 font-bold">{u.full_name || '—'}</td>
+                      <td className="py-2 pe-3" dir="ltr">
+                        {u.national_id || '—'}
+                      </td>
+                      <td className="py-2 pe-3" dir="ltr">
+                        {u.phone || '—'}
+                      </td>
+                      <td className="py-2 pe-3" dir="ltr">
+                        {u.email}
+                      </td>
+                      <td className="py-2 pe-3">{ROLE_LABEL[u.role] ?? u.role}</td>
+                      <td className="py-2 pe-3">{u.contracts_completed}</td>
+                      <td className="py-2 pe-3">{u.contracts_signed_as_party}</td>
+                      <td className="py-2 pe-3">{u.credit_balance.toFixed(2)}</td>
+                      <td className="py-2">{formatDate(u.created_at)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          ))}
-          {pendingContracts.length === 0 && <p className="text-sm text-slate">لا توجد عقود معلّقة حاليًا</p>}
-        </div>
-      </Card>
+          </Card>
 
-      <Card title={`أكواد الخصم (${discountCodes.length})`}>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-line text-right text-slate">
-                <th className="py-2 pe-3 font-bold">الكود</th>
-                <th className="py-2 pe-3 font-bold">الخصم</th>
-                <th className="py-2 pe-3 font-bold">الحالة</th>
-                <th className="py-2 pe-3 font-bold">مرات الاستخدام</th>
-                <th className="py-2 pe-3 font-bold">الانتهاء</th>
-                <th className="py-2 font-bold">مُنتهٍ؟</th>
-              </tr>
-            </thead>
-            <tbody>
-              {discountCodes.map((c) => (
-                <tr key={c.id} className="border-b border-line text-ink">
-                  <td className="py-2 pe-3 font-mono font-bold" dir="ltr">
-                    {c.code}
-                  </td>
-                  <td className="py-2 pe-3">{c.discount_percent}%</td>
-                  <td className="py-2 pe-3">{c.approval_status === 'approved' ? (c.is_active ? 'مُفعَّل' : 'مُعطَّل') : c.approval_status === 'pending' ? 'بانتظار الموافقة' : 'مرفوض'}</td>
-                  <td className="py-2 pe-3">
-                    {c.uses_count}
-                    {c.max_uses !== null && ` / ${c.max_uses}`}
-                  </td>
-                  <td className="py-2 pe-3">{c.ends_at ? formatDate(c.ends_at) : '—'}</td>
-                  <td className="py-2">{c.is_expired ? 'نعم' : 'لا'}</td>
-                </tr>
-              ))}
-              {discountCodes.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="py-3 text-center text-slate">
-                    لا توجد أكواد خصم
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+          <Card title="العقود حسب الحالة ونوع الوثيقة">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-line text-right text-slate">
+                    <th className="py-2 pe-3 font-bold">الحالة</th>
+                    {documentTypes.map((dt) => (
+                      <th key={dt} className="py-2 pe-3 font-bold">
+                        {DOCUMENT_TYPE_LABELS[dt]}
+                      </th>
+                    ))}
+                    <th className="py-2 font-bold">الإجمالي</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {statuses.map((st) => {
+                    const rowTotal = documentTypes.reduce((sum, dt) => sum + breakdownCount(st, dt), 0);
+                    return (
+                      <tr key={st} className="border-b border-line text-ink">
+                        <td className="py-2 pe-3 font-bold">{CONTRACT_STATUS_LABEL[st]?.label ?? st}</td>
+                        {documentTypes.map((dt) => (
+                          <td key={dt} className="py-2 pe-3">
+                            {breakdownCount(st, dt)}
+                          </td>
+                        ))}
+                        <td className="py-2 font-bold">{rowTotal}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
 
-      <Card title={`أكواد الشحن (${creditReport?.codes.length ?? 0})`}>
-        <div className="overflow-x-auto mb-5">
-          <table className="w-full min-w-[480px] border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-line text-right text-slate">
-                <th className="py-2 pe-3 font-bold">الكود</th>
-                <th className="py-2 pe-3 font-bold">القيمة</th>
-                <th className="py-2 pe-3 font-bold">الحالة</th>
-                <th className="py-2 font-bold">مرات الاستخدام</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(creditReport?.codes ?? []).map((c) => (
-                <tr key={c.id} className="border-b border-line text-ink">
-                  <td className="py-2 pe-3 font-mono font-bold" dir="ltr">
-                    {c.code}
-                  </td>
-                  <td className="py-2 pe-3">{c.amount.toFixed(2)} ريال</td>
-                  <td className="py-2 pe-3">{c.is_active ? 'مُفعَّل' : 'مُعطَّل'}</td>
-                  <td className="py-2">
-                    {c.uses_count}
-                    {c.max_uses !== null && ` / ${c.max_uses}`}
-                  </td>
-                </tr>
-              ))}
-              {(creditReport?.codes.length ?? 0) === 0 && (
-                <tr>
-                  <td colSpan={4} className="py-3 text-center text-slate">
-                    لا توجد أكواد شحن
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+          <Card title={`تقرير التفويضات (${poaContracts.length})`}>
+            <ContractsWithPartiesList contracts={poaContracts} emptyLabel="لا توجد تفويضات مُصدَرة حتى الآن" />
+          </Card>
 
-        <h3 className="mb-3 font-display text-xs font-bold text-ink">المستخدمون المستفيدون من الشحن</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[480px] border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-line text-right text-slate">
-                <th className="py-2 pe-3 font-bold">المستخدم</th>
-                <th className="py-2 pe-3 font-bold">الجوال</th>
-                <th className="py-2 pe-3 font-bold">الكود</th>
-                <th className="py-2 pe-3 font-bold">المبلغ</th>
-                <th className="py-2 font-bold">التاريخ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(creditReport?.redemptions ?? []).map((r) => (
-                <tr key={r.id} className="border-b border-line text-ink">
-                  <td className="py-2 pe-3">{r.user_name || '—'}</td>
-                  <td className="py-2 pe-3" dir="ltr">
-                    {r.user_phone || '—'}
-                  </td>
-                  <td className="py-2 pe-3 font-mono" dir="ltr">
-                    {r.code}
-                  </td>
-                  <td className="py-2 pe-3">{r.amount.toFixed(2)} ريال</td>
-                  <td className="py-2">{formatDateTime(r.created_at)}</td>
-                </tr>
-              ))}
-              {(creditReport?.redemptions.length ?? 0) === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-3 text-center text-slate">
-                    لا توجد عمليات شحن بعد
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+          <Card title={`العقود المعلّقة (${pendingContracts.length})`}>
+            <ContractsWithPartiesList contracts={pendingContracts} emptyLabel="لا توجد عقود معلّقة حاليًا" />
+          </Card>
+        </>
+      )}
     </div>
   );
 }
