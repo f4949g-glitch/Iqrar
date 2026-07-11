@@ -87,7 +87,7 @@ function AppShell() {
           <Route path="/contracts/new" element={<NewContractWizard />} />
           <Route path="/contracts/:id" element={profile ? <ContractDetailPage /> : <AuthGate />} />
           <Route path="/balance" element={profile ? <BalancePage /> : <AuthGate />} />
-          <Route path="/profile" element={profile ? <ProfilePage profile={profile} /> : <AuthGate />} />
+          <Route path="/profile" element={profile ? <ProfilePage profile={profile} onUpdated={refresh} /> : <AuthGate />} />
           <Route path="/settings" element={profile ? <SettingsPage /> : <AuthGate />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route

@@ -102,3 +102,27 @@ export async function saveSignature(dataUrl: string | null): Promise<void> {
   const { error } = await supabase.from('profiles').update({ signature_data_url: dataUrl }).eq('id', userData.user.id);
   if (error) throw new Error(translateErrorMessage(error.message));
 }
+
+export interface UpdateProfileInput {
+  user_id?: string;
+  full_name: string;
+  national_id: string;
+  email: string;
+  nationality: string;
+  date_of_birth: string | null;
+  phone: string;
+}
+
+// دالة خادمية موحّدة لتعديل بيانات الحساب (الاسم، رقم الهوية، البريد، الجنسية،
+// تاريخ الميلاد، الجوال) — تُستخدم لتعديل الملف الشخصي للمستخدم نفسه، وأيضًا
+// من لوحة الأدمن لتعديل بيانات أي مستخدم آخر (بتمرير user_id). التحقق من صلاحية
+// تعديل مستخدم آخر يتم خادميًا فقط، وتغيير البريد يُطبَّق على حساب الدخول في
+// Supabase Auth مباشرة كي لا يفترق عن البريد المعروض في الملف الشخصي.
+export async function updateProfile(input: UpdateProfileInput): Promise<Profile> {
+  const { data, error } = await supabase.functions.invoke<{ ok: boolean; profile: Profile; error?: string }>('update-profile', {
+    body: input,
+  });
+  if (error) throw await extractFunctionError(error);
+  if (data && 'error' in data && data.error) throw new Error(data.error);
+  return (data as { profile: Profile }).profile;
+}

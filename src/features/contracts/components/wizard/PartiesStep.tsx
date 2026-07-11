@@ -253,17 +253,22 @@ export function PartiesStep({
             <p className="rounded-lg border border-line bg-paper px-3 py-2.5 text-ink">7 أيام (تلقائيًا للتفويض)</p>
           </div>
         ) : (
-          <Field
-            label="صلاحية التوثيق (أيام)"
-            value={durationDays}
-            onChange={onDurationChange}
-            type="number"
-            min={1}
-            max={14}
-            placeholder="من 1 إلى 14"
-            required
-            hint="المدة التي تبقى فيها روابط التوقيع صالحة، بين يوم و14 يومًا"
-          />
+          <label className="block text-sm">
+            <span className="mb-1.5 block text-xs font-bold text-slate">صلاحية التوثيق (أيام)</span>
+            <select
+              value={durationDays}
+              onChange={(e) => onDurationChange(e.target.value)}
+              required
+              className="w-full rounded-lg border border-line bg-white px-3 py-2.5 text-ink outline-none focus:border-seal"
+            >
+              {Array.from({ length: 14 }, (_, i) => i + 1).map((day) => (
+                <option key={day} value={String(day)}>
+                  {day} {day === 1 ? 'يوم' : 'أيام'}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1.5 block text-xs text-slate">المدة التي تبقى فيها روابط التوقيع صالحة، بين يوم و14 يومًا (الافتراضي 3 أيام)</span>
+          </label>
         )}
         <div className="block text-sm">
           <span className="mb-1.5 block text-xs font-bold text-slate">نوع الوثيقة</span>
