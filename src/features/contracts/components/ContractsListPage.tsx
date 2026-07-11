@@ -5,9 +5,9 @@ import { StatusPill } from '@/shared/ui/StatusPill';
 import { Button } from '@/shared/ui/Button';
 import {
   deleteDraftContract,
+  listActiveContracts,
   listApprovedContracts,
-  listAwaitingApprovalContracts,
-  listDraftContracts,
+  listContractsAwaitingMySignature,
   listRejectedContracts,
   searchContracts,
   type ContractListItem,
@@ -15,13 +15,13 @@ import {
 import { CONTRACT_STATUS_LABEL } from '../types';
 import { formatDate } from '@/shared/lib/formatDate';
 
-type Tab = 'draft' | 'awaiting' | 'approved' | 'rejected';
+type Tab = 'new' | 'approved' | 'awaiting' | 'rejected';
 
 const TABS: { key: Tab; label: string }[] = [
-  { key: 'draft', label: 'مسودة' },
-  { key: 'awaiting', label: 'انتظار الموافقة' },
-  { key: 'approved', label: 'موافق عليها' },
-  { key: 'rejected', label: 'مرفوض' },
+  { key: 'new', label: 'عقود جديدة' },
+  { key: 'approved', label: 'العقود الموافق عليها' },
+  { key: 'awaiting', label: 'طلبات الموافقة' },
+  { key: 'rejected', label: 'عقود مرفوضة' },
 ];
 
 function ContractCard({ contract, onDelete }: { contract: ContractListItem; onDelete: (id: string) => void }) {
@@ -81,13 +81,13 @@ function StatCard({ icon: Icon, label, value, accent }: StatCardProps) {
 }
 
 function isTab(value: string | null): value is Tab {
-  return value === 'draft' || value === 'awaiting' || value === 'approved' || value === 'rejected';
+  return value === 'new' || value === 'awaiting' || value === 'approved' || value === 'rejected';
 }
 
 export function ContractsListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get('tab');
-  const [tab, setTab] = useState<Tab>(isTab(initialTab) ? initialTab : 'awaiting');
+  const [tab, setTab] = useState<Tab>(isTab(initialTab) ? initialTab : 'new');
   const [contracts, setContracts] = useState<ContractListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -103,13 +103,13 @@ export function ContractsListPage() {
     setError('');
     try {
       const data =
-        activeTab === 'draft'
-          ? await listDraftContracts()
+        activeTab === 'new'
+          ? await listActiveContracts()
           : activeTab === 'approved'
             ? await listApprovedContracts()
             : activeTab === 'rejected'
               ? await listRejectedContracts()
-              : await listAwaitingApprovalContracts();
+              : await listContractsAwaitingMySignature();
       setContracts(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'تعذّر تحميل العقود');
@@ -134,9 +134,9 @@ export function ContractsListPage() {
   };
 
   useEffect(() => {
-    Promise.all([listAwaitingApprovalContracts(), listApprovedContracts(), listDraftContracts()])
-      .then(([awaiting, approved, draft]) => {
-        const all = [...awaiting, ...approved, ...draft];
+    Promise.all([listActiveContracts(), listApprovedContracts()])
+      .then(([active, approved]) => {
+        const all = [...active, ...approved];
         setStats({
           total: all.length,
           completed: approved.length,
@@ -149,7 +149,7 @@ export function ContractsListPage() {
 
   const chooseTab = (next: Tab) => {
     setTab(next);
-    setSearchParams(next === 'awaiting' ? {} : { tab: next });
+    setSearchParams(next === 'new' ? {} : { tab: next });
   };
 
   useEffect(() => {
