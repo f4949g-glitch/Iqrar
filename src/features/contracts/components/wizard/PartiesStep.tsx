@@ -8,6 +8,7 @@ import { NATIONALITIES } from '@/shared/lib/nationalities';
 import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '../../api/pricingApi';
 import { addParty as addPartyApi } from '../../api/contractsApi';
 import { initiateNafathVerification, checkNafathStatus } from '../../api/nafathApi';
+import { findDuplicateNationalId } from '../../lib/findDuplicateNationalId';
 import {
   PARTY_ROLE_OPTIONS,
   DOCUMENT_TYPE_LABELS,
@@ -238,18 +239,10 @@ export function PartiesStep({
         return;
       }
     }
-    // لا يجوز أن يتكرر رقم الهوية بين طرفين مختلفين في نفس العقد (نفس الشخص لا
-    // يمكن أن يكون طرفًا أول وطرفًا ثانيًا معًا مثلًا).
-    const nationalIdOwners = new Map<string, number>();
-    for (let i = 0; i < parties.length; i++) {
-      const nid = parties[i].national_id.trim();
-      if (!nid) continue;
-      const ownerIndex = nationalIdOwners.get(nid);
-      if (ownerIndex !== undefined) {
-        setError(`رقم الهوية مكرر بين الطرف ${ownerIndex + 1} والطرف ${i + 1} — لا يمكن أن يتطابق رقم الهوية بين طرفين مختلفين`);
-        return;
-      }
-      nationalIdOwners.set(nid, i);
+    const duplicate = findDuplicateNationalId(parties.map((p) => p.national_id));
+    if (duplicate) {
+      setError(`رقم الهوية مكرر بين الطرف ${duplicate.firstIndex + 1} والطرف ${duplicate.secondIndex + 1} — لا يمكن أن يتطابق رقم الهوية بين طرفين مختلفين`);
+      return;
     }
     onNext();
   };
