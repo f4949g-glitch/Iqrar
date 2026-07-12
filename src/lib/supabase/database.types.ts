@@ -745,6 +745,47 @@ export type Database = {
         };
         Relationships: [];
       };
+      email_messages: {
+        Row: {
+          created_at: string;
+          error_detail: string | null;
+          id: string;
+          message: string;
+          recipient_email: string;
+          sent_by: string | null;
+          status: string;
+          subject: string;
+        };
+        Insert: {
+          created_at?: string;
+          error_detail?: string | null;
+          id?: string;
+          message: string;
+          recipient_email: string;
+          sent_by?: string | null;
+          status: string;
+          subject: string;
+        };
+        Update: {
+          created_at?: string;
+          error_detail?: string | null;
+          id?: string;
+          message?: string;
+          recipient_email?: string;
+          sent_by?: string | null;
+          status?: string;
+          subject?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "email_messages_sent_by_fkey";
+            columns: ["sent_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       sms_messages: {
         Row: {
           created_at: string;

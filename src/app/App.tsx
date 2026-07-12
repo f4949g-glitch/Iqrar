@@ -21,6 +21,7 @@ const ReportsPage = lazy(() => import('@/features/contracts/components/ReportsPa
 const AdminUsersPage = lazy(() => import('@/features/auth/components/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage })));
 const CustomerServicePage = lazy(() => import('@/features/site/components/CustomerServicePage').then((m) => ({ default: m.CustomerServicePage })));
 const SendSmsPage = lazy(() => import('@/features/sms/components/SendSmsPage').then((m) => ({ default: m.SendSmsPage })));
+const SendEmailPage = lazy(() => import('@/features/sms/components/SendEmailPage').then((m) => ({ default: m.SendEmailPage })));
 const VerificationReprintPage = lazy(() =>
   import('@/features/verification/components/VerificationReprintPage').then((m) => ({ default: m.VerificationReprintPage })),
 );
@@ -118,6 +119,7 @@ function AppShell() {
           <Route path="/customer-service" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <CustomerServicePage /> : <AdminGate />} />
           <Route path="/org-settings" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <OrganizationSettingsPage /> : <AdminGate />} />
           <Route path="/sms" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <SendSmsPage /> : <AdminGate />} />
+          <Route path="/email" element={!profile ? <AuthGate /> : profile.role === 'admin' ? <SendEmailPage /> : <AdminGate />} />
           <Route
             path="/legal/privacy-policy"
             element={!profile ? <AuthGate /> : profile.role === 'admin' ? <PrivacyPolicyEditPage /> : <AdminGate />}

@@ -2,6 +2,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { sendSms, isSmsConfigured } from '../_shared/sms.ts';
+import { sendEmail, isEmailConfigured } from '../_shared/email.ts';
 import { generateOtpCode } from '../_shared/otp.ts';
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
@@ -52,11 +53,30 @@ Deno.serve(async (req: Request) => {
   const { error: upsertError } = await admin.rpc('rpc_upsert_registration_otp', { p_phone: phone, p_code: code, p_expires_at: expiresAt });
   if (upsertError) return jsonResponse({ error: 'تعذّر إنشاء رمز التحقق' }, 500);
 
+  // يُرسَل الرمز عبر الجوال والبريد معًا (كلاهما مطلوبان عند التسجيل)؛ النجاح
+  // في أي قناة كافٍ لعدم اعتبار الطلب فاشلًا.
   const smsConfigured = isSmsConfigured();
+  const emailConfigured = isEmailConfigured();
+  let attempted = false;
+  let anySent = false;
+
   if (smsConfigured) {
-    const sendResult = await sendSms(phone, `رمز التحقق لإنشاء حساب إقرار: ${code} (صالح لمدة 10 دقائق)`);
-    if (!sendResult.ok) return jsonResponse({ error: 'تعذّر إرسال رمز التحقق عبر الرسائل، حاول مرة أخرى' }, 502);
+    attempted = true;
+    const result = await sendSms(phone, `رمز التحقق لإنشاء حساب إقرار: ${code} (صالح لمدة 10 دقائق)`);
+    if (result.ok) anySent = true;
   }
 
-  return jsonResponse({ ok: true, sms_configured: smsConfigured, dev_code: smsConfigured ? undefined : code });
+  if (emailConfigured) {
+    attempted = true;
+    const result = await sendEmail(
+      email,
+      'رمز تأكيد إنشاء الحساب',
+      `<p>رمز التحقق لإنشاء حسابك في منصة إقرار: <b>${code}</b> (صالح لمدة 10 دقائق)</p>`,
+    );
+    if (result.ok) anySent = true;
+  }
+
+  if (attempted && !anySent) return jsonResponse({ error: 'تعذّر إرسال رمز التحقق، حاول مرة أخرى' }, 502);
+
+  return jsonResponse({ ok: true, sms_configured: smsConfigured, email_configured: emailConfigured, dev_code: attempted ? undefined : code });
 });

@@ -19,6 +19,7 @@ import {
   Building2,
   Send,
   Printer,
+  Mail,
 } from 'lucide-react';
 import type { Profile } from '@/features/auth';
 import { hasAdminPermission } from '@/features/auth/types';
@@ -79,6 +80,7 @@ function buildAdminGroups(profile: Profile): SidebarGroup[] {
     customerLinks.push(
       { to: '/app/customer-service', label: 'خدمة العملاء', icon: MessageSquare },
       { to: '/app/sms', label: 'إرسال رسائل SMS', icon: Send },
+      { to: '/app/email', label: 'إرسال بريد إلكتروني', icon: Mail },
       { to: '/app/contracts/reprint-verification', label: 'إعادة طباعة معلومات التوثيق', icon: Printer },
     );
   }

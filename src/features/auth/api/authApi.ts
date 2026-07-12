@@ -16,7 +16,7 @@ export interface RequestOtpPayload {
 }
 
 export async function requestRegistrationOtp(payload: RequestOtpPayload) {
-  return invokeAuthFunction<{ ok: boolean; sms_configured: boolean; dev_code?: string }>('register-request-otp', payload);
+  return invokeAuthFunction<{ ok: boolean; sms_configured: boolean; email_configured: boolean; dev_code?: string }>('register-request-otp', payload);
 }
 
 export interface VerifyOtpPayload {
@@ -35,7 +35,7 @@ export async function verifyRegistrationOtp(payload: VerifyOtpPayload) {
 }
 
 export async function requestPasswordReset(nationalId: string) {
-  return invokeAuthFunction<{ ok: boolean; sms_configured: boolean; dev_code?: string }>('request-password-reset', {
+  return invokeAuthFunction<{ ok: boolean; sms_configured: boolean; email_configured: boolean; dev_code?: string }>('request-password-reset', {
     national_id: nationalId,
   });
 }

@@ -2,6 +2,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { sendSms, isSmsConfigured } from '../_shared/sms.ts';
+import { sendEmail, isEmailConfigured } from '../_shared/email.ts';
 import { generateOtpCode } from '../_shared/otp.ts';
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
@@ -27,9 +28,9 @@ Deno.serve(async (req: Request) => {
   const nationalId = String(body.national_id ?? '').trim();
   if (!nationalId) return jsonResponse({ error: 'رقم الهوية مطلوب' }, 400);
 
-  const { data: profile } = await admin.from('profiles').select('id, phone').eq('national_id', nationalId).maybeSingle();
-  if (!profile || !profile.phone) {
-    return jsonResponse({ error: 'لا يوجد حساب برقم جوال مسجَّل مطابق لهذا الرقم' }, 404);
+  const { data: profile } = await admin.from('profiles').select('id, phone, email').eq('national_id', nationalId).maybeSingle();
+  if (!profile || (!profile.phone && !profile.email)) {
+    return jsonResponse({ error: 'لا يوجد حساب برقم جوال أو بريد إلكتروني مسجَّل مطابق لهذا الرقم' }, 404);
   }
 
   const code = generateOtpCode();
@@ -42,11 +43,31 @@ Deno.serve(async (req: Request) => {
   });
   if (upsertError) return jsonResponse({ error: 'تعذّر إنشاء رمز التحقق' }, 500);
 
+  // يُرسَل الرمز عبر كل قناة متاحة (جوال وبريد) بدلًا من الاعتماد على قناة
+  // واحدة فقط؛ النجاح في أي قناة كافٍ، ولا يُعتبر الطلب فاشلًا إلا إذا فشلت
+  // كل القنوات التي حاولنا الإرسال عبرها فعليًا.
   const smsConfigured = isSmsConfigured();
-  if (smsConfigured) {
-    const sendResult = await sendSms(profile.phone, `رمز استعادة كلمة المرور في منصة إقرار: ${code} (صالح لمدة 10 دقائق)`);
-    if (!sendResult.ok) return jsonResponse({ error: 'تعذّر إرسال رمز التحقق عبر الرسائل، حاول مرة أخرى' }, 502);
+  const emailConfigured = isEmailConfigured();
+  let attempted = false;
+  let anySent = false;
+
+  if (smsConfigured && profile.phone) {
+    attempted = true;
+    const result = await sendSms(profile.phone, `رمز استعادة كلمة المرور في منصة إقرار: ${code} (صالح لمدة 10 دقائق)`);
+    if (result.ok) anySent = true;
   }
 
-  return jsonResponse({ ok: true, sms_configured: smsConfigured, dev_code: smsConfigured ? undefined : code });
+  if (emailConfigured && profile.email) {
+    attempted = true;
+    const result = await sendEmail(
+      profile.email,
+      'رمز استعادة كلمة المرور',
+      `<p>رمز استعادة كلمة المرور في منصة إقرار: <b>${code}</b> (صالح لمدة 10 دقائق)</p><p>إن لم تطلب هذا، تجاهل هذه الرسالة.</p>`,
+    );
+    if (result.ok) anySent = true;
+  }
+
+  if (attempted && !anySent) return jsonResponse({ error: 'تعذّر إرسال رمز التحقق، حاول مرة أخرى' }, 502);
+
+  return jsonResponse({ ok: true, sms_configured: smsConfigured, email_configured: emailConfigured, dev_code: attempted ? undefined : code });
 });
