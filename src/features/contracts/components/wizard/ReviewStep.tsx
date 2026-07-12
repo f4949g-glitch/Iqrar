@@ -20,10 +20,23 @@ interface ReviewStepProps {
   pdfUrl: string;
   companyLogoDataUrl: string | null;
   profile?: Profile | null;
+  // كود خصم طُبِّق مسبقًا ونجحت معاينته في نافذة الصفحة الرئيسية قبل إنشاء
+  // العقد — يُطبَّق هنا تلقائيًا على العقد الحقيقي بدل مطالبة المستخدم بإعادة كتابته.
+  initialDiscountCode?: string;
   onBack: () => void;
 }
 
-export function ReviewStep({ contract: initialContract, parties: initialParties, fields, body, pdfUrl, companyLogoDataUrl, profile = null, onBack }: ReviewStepProps) {
+export function ReviewStep({
+  contract: initialContract,
+  parties: initialParties,
+  fields,
+  body,
+  pdfUrl,
+  companyLogoDataUrl,
+  profile = null,
+  initialDiscountCode,
+  onBack,
+}: ReviewStepProps) {
   const navigate = useNavigate();
   const [contract, setContract] = useState(initialContract);
   const [parties, setParties] = useState(initialParties);
@@ -86,15 +99,16 @@ export function ReviewStep({ contract: initialContract, parties: initialParties,
     );
   }, [contract, parties, body, companyLogoDataUrl]);
 
-  const applyDiscountCode = async () => {
-    if (!discountCode.trim()) return;
+  const applyDiscountCode = async (codeOverride?: string) => {
+    const code = (codeOverride ?? discountCode).trim();
+    if (!code) return;
     setCheckingCode(true);
     setDiscountPreview(null);
     try {
-      const result = await previewDiscountCode(discountCode.trim(), parties.length);
+      const result = await previewDiscountCode(code, parties.length);
       setDiscountPreview(result);
       if (result.discount_code_id) {
-        await setContractDiscountCode(contract.id, discountCode.trim());
+        await setContractDiscountCode(contract.id, code);
         setContract((prev) => ({ ...prev, discount_code_id: result.discount_code_id }));
       }
     } catch (err) {
@@ -103,6 +117,16 @@ export function ReviewStep({ contract: initialContract, parties: initialParties,
       setCheckingCode(false);
     }
   };
+
+  // كود خصم طُبِّق مسبقًا من نافذة الصفحة الرئيسية (initialDiscountCode) يُربَط
+  // تلقائيًا بالعقد الحقيقي فور توفّره هنا، بدل مطالبة المستخدم بإعادة كتابته.
+  useEffect(() => {
+    if (initialDiscountCode) {
+      setDiscountCode(initialDiscountCode);
+      applyDiscountCode(initialDiscountCode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const send = async () => {
     setSubmitting(true);
@@ -216,7 +240,7 @@ export function ReviewStep({ contract: initialContract, parties: initialParties,
               }}
             />
           </div>
-          <Button variant="secondary" onClick={applyDiscountCode} disabled={checkingCode || !discountCode.trim()}>
+          <Button variant="secondary" onClick={() => applyDiscountCode()} disabled={checkingCode || !discountCode.trim()}>
             {checkingCode ? 'جارِ التحقق...' : 'تطبيق'}
           </Button>
         </div>

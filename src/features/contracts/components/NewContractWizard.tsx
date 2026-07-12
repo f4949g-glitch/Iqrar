@@ -128,6 +128,11 @@ export function NewContractWizard() {
   const [termValue, setTermValue] = useState(guestDraft?.termValue ?? '');
   const [termUnit, setTermUnit] = useState<TermUnit>(guestDraft?.termUnit ?? 'month');
   const [termEndDate, setTermEndDate] = useState(guestDraft?.termEndDate ?? '');
+  // إن وصل المستخدم عبر نافذة الصفحة الرئيسية (pendingIntent) فقد اختار طريقة
+  // التصديق هناك بالفعل — لا داعي لسؤاله نفس السؤال مجددًا في خطوة بيانات
+  // الأطراف؛ null يعني أنه فتح المعالج مباشرة بلا اختيار مسبق فتبقى البطاقتان
+  // التفاعليتان معروضتين كسابقًا.
+  const verificationPreset = pendingIntent?.verificationDefault ?? null;
   const [draftParties, setDraftParties] = useState<DraftParty[]>(() => {
     if (guestDraft) return guestDraft.parties;
     // العقد يتطلب طرفين على الأقل (تفويض هو الاستثناء الوحيد بطرف واحد)، فتُهيَّأ
@@ -456,6 +461,7 @@ export function NewContractWizard() {
           parties={draftParties}
           onPartiesChange={setDraftParties}
           ensureContract={ensureContract}
+          verificationPreset={verificationPreset}
           onNext={goToMethod}
         />
       )}
@@ -510,6 +516,7 @@ export function NewContractWizard() {
           pdfUrl={pdfUrl}
           companyLogoDataUrl={companyLogoDataUrl}
           profile={profile}
+          initialDiscountCode={pendingIntent?.discountCode}
           onBack={() => goToStep(method === 'editor' ? 'editor' : 'fields')}
         />
       )}

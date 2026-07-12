@@ -115,6 +115,10 @@ interface PartiesStepProps {
   parties: DraftParty[];
   onPartiesChange: (parties: DraftParty[]) => void;
   ensureContract: () => Promise<Contract>;
+  // غير فارغة إذا اختار المستخدم طريقة التصديق مسبقًا في نافذة الصفحة
+  // الرئيسية — عندها تُعرَض الطريقة كشارة للقراءة فقط بدل بطاقتين تفاعليتين،
+  // كي لا يُسأل نفس السؤال مرتين لنفس العقد.
+  verificationPreset?: VerificationMethod | null;
   onNext: () => void;
 }
 
@@ -144,6 +148,7 @@ export function PartiesStep({
   parties,
   onPartiesChange,
   ensureContract,
+  verificationPreset = null,
   onNext,
 }: PartiesStepProps) {
   const docLabel = DOCUMENT_TYPE_DEFINITE_LABELS[documentType];
@@ -189,7 +194,10 @@ export function PartiesStep({
   };
 
   const addParty = () => {
-    onPartiesChange([...parties, emptyParty(parties.length)]);
+    const next = emptyParty(parties.length);
+    // طرف جديد يُضاف بعد اختيار طريقة تصديق مسبقة (verificationPreset) يرث نفس
+    // الطريقة تلقائيًا بدل الافتراضي "يدوي" — كي يطابق ما تعرضه الشارة للقراءة فقط.
+    onPartiesChange([...parties, verificationPreset ? { ...next, verification_method: verificationPreset } : next]);
     setOpenIndexes((prev) => new Set(prev).add(parties.length));
   };
   const removeParty = (index: number) => onPartiesChange(parties.filter((_, i) => i !== index));
@@ -572,36 +580,46 @@ export function PartiesStep({
                   </>
                 )}
 
-                {/* طريقة إثبات الهوية بطاقتان بارزتان بدل مفتاحين متساويين بلا تمييز،
-                    ليكون الفرق بين الإدخال اليدوي والتحقق الرسمي عبر نفاذ واضحًا للمستخدم. */}
-                <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => updateParty(index, { verification_method: 'manual' })}
-                    className={`flex items-center gap-2 rounded-xl border-2 p-3 text-start transition ${
-                      party.verification_method === 'manual' ? 'border-seal bg-sealLight' : 'border-line bg-card hover:border-sealMuted'
-                    }`}
-                  >
-                    <User size={18} className={party.verification_method === 'manual' ? 'text-seal' : 'text-sealMuted'} />
-                    <span>
-                      <span className="block text-sm font-bold text-ink">إدخال يدوي</span>
-                      <span className="block text-[11px] text-slate">إدخال البيانات مباشرة بلا تحقق رسمي</span>
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => updateParty(index, { verification_method: 'nafath' })}
-                    className={`flex items-center gap-2 rounded-xl border-2 p-3 text-start transition ${
-                      party.verification_method === 'nafath' ? 'border-seal bg-sealLight' : 'border-line bg-card hover:border-sealMuted'
-                    }`}
-                  >
-                    <ShieldCheck size={18} className={party.verification_method === 'nafath' ? 'text-seal' : 'text-sealMuted'} />
-                    <span>
-                      <span className="block text-sm font-bold text-ink">تحقق عبر نفاذ</span>
-                      <span className="block text-[11px] text-slate">تحقق رسمي من الهوية عبر تطبيق نفاذ</span>
-                    </span>
-                  </button>
-                </div>
+                {/* طريقة إثبات الهوية: إن اختارها المستخدم مسبقًا في نافذة الصفحة الرئيسية
+                    (verificationPreset) تُعرض كشارة للقراءة فقط بدل إعادة السؤال؛ وإلا
+                    تُعرض كبطاقتين بارزتين تفاعليتين ليكون الفرق بين الإدخال اليدوي
+                    والتحقق الرسمي عبر نفاذ واضحًا للمستخدم. */}
+                {verificationPreset ? (
+                  <div className="mb-3 flex items-center gap-2 rounded-lg bg-paper p-2.5 text-sm font-bold text-ink">
+                    {verificationPreset === 'nafath' ? <ShieldCheck size={16} className="text-seal" /> : <User size={16} className="text-seal" />}
+                    طريقة التصديق: {verificationPreset === 'nafath' ? 'تحقق عبر نفاذ' : 'إدخال يدوي'}
+                    <span className="text-xs font-normal text-slate">(اختِيرت مسبقًا)</span>
+                  </div>
+                ) : (
+                  <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => updateParty(index, { verification_method: 'manual' })}
+                      className={`flex items-center gap-2 rounded-xl border-2 p-3 text-start transition ${
+                        party.verification_method === 'manual' ? 'border-seal bg-sealLight' : 'border-line bg-card hover:border-sealMuted'
+                      }`}
+                    >
+                      <User size={18} className={party.verification_method === 'manual' ? 'text-seal' : 'text-sealMuted'} />
+                      <span>
+                        <span className="block text-sm font-bold text-ink">إدخال يدوي</span>
+                        <span className="block text-[11px] text-slate">إدخال البيانات مباشرة بلا تحقق رسمي</span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateParty(index, { verification_method: 'nafath' })}
+                      className={`flex items-center gap-2 rounded-xl border-2 p-3 text-start transition ${
+                        party.verification_method === 'nafath' ? 'border-seal bg-sealLight' : 'border-line bg-card hover:border-sealMuted'
+                      }`}
+                    >
+                      <ShieldCheck size={18} className={party.verification_method === 'nafath' ? 'text-seal' : 'text-sealMuted'} />
+                      <span>
+                        <span className="block text-sm font-bold text-ink">تحقق عبر نفاذ</span>
+                        <span className="block text-[11px] text-slate">تحقق رسمي من الهوية عبر تطبيق نفاذ</span>
+                      </span>
+                    </button>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {!poaMode && (

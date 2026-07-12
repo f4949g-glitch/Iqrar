@@ -23,6 +23,8 @@ import {
   Mail,
 } from 'lucide-react';
 import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '@/features/contracts/api/pricingApi';
+import { previewDiscountCode, type DiscountPreview } from '@/features/contracts/api/discountCodesApi';
+import { redeemCreditCode } from '@/features/contracts/api/creditCodesApi';
 import { setPendingContractIntent } from '@/features/contracts/lib/pendingIntent';
 import type { DocumentType, VerificationMethod } from '@/features/contracts/types';
 import { fetchSiteSettings, type SiteSettings } from '@/features/site/api/siteSettingsApi';
@@ -148,13 +150,26 @@ function Nav({ profile, onLogout, orgName, logoUrl }: { profile: Profile | null;
 // 2) طريقة التصديق الافتراضية (للعقد فقط)، 3) تسجيل الدخول/إنشاء حساب/الاستمرار
 // كضيف. يُحفَظ الاختيار عبر sessionStorage (setPendingContractIntent) ليقرأه معالج
 // إنشاء العقد بعد أي من المسارات الثلاثة، بما فيها إعادة التوجيه بعد تسجيل الدخول.
+const PARTY_COUNT_OPTIONS = Array.from({ length: 19 }, (_, i) => i + 2);
+
 function CreateEntryFlow({ documentType, onClose }: { documentType: DocumentType; onClose: () => void }) {
   const isPoa = documentType === 'power_of_attorney';
+  const navigate = useNavigate();
+  const { profile } = useSession();
   const [step, setStep] = useState<'count' | 'method' | 'auth'>('count');
   const [partyCountInput, setPartyCountInput] = useState('2');
+  const [partyCountMode, setPartyCountMode] = useState<'select' | 'custom'>('select');
   const [pricing, setPricing] = useState<PricingSettings | null>(null);
   const [verificationDefault, setVerificationDefault] = useState<VerificationMethod>('nafath');
   const [error, setError] = useState('');
+
+  const [discountCode, setDiscountCode] = useState('');
+  const [discountPreview, setDiscountPreview] = useState<DiscountPreview | null>(null);
+  const [checkingDiscount, setCheckingDiscount] = useState(false);
+
+  const [creditCode, setCreditCode] = useState('');
+  const [creditResult, setCreditResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [redeemingCredit, setRedeemingCredit] = useState(false);
 
   useEffect(() => {
     fetchPricingSettings()
@@ -166,24 +181,72 @@ function CreateEntryFlow({ documentType, onClose }: { documentType: DocumentType
   const price = pricing ? calculateInvoice(partyCount, pricing) : null;
   const title = isPoa ? 'إنشاء تفويض' : 'إنشاء عقد';
 
+  const applyDiscountCode = async () => {
+    if (!discountCode.trim()) return;
+    setCheckingDiscount(true);
+    setDiscountPreview(null);
+    try {
+      setDiscountPreview(await previewDiscountCode(discountCode.trim(), partyCount));
+    } catch (err) {
+      setDiscountPreview({
+        discount_code_id: null,
+        discount_percent: null,
+        base_amount: 0,
+        final_amount: 0,
+        message: err instanceof Error ? err.message : 'تعذّر التحقق من الكود',
+      });
+    } finally {
+      setCheckingDiscount(false);
+    }
+  };
+
+  const applyCreditCode = async () => {
+    if (!creditCode.trim()) return;
+    setRedeemingCredit(true);
+    setCreditResult(null);
+    try {
+      const added = await redeemCreditCode(creditCode.trim());
+      setCreditResult({ ok: true, message: `تم شحن رصيدك بمبلغ ${added.toFixed(2)} ريال` });
+      setCreditCode('');
+    } catch (err) {
+      setCreditResult({ ok: false, message: err instanceof Error ? err.message : 'تعذّر استخدام الكود' });
+    } finally {
+      setRedeemingCredit(false);
+    }
+  };
+
+  // يُنهي نافذة الدخول: يحفظ نية الإنشاء (عدد الأطراف، طريقة التصديق، وكود
+  // الخصم إن طُبِّق بنجاح) ثم إما يذهب مباشرة لمعالج إنشاء العقد إن كان
+  // المستخدم مسجَّل دخوله بالفعل (بدل سؤاله تسجيل الدخول مجددًا وهو مسجَّل)،
+  // أو يعرض خطوة الدخول/التسجيل/الاستمرار كضيف كما كان.
+  const proceedToWizard = (verification: VerificationMethod) => {
+    setPendingContractIntent({
+      documentType,
+      partyCount,
+      verificationDefault: verification,
+      discountCode: discountPreview?.discount_code_id ? discountCode.trim() : undefined,
+    });
+    if (profile) {
+      navigate('/app/contracts/new');
+    } else {
+      setStep('auth');
+    }
+  };
+
   const confirmCount = () => {
     if (!isPoa && (!partyCountInput.trim() || partyCount < 2)) {
       setError('أدخل عدد أطراف العقد (طرفان على الأقل)');
       return;
     }
     setError('');
-    setStep(isPoa ? 'auth' : 'method');
+    if (isPoa) {
+      proceedToWizard('manual');
+    } else {
+      setStep('method');
+    }
   };
 
-  const confirmMethod = () => {
-    setPendingContractIntent({ documentType, partyCount, verificationDefault });
-    setStep('auth');
-  };
-
-  const goToAuthDirect = () => {
-    setPendingContractIntent({ documentType, partyCount, verificationDefault: 'manual' });
-    setStep('auth');
-  };
+  const confirmMethod = () => proceedToWizard(verificationDefault);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4" dir="rtl" onClick={onClose}>
@@ -200,27 +263,126 @@ function CreateEntryFlow({ documentType, onClose }: { documentType: DocumentType
 
         {step === 'count' && (
           <div className="space-y-4">
-            {!isPoa && (
-              <div>
-                <label className="mb-1.5 block text-xs font-bold text-slate">كم عدد أطراف العقد؟</label>
+            {!isPoa ? (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold text-slate">كم عدد أطراف العقد؟</label>
+                  <select
+                    value={partyCountMode === 'custom' ? 'custom' : partyCountInput}
+                    onChange={(e) => {
+                      if (e.target.value === 'custom') {
+                        setPartyCountMode('custom');
+                        setPartyCountInput('');
+                      } else {
+                        setPartyCountMode('select');
+                        setPartyCountInput(e.target.value);
+                      }
+                    }}
+                    className="w-full rounded-lg border border-line bg-white px-3 py-2.5 text-center text-ink outline-none focus:border-seal"
+                  >
+                    {PARTY_COUNT_OPTIONS.map((n) => (
+                      <option key={n} value={String(n)}>
+                        {n}
+                      </option>
+                    ))}
+                    <option value="custom">أخرى</option>
+                  </select>
+                  {partyCountMode === 'custom' && (
+                    <input
+                      type="number"
+                      min={2}
+                      inputMode="numeric"
+                      autoFocus
+                      value={partyCountInput}
+                      onChange={(e) => setPartyCountInput(e.target.value)}
+                      placeholder="أدخل العدد"
+                      className="mt-2 w-full rounded-lg border border-line bg-white px-3 py-2.5 text-center text-ink outline-none focus:border-seal"
+                    />
+                  )}
+                </div>
+                {price !== null && (
+                  <div className="rounded-xl border border-line bg-paper p-4 text-center">
+                    <p className="text-xs font-bold text-slate">التكلفة المتوقعة للتوثيق</p>
+                    {discountPreview?.discount_code_id ? (
+                      <p className="mt-1 font-display text-xl font-extrabold text-seal">
+                        <span className="ms-1 block text-xs font-bold text-slate line-through">{price.toFixed(2)}</span>
+                        {discountPreview.final_amount.toFixed(2)} <span className="text-xs font-bold text-slate">ريال</span>
+                      </p>
+                    ) : (
+                      <p className="mt-1 font-display text-xl font-extrabold text-seal">
+                        {price.toFixed(2)} <span className="text-xs font-bold text-slate">ريال</span>
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              price !== null && (
+                <div className="rounded-xl border border-line bg-paper p-4 text-center">
+                  <p className="text-xs font-bold text-slate">سعر الخدمة المتوقع</p>
+                  <p className="mt-1 font-display text-2xl font-extrabold text-seal">
+                    {price.toFixed(2)} <span className="text-sm font-bold text-slate">ريال سعودي</span>
+                  </p>
+                </div>
+              )
+            )}
+
+            <div className="rounded-xl border border-line bg-card p-3">
+              <p className="mb-2 text-xs font-bold text-ink">كود الخصم (اختياري)</p>
+              <div className="flex gap-2">
                 <input
-                  type="number"
-                  min={2}
-                  inputMode="numeric"
-                  value={partyCountInput}
-                  onChange={(e) => setPartyCountInput(e.target.value)}
-                  className="w-full rounded-lg border border-line bg-white px-3 py-2.5 text-center text-ink outline-none focus:border-seal"
+                  value={discountCode}
+                  onChange={(e) => {
+                    setDiscountCode(e.target.value);
+                    setDiscountPreview(null);
+                  }}
+                  placeholder="أدخل الكود"
+                  className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-seal"
                 />
+                <button
+                  type="button"
+                  onClick={applyDiscountCode}
+                  disabled={checkingDiscount || !discountCode.trim()}
+                  className="shrink-0 rounded-lg bg-seal px-3 py-2 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
+                >
+                  {checkingDiscount ? 'جارِ التحقق...' : 'طبّق'}
+                </button>
               </div>
-            )}
-            {price !== null && (
-              <div className="rounded-xl border border-line bg-paper p-4 text-center">
-                <p className="text-xs font-bold text-slate">{isPoa ? 'سعر الخدمة المتوقع' : 'التكلفة المتوقعة للتوثيق'}</p>
-                <p className="mt-1 font-display text-2xl font-extrabold text-seal">
-                  {price.toFixed(2)} <span className="text-sm font-bold text-slate">ريال سعودي</span>
+              {discountPreview && (
+                <p className={`mt-1.5 text-xs font-bold ${discountPreview.discount_code_id ? 'text-sage' : 'text-clay'}`}>
+                  {discountPreview.discount_code_id ? `تم تطبيق الكود: خصم ${discountPreview.discount_percent}%` : discountPreview.message}
                 </p>
+              )}
+            </div>
+
+            {profile && (
+              <div className="rounded-xl border border-line bg-card p-3">
+                <p className="mb-2 text-xs font-bold text-ink">استخدام كود الشحن (اختياري)</p>
+                <div className="flex gap-2">
+                  <input
+                    value={creditCode}
+                    onChange={(e) => {
+                      setCreditCode(e.target.value);
+                      setCreditResult(null);
+                    }}
+                    placeholder="أدخل الكود"
+                    className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-seal"
+                  />
+                  <button
+                    type="button"
+                    onClick={applyCreditCode}
+                    disabled={redeemingCredit || !creditCode.trim()}
+                    className="shrink-0 rounded-lg bg-seal px-3 py-2 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    {redeemingCredit ? 'جارِ الشحن...' : 'طبّق'}
+                  </button>
+                </div>
+                {creditResult && (
+                  <p className={`mt-1.5 text-xs font-bold ${creditResult.ok ? 'text-sage' : 'text-clay'}`}>{creditResult.message}</p>
+                )}
               </div>
             )}
+
             {error && <p className="text-sm font-bold text-clay">{error}</p>}
             <button
               type="button"
@@ -264,21 +426,18 @@ function CreateEntryFlow({ documentType, onClose }: { documentType: DocumentType
             <p className="mb-3 text-center text-sm text-slate">كيف تريد المتابعة؟</p>
             <Link
               to="/login?return=/app/contracts/new"
-              onClick={isPoa ? goToAuthDirect : undefined}
               className="flex items-center gap-2 rounded-md border border-line px-4 py-3 text-sm font-bold text-ink hover:bg-paper"
             >
               <LogIn size={16} /> تسجيل الدخول
             </Link>
             <Link
               to="/register?return=/app/contracts/new"
-              onClick={isPoa ? goToAuthDirect : undefined}
               className="flex items-center gap-2 rounded-md bg-seal px-4 py-3 text-sm font-bold text-white hover:opacity-90"
             >
               <UserPlus size={16} /> إنشاء حساب
             </Link>
             <Link
               to="/app/contracts/new"
-              onClick={isPoa ? goToAuthDirect : undefined}
               className="flex items-center gap-2 rounded-md px-4 py-3 text-sm font-bold text-seal hover:bg-sealLight"
             >
               <ArrowLeft size={16} /> استمرار كضيف
