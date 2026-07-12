@@ -26,13 +26,25 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
 
 const IMAGE_FIELD_TYPES = new Set(['signature', 'image', 'logo', 'stamp']);
 
-function decodeDataUrl(dataUrl: string): Uint8Array {
+// يُعيد نوع MIME الفعلي مع البايتات بدل افتراض PNG دائمًا — الحقول القابلة للرفع
+// (شعار/ختم) غالبًا JPEG من كاميرا الجوال، وتخزينها بامتداد/نوع محتوى PNG خاطئ
+// كان يجعل embedPng في generateFinalPdf.ts يفشل بصمت عند توليد المستند النهائي.
+function decodeDataUrl(dataUrl: string): { bytes: Uint8Array; mimeType: string } {
+  const match = /^data:([^;,]+)?(;base64)?,/.exec(dataUrl);
+  const mimeType = match?.[1] || 'image/png';
   const base64 = dataUrl.split(',')[1] ?? dataUrl;
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
+  return { bytes, mimeType };
 }
+
+const IMAGE_EXTENSION_BY_MIME: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/webp': 'webp',
+};
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -98,11 +110,12 @@ Deno.serve(async (req: Request) => {
 
     let storedValue: unknown = raw;
     if (IMAGE_FIELD_TYPES.has(field.field_type) && typeof raw === 'string' && raw.startsWith('data:')) {
-      const bytes = decodeDataUrl(raw);
-      const path = `${contract.id}/fields/${field.id}.png`;
+      const { bytes, mimeType } = decodeDataUrl(raw);
+      const extension = IMAGE_EXTENSION_BY_MIME[mimeType] ?? 'png';
+      const path = `${contract.id}/fields/${field.id}.${extension}`;
       const { error: uploadError } = await admin.storage.from('contracts').upload(path, bytes, {
         upsert: true,
-        contentType: 'image/png',
+        contentType: mimeType,
       });
       if (uploadError) return jsonResponse({ error: 'تعذّر رفع أحد الحقول' }, 500);
       storedValue = { path };

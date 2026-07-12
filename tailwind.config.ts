@@ -12,6 +12,7 @@ export default {
         slate: 'var(--color-slate)',
         seal: 'var(--color-seal)',
         sealLight: 'var(--color-seal-light)',
+        sealMuted: 'var(--color-seal-muted)',
         sage: 'var(--color-sage)',
         sageLight: 'var(--color-sage-light)',
         clay: 'var(--color-clay)',

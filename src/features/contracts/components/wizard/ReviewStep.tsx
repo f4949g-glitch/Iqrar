@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { JSONContent } from '@tiptap/react';
-import { CreditCard, Eye, X } from 'lucide-react';
+import { CreditCard, Eye, UserCheck, X } from 'lucide-react';
 import { Field } from '@/shared/ui/Field';
 import { Button } from '@/shared/ui/Button';
 import { getErrorMessage } from '@/shared/lib/errorMessage';
-import { sendContract } from '../../api/contractsApi';
+import { sendContract, updateParty, type NewPartyInput } from '../../api/contractsApi';
 import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '../../api/pricingApi';
 import { previewDiscountCode, setContractDiscountCode, type DiscountPreview } from '../../api/discountCodesApi';
 import { renderContractHtml, renderPartiesHeaderHtml, renderTermLineHtml, escapeHtml, type JsonNode } from '../../editor/renderContractHtml';
 import { DOCUMENT_TYPE_DEFINITE_LABELS, FIELD_TYPE_LABELS, type Contract, type ContractField, type ContractParty } from '../../types';
+import type { Profile } from '@/features/auth';
 
 interface ReviewStepProps {
   contract: Contract;
@@ -18,12 +19,14 @@ interface ReviewStepProps {
   body: JSONContent | null;
   pdfUrl: string;
   companyLogoDataUrl: string | null;
+  profile?: Profile | null;
   onBack: () => void;
 }
 
-export function ReviewStep({ contract: initialContract, parties, fields, body, pdfUrl, companyLogoDataUrl, onBack }: ReviewStepProps) {
+export function ReviewStep({ contract: initialContract, parties: initialParties, fields, body, pdfUrl, companyLogoDataUrl, profile = null, onBack }: ReviewStepProps) {
   const navigate = useNavigate();
   const [contract, setContract] = useState(initialContract);
+  const [parties, setParties] = useState(initialParties);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [pricing, setPricing] = useState<PricingSettings | null>(null);
@@ -32,6 +35,7 @@ export function ReviewStep({ contract: initialContract, parties, fields, body, p
   const [checkingCode, setCheckingCode] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [savingSelf, setSavingSelf] = useState(false);
   // بوابة الدفع الفعلية غير مربوطة بعد؛ بيانات البطاقة أصفار تمهيدية للاختبار
   // فقط، وسيُستبدل هذا الحقل بمُكوّن بوابة الدفع الحقيقي عند توفر بيانات الحساب.
   const [cardNumber] = useState('0000 0000 0000 0000');
@@ -46,6 +50,24 @@ export function ReviewStep({ contract: initialContract, parties, fields, body, p
   }, []);
 
   const invoice = pricing ? calculateInvoice(parties.length, pricing) : null;
+
+  // الطرف الذي يمثّل صاحب الحساب الحالي (لا يوجد عمود "is_self" في القاعدة، فيُحدَّد
+  // بمطابقة رقم الهوية مع بيانات الحساب) — يُسمح له بتصحيح بياناته هنا مباشرة بدل
+  // الاضطرار للرجوع لخطوة الأطراف عند ملاحظة خطأ في اللحظة الأخيرة.
+  const selfPartyId = profile?.national_id ? parties.find((p) => p.national_id === profile.national_id)?.id ?? null : null;
+
+  const updateSelfParty = async (patch: Partial<Pick<NewPartyInput, 'full_name' | 'phone' | 'email'>>) => {
+    if (!selfPartyId) return;
+    setSavingSelf(true);
+    try {
+      const updated = await updateParty(selfPartyId, patch);
+      setParties((prev) => prev.map((p) => (p.id === selfPartyId ? updated : p)));
+    } catch (err) {
+      setError(getErrorMessage(err, 'تعذّر تحديث بياناتك'));
+    } finally {
+      setSavingSelf(false);
+    }
+  };
 
   // معاينة المحتوى قبل الإرسال للتوثيق: للمستندات المكتوبة بالمحرر تُبنى نفس
   // مكوّنات المستند النهائي (شعار المنشأة، مدة السريان، جدول الأطراف، النص)
@@ -96,11 +118,79 @@ export function ReviewStep({ contract: initialContract, parties, fields, body, p
 
   return (
     <div className="space-y-6">
+      {/* العنوان */}
       <div className="rounded-xl border border-line bg-card p-5">
         <h3 className="mb-1 font-display text-lg font-bold text-ink">{contract.title}</h3>
         {contract.duration_days && <p className="text-xs text-slate">مدة التوثيق: {contract.duration_days} يومًا</p>}
       </div>
 
+      {/* محتوى العقد: معاينة مباشرة داخل الصفحة بدل الاقتصار على نافذة منبثقة فقط */}
+      {(editorPreviewHtml || pdfUrl) && (
+        <div className="rounded-xl border border-line bg-card p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <h4 className="font-display text-sm font-bold text-ink">محتوى {docLabel}</h4>
+            <Button variant="secondary" onClick={() => setShowPreview(true)} disabled={submitting}>
+              <span className="flex items-center gap-1.5">
+                <Eye size={16} /> معاينة كاملة
+              </span>
+            </Button>
+          </div>
+          {editorPreviewHtml ? (
+            <div
+              className="prose max-h-64 max-w-none overflow-y-auto rounded-lg border border-line bg-paper p-4 text-sm text-ink"
+              dangerouslySetInnerHTML={{ __html: editorPreviewHtml }}
+            />
+          ) : (
+            <iframe src={pdfUrl} title="معاينة المستند" className="h-64 w-full rounded-lg border border-line" />
+          )}
+        </div>
+      )}
+
+      {/* عدد الأطراف */}
+      <div className="rounded-xl border border-line bg-card p-5">
+        <h4 className="mb-3 font-display text-sm font-bold text-ink">الأطراف ({parties.length})</h4>
+        <ul className="space-y-2">
+          {parties.map((p) => (
+            <li key={p.id} className="rounded-lg border border-line p-2.5">
+              {p.id === selfPartyId ? (
+                <div>
+                  <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-seal">
+                    <UserCheck size={14} /> بياناتك — يمكنك تصحيحها هنا مباشرة
+                  </p>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <Field label="الاسم" value={p.full_name ?? ''} onChange={(v) => updateSelfParty({ full_name: v })} disabled={savingSelf} />
+                    <Field label="الجوال" value={p.phone ?? ''} onChange={(v) => updateSelfParty({ phone: v })} phone disabled={savingSelf} />
+                    <Field label="البريد الإلكتروني" value={p.email ?? ''} onChange={(v) => updateSelfParty({ email: v })} type="email" disabled={savingSelf} />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-ink">{p.full_name}</span>
+                  <span className="text-slate">{p.role_label}</span>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* الحقول */}
+      <div className="rounded-xl border border-line bg-card p-5">
+        <h4 className="mb-3 font-display text-sm font-bold text-ink">الحقول ({fields.length})</h4>
+        <ul className="space-y-1 text-sm text-slate">
+          {fields.map((f) => {
+            const party = parties.find((p) => p.id === f.party_id);
+            return (
+              <li key={f.id}>
+                {f.page_number ? `صفحة ${f.page_number} — ` : ''}
+                {FIELD_TYPE_LABELS[f.field_type]} ({party?.full_name ?? '—'})
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      {/* التكلفة والخصم */}
       <div className="rounded-xl border border-line bg-card p-5">
         <h4 className="mb-3 font-display text-sm font-bold text-ink">الدفع والخصم</h4>
         {invoice !== null && (
@@ -138,33 +228,6 @@ export function ReviewStep({ contract: initialContract, parties, fields, body, p
         <p className="mt-2 text-xs text-slate">سيُخصم مبلغ الفاتورة النهائي من رصيدك عند الإرسال.</p>
       </div>
 
-      <div className="rounded-xl border border-line bg-card p-5">
-        <h4 className="mb-3 font-display text-sm font-bold text-ink">الأطراف ({parties.length})</h4>
-        <ul className="space-y-2">
-          {parties.map((p) => (
-            <li key={p.id} className="flex items-center justify-between text-sm">
-              <span className="text-ink">{p.full_name}</span>
-              <span className="text-slate">{p.role_label}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="rounded-xl border border-line bg-card p-5">
-        <h4 className="mb-3 font-display text-sm font-bold text-ink">الحقول ({fields.length})</h4>
-        <ul className="space-y-1 text-sm text-slate">
-          {fields.map((f) => {
-            const party = parties.find((p) => p.id === f.party_id);
-            return (
-              <li key={f.id}>
-                {f.page_number ? `صفحة ${f.page_number} — ` : ''}
-                {FIELD_TYPE_LABELS[f.field_type]} ({party?.full_name ?? '—'})
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-
       {error && <p className="text-sm font-bold text-clay">{error}</p>}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -172,13 +235,6 @@ export function ReviewStep({ contract: initialContract, parties, fields, body, p
           السابق
         </Button>
         <div className="flex items-center gap-2">
-          {(editorPreviewHtml || pdfUrl) && (
-            <Button variant="secondary" onClick={() => setShowPreview(true)} disabled={submitting}>
-              <span className="flex items-center gap-1.5">
-                <Eye size={16} /> معاينة {docLabel} قبل الإرسال
-              </span>
-            </Button>
-          )}
           <Button onClick={() => setShowPayment(true)} disabled={submitting}>
             {submitting ? 'جارِ الإرسال...' : `المتابعة للدفع وإرسال ${docLabel}`}
           </Button>

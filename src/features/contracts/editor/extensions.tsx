@@ -6,12 +6,20 @@ export interface MergeFieldAttrs {
   partyId: string;
   partyLabel: string;
   fieldKey: MergeFieldKey;
+  // لون مميّز للطرف صاحب الحقل (يُحفَظ وقت الإدراج) بدل لون موحّد لكل الحقول،
+  // ليسهل تمييز حقول كل طرف داخل المستند بلمحة سريعة.
+  partyColor: string;
 }
 
 function MergeFieldView({ node }: NodeViewProps) {
-  const { partyLabel, fieldKey } = node.attrs as unknown as MergeFieldAttrs;
+  const { partyLabel, fieldKey, partyColor } = node.attrs as unknown as MergeFieldAttrs;
+  const color = partyColor || '#2955D8';
   return (
-    <NodeViewWrapper as="span" className="mx-0.5 inline-flex items-center rounded bg-sealLight px-1.5 py-0.5 text-xs font-bold text-seal">
+    <NodeViewWrapper
+      as="span"
+      className="mx-0.5 inline-flex items-center rounded px-1.5 py-0.5 text-xs font-bold"
+      style={{ background: `${color}1a`, color }}
+    >
       {`{{${partyLabel}: ${MERGE_FIELD_LABELS[fieldKey]}}}`}
     </NodeViewWrapper>
   );
@@ -29,6 +37,7 @@ export const MergeFieldNode = Node.create({
       partyId: { default: '' },
       partyLabel: { default: '' },
       fieldKey: { default: 'full_name' },
+      partyColor: { default: '#2955D8' },
     };
   },
 
@@ -52,14 +61,17 @@ export interface FillFieldAttrs {
   fieldType: FieldType;
   label: string;
   required: boolean;
+  partyColor: string;
 }
 
 function FillFieldView({ node }: NodeViewProps) {
-  const { partyLabel, fieldType, label, required } = node.attrs as unknown as FillFieldAttrs;
+  const { partyLabel, fieldType, label, required, partyColor } = node.attrs as unknown as FillFieldAttrs;
+  const color = partyColor || '#1F7A5C';
   return (
     <NodeViewWrapper
       as="span"
-      className="mx-0.5 inline-flex items-center gap-1 rounded border border-dashed border-sage bg-sageLight px-1.5 py-0.5 text-xs font-bold text-sage"
+      className="mx-0.5 inline-flex items-center gap-1 rounded border border-dashed px-1.5 py-0.5 text-xs font-bold"
+      style={{ borderColor: color, background: `${color}1a`, color }}
     >
       [{label || FIELD_TYPE_LABELS[fieldType]} — {partyLabel}
       {required ? '*' : ''}]
@@ -82,6 +94,7 @@ export const FillFieldNode = Node.create({
       fieldType: { default: 'text' },
       label: { default: '' },
       required: { default: true },
+      partyColor: { default: '#1F7A5C' },
     };
   },
 

@@ -102,7 +102,10 @@ export async function generateFinalPdf(
       if (!value.path) continue;
       try {
         const bytes = await fetchImage(value.path);
-        const image = await pdfDoc.embedPng(bytes);
+        // الصورة قد تكون PNG (لوحة التوقيع تُصدِّر PNG دائمًا) أو JPEG (صورة شعار/ختم
+        // مرفوعة من المستخدم، شائعة جدًا من كاميرا الجوال) — embedPng وحدها تفشل
+        // بصمت على JPEG فيختفي الحقل من المستند النهائي دون أي خطأ ظاهر للمستخدم.
+        const image = await pdfDoc.embedPng(bytes).catch(() => pdfDoc.embedJpg(bytes));
         page.drawImage(image, { x: boxX, y: boxYFromBottom, width: boxWidth, height: boxHeight });
       } catch (err) {
         console.error('تعذّر تضمين صورة الحقل', field, err);

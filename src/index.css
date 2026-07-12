@@ -14,6 +14,7 @@
   --color-slate: #5b6478;
   --color-seal: #2955d8;
   --color-seal-light: #e6ecfb;
+  --color-seal-muted: #6b84cf;
   --color-sage: #1f7a5c;
   --color-sage-light: #e2f3ec;
   --color-clay: #c23b3b;
@@ -34,6 +35,7 @@
   --color-slate: #8e97ad;
   --color-seal: #6b8ef2;
   --color-seal-light: #1e2a4a;
+  --color-seal-muted: #8ea3e0;
   --color-sage: #7fcaab;
   --color-sage-light: #17291f;
   --color-clay: #e2917a;
@@ -52,6 +54,7 @@
     --color-slate: #8e97ad;
     --color-seal: #6b8ef2;
     --color-seal-light: #1e2a4a;
+    --color-seal-muted: #8ea3e0;
     --color-sage: #7fcaab;
     --color-sage-light: #17291f;
     --color-clay: #e2917a;

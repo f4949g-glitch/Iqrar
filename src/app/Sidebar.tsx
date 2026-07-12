@@ -3,9 +3,6 @@ import {
   User,
   Home,
   FileSignature,
-  FileClock,
-  ClipboardCheck,
-  FileX2,
   Settings,
   ShieldQuestion,
   ShieldCheck,
@@ -37,22 +34,17 @@ interface SidebarGroup {
 
 // مجموعات القائمة اليمنى للمستخدم: كل مجموعة بعنوان قصير يوضّح الغرض منها
 // بدل قائمة مسطّحة واحدة، ليسهل إيجاد الرابط المطلوب بسرعة.
+// "عقودي" رابط واحد فقط يفتح لوحة التحكم مباشرةً (بدل تكرار سابق بين رابط
+// "الصفحة الرئيسية" منفصل وأربعة روابط فرعية) — التنقّل بين حالات العقود
+// (جديدة/موافق عليها/بانتظار الموافقة/مرفوضة) متاح فعليًا كتبويبات داخل
+// الصفحة نفسها (ContractsListPage)، فلا داعي لتكراره هنا.
 const USER_GROUPS: SidebarGroup[] = [
   {
     title: null,
     links: [
-      { to: '/', label: 'الصفحة الرئيسية', icon: Home },
+      { to: '/app/contracts', label: 'عقودي', icon: Home },
       { to: '/app/contracts/new', label: 'توثيق العقود', icon: FileSignature },
       { to: '/verify', label: 'التحقق من وثيقة موثقة', icon: ShieldCheck },
-    ],
-  },
-  {
-    title: 'عقودي',
-    links: [
-      { to: '/app/contracts', label: 'عقود جديدة', icon: FileClock },
-      { to: '/app/contracts?tab=approved', label: 'العقود الموافق عليها', icon: ShieldCheck },
-      { to: '/app/contracts?tab=awaiting', label: 'طلبات الموافقة', icon: ClipboardCheck },
-      { to: '/app/contracts?tab=rejected', label: 'عقود مرفوضة', icon: FileX2 },
     ],
   },
   {
@@ -118,7 +110,7 @@ function NavItem({ link, active, onNavigate }: { link: SidebarLink; active: bool
       to={link.to}
       onClick={onNavigate}
       className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-bold leading-tight transition sm:gap-2.5 sm:px-3 sm:text-sm lg:gap-3 lg:px-3.5 lg:py-2.5 lg:text-[15px] ${
-        active ? 'bg-sealLight text-seal' : 'text-slate hover:bg-paper hover:text-ink'
+        active ? 'bg-sealLight text-seal' : 'text-sealMuted hover:bg-sealLight hover:text-seal'
       }`}
     >
       <Icon size={16} className="shrink-0 sm:size-[17px] lg:size-5" />
@@ -130,7 +122,7 @@ function NavItem({ link, active, onNavigate }: { link: SidebarLink; active: bool
 function NavGroup({ group, isActive, onNavigate }: { group: SidebarGroup; isActive: (to: string) => boolean; onNavigate?: () => void }) {
   return (
     <div className="mb-4 last:mb-0">
-      {group.title && <p className="mb-1 px-3 text-[11px] font-bold text-slate lg:text-xs">{group.title}</p>}
+      {group.title && <p className="mb-1 px-3 text-[11px] font-bold text-sealMuted lg:text-xs">{group.title}</p>}
       <nav className="space-y-1">
         {group.links.map((link) => (
           <NavItem key={link.to} link={link} active={isActive(link.to)} onNavigate={onNavigate} />

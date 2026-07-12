@@ -11,12 +11,22 @@ import {
   Table as TableIcon,
   Heading1,
   Heading2,
+  Braces,
+  PenLine,
 } from 'lucide-react';
 import Underline from '@tiptap/extension-underline';
 import { MergeFieldNode, FillFieldNode } from './extensions';
 import { FIELD_TYPE_LABELS, MERGE_FIELD_LABELS, type ContractParty, type FieldType, type MergeFieldKey } from '../types';
 
 const FILLABLE_TYPES: FieldType[] = ['text', 'number', 'date', 'signature', 'checkbox', 'textarea'];
+
+// لون ثابت لكل طرف حسب ترتيبه (نفس لوحة الألوان المستخدمة في خطوة تحديد حقول
+// PDF الجاهز)، ليسهل تمييز حقول كل طرف داخل المستند بلمحة سريعة بدل لون رمادي موحّد.
+const PARTY_COLORS = ['#C9922B', '#4C7A6B', '#B5533C', '#5B6B82', '#8B5CF6', '#0EA5E9'];
+function colorForParty(parties: ContractParty[], partyId: string): string {
+  const index = parties.findIndex((p) => p.id === partyId);
+  return PARTY_COLORS[index % PARTY_COLORS.length] ?? PARTY_COLORS[0];
+}
 
 interface ContractEditorProps {
   parties: ContractParty[];
@@ -63,7 +73,12 @@ export function ContractEditor({ parties, content, onChange }: ContractEditorPro
       .focus()
       .insertContent({
         type: 'mergeField',
-        attrs: { partyId: party.id, partyLabel: `${party.role_label} — ${party.full_name}`, fieldKey },
+        attrs: {
+          partyId: party.id,
+          partyLabel: `${party.role_label} — ${party.full_name}`,
+          fieldKey,
+          partyColor: colorForParty(parties, party.id),
+        },
       })
       .run();
   };
@@ -83,6 +98,7 @@ export function ContractEditor({ parties, content, onChange }: ContractEditorPro
           fieldType: fillType,
           label: FIELD_TYPE_LABELS[fillType],
           required: true,
+          partyColor: colorForParty(parties, party.id),
         },
       })
       .run();
@@ -115,53 +131,71 @@ export function ContractEditor({ parties, content, onChange }: ContractEditorPro
         <ToolbarButton title="إدراج جدول" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
           <TableIcon size={16} />
         </ToolbarButton>
+      </div>
 
-        <div className="mx-2 h-6 w-px bg-line" />
+      {/* قسمان منفصلان بعنوان وأيقونة واضحين بدل عناصر متجاورة بلا تمييز، ليسهل
+          التفريق بين "حقل دمج" (يُستبدَل ببيانات الطرف تلقائيًا) و"حقل تعبئة"
+          (يملؤه الطرف بنفسه عند التوقيع). نقطة اللون بجانب كل قائمة أطراف تطابق
+          لون شارات الحقول المُدرَجة لنفس الطرف داخل المستند. */}
+      <div className="grid grid-cols-1 gap-2 border-b border-line p-2 sm:grid-cols-2">
+        <div className="rounded-lg bg-sealLight p-2">
+          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-seal">
+            <Braces size={14} /> حقل دمج (يُستبدَل تلقائيًا ببيانات الطرف)
+          </p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorForParty(parties, mergeParty) }} aria-hidden="true" />
+            <select value={mergeParty} onChange={(e) => setMergeParty(e.target.value)} className="rounded-lg border border-line bg-white px-2 py-1 text-xs text-ink">
+              {parties.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.role_label} — {p.full_name || 'بلا اسم'}
+                </option>
+              ))}
+            </select>
+            <select
+              defaultValue=""
+              onChange={(e) => {
+                if (e.target.value) insertMergeField(e.target.value as MergeFieldKey);
+                e.target.value = '';
+              }}
+              className="rounded-lg border border-seal bg-white px-2 py-1 text-xs font-bold text-seal"
+            >
+              <option value="" disabled>
+                + إدراج حقل دمج
+              </option>
+              {(Object.keys(MERGE_FIELD_LABELS) as MergeFieldKey[]).map((k) => (
+                <option key={k} value={k}>
+                  {MERGE_FIELD_LABELS[k]}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
-        <select value={mergeParty} onChange={(e) => setMergeParty(e.target.value)} className="rounded-lg border border-line bg-white px-2 py-1 text-xs text-ink">
-          {parties.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.role_label} — {p.full_name || 'بلا اسم'}
-            </option>
-          ))}
-        </select>
-        <select
-          defaultValue=""
-          onChange={(e) => {
-            if (e.target.value) insertMergeField(e.target.value as MergeFieldKey);
-            e.target.value = '';
-          }}
-          className="rounded-lg border border-seal bg-sealLight px-2 py-1 text-xs font-bold text-seal"
-        >
-          <option value="" disabled>
-            + إدراج حقل دمج
-          </option>
-          {(Object.keys(MERGE_FIELD_LABELS) as MergeFieldKey[]).map((k) => (
-            <option key={k} value={k}>
-              {MERGE_FIELD_LABELS[k]}
-            </option>
-          ))}
-        </select>
-
-        <div className="mx-2 h-6 w-px bg-line" />
-
-        <select value={fillParty} onChange={(e) => setFillParty(e.target.value)} className="rounded-lg border border-line bg-white px-2 py-1 text-xs text-ink">
-          {parties.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.role_label} — {p.full_name || 'بلا اسم'}
-            </option>
-          ))}
-        </select>
-        <select value={fillType} onChange={(e) => setFillType(e.target.value as FieldType)} className="rounded-lg border border-line bg-white px-2 py-1 text-xs text-ink">
-          {FILLABLE_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {FIELD_TYPE_LABELS[t]}
-            </option>
-          ))}
-        </select>
-        <button type="button" onClick={insertFillField} className="rounded-lg border border-sage bg-sageLight px-2 py-1 text-xs font-bold text-sage">
-          + إدراج حقل تعبئة
-        </button>
+        <div className="rounded-lg bg-sageLight p-2">
+          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-sage">
+            <PenLine size={14} /> حقل تعبئة (يملؤه الطرف بنفسه عند التوقيع)
+          </p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorForParty(parties, fillParty) }} aria-hidden="true" />
+            <select value={fillParty} onChange={(e) => setFillParty(e.target.value)} className="rounded-lg border border-line bg-white px-2 py-1 text-xs text-ink">
+              {parties.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.role_label} — {p.full_name || 'بلا اسم'}
+                </option>
+              ))}
+            </select>
+            <select value={fillType} onChange={(e) => setFillType(e.target.value as FieldType)} className="rounded-lg border border-line bg-white px-2 py-1 text-xs text-ink">
+              {FILLABLE_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {FIELD_TYPE_LABELS[t]}
+                </option>
+              ))}
+            </select>
+            <button type="button" onClick={insertFillField} className="rounded-lg border border-sage bg-white px-2 py-1 text-xs font-bold text-sage">
+              + إدراج
+            </button>
+          </div>
+        </div>
       </div>
       <EditorContent editor={editor} className="prose max-w-none p-4 text-ink [&_.ProseMirror]:min-h-[300px] [&_.ProseMirror]:outline-none" />
     </div>

@@ -23,6 +23,7 @@ import { formatDate, formatDateTime } from '@/shared/lib/formatDate';
 import { parseUserAgent } from '@/shared/lib/parseUserAgent';
 import {
   CONTRACT_STATUS_LABEL,
+  PARTY_STATUS_LABEL,
   PARTY_ROLE_OPTIONS,
   TERM_UNIT_LABELS,
   type Contract,
@@ -46,13 +47,6 @@ const PRINT_STYLES = `
   .company-logo { text-align: center; margin-bottom: 16px; }
   .company-logo img { max-height: 90px; max-width: 220px; object-fit: contain; }
 `;
-
-const PARTY_STATUS_LABEL: Record<string, string> = {
-  pending: 'بانتظار التوقيع',
-  viewed: 'تمت المشاهدة',
-  signed: 'وقّع',
-  rejected: 'مرفوض',
-};
 
 function copyLink(token: string) {
   const url = `${window.location.origin}/sign/${token}`;
@@ -397,9 +391,16 @@ export function ContractDetailPage() {
             ) : (
               <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line p-3">
                 <div>
-                  <p className="text-sm font-bold text-ink">{p.full_name || 'بانتظار التحقق عبر نفاذ'}</p>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <p className="text-sm font-bold text-ink">{p.full_name || 'بانتظار التحقق عبر نفاذ'}</p>
+                    <StatusPill
+                      label={PARTY_STATUS_LABEL[p.status].label}
+                      bg={PARTY_STATUS_LABEL[p.status].bg}
+                      fg={PARTY_STATUS_LABEL[p.status].fg}
+                    />
+                  </div>
                   <p className="text-xs text-slate">
-                    {p.role_label} · {PARTY_STATUS_LABEL[p.status]}
+                    {p.role_label}
                     {p.verification_method === 'nafath' && p.nafath_verified_at && ' · وُثّق عبر نفاذ'}
                     {p.signed_at && ` في ${formatDateTime(p.signed_at)}`}
                   </p>

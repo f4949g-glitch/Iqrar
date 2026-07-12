@@ -214,9 +214,12 @@ function CreateEntryFlow({ documentType, onClose }: { documentType: DocumentType
               </div>
             )}
             {price !== null && (
-              <p className="rounded-lg bg-sealLight p-3 text-center text-sm font-bold text-seal">
-                {isPoa ? 'سعر الخدمة هو' : 'سعر التوثيق هو'} {price.toFixed(2)} ريال سعودي
-              </p>
+              <div className="rounded-xl border border-line bg-paper p-4 text-center">
+                <p className="text-xs font-bold text-slate">{isPoa ? 'سعر الخدمة المتوقع' : 'التكلفة المتوقعة للتوثيق'}</p>
+                <p className="mt-1 font-display text-2xl font-extrabold text-seal">
+                  {price.toFixed(2)} <span className="text-sm font-bold text-slate">ريال سعودي</span>
+                </p>
+              </div>
             )}
             {error && <p className="text-sm font-bold text-clay">{error}</p>}
             <button

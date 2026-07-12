@@ -174,12 +174,23 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   file: 'رفع ملف',
 };
 
+// كل حالة لها لون مستقل وواضح (لا تشارك حالتان نفس اللون) ليسهل تمييزها
+// كشارة (Badge) بلمحة سريعة، بروح الترميز 🟢 مكتمل / 🟡 بانتظار / 🔴 مرفوض / ⚫ منتهي.
 export const CONTRACT_STATUS_LABEL: Record<ContractStatus, { label: string; bg: string; fg: string }> = {
-  draft: { label: 'مسودة', bg: '#E5E1D6', fg: '#5B6B82' },
-  pending: { label: 'بانتظار التوثيق', bg: '#F5E8CE', fg: '#C9922B' },
-  partially_completed: { label: 'مكتمل جزئيًا', bg: '#F5E8CE', fg: '#C9922B' },
-  completed: { label: 'مكتمل', bg: '#E4EEEA', fg: '#4C7A6B' },
-  expired: { label: 'منتهي الصلاحية', bg: '#F5E4DF', fg: '#B5533C' },
-  rejected: { label: 'مرفوض', bg: '#F5E4DF', fg: '#B5533C' },
-  cancelled: { label: 'ملغي', bg: '#E5E1D6', fg: '#5B6B82' },
+  draft: { label: 'مسودة', bg: '#EDEEF3', fg: '#5B6478' },
+  pending: { label: 'بانتظار التوقيع', bg: '#FDF1CE', fg: '#B8860B' },
+  partially_completed: { label: 'مكتمل جزئيًا', bg: '#E3ECFB', fg: '#2955D8' },
+  completed: { label: 'مكتمل', bg: '#DFF3E3', fg: '#1F7A5C' },
+  expired: { label: 'منتهي', bg: '#E4E4E7', fg: '#27272A' },
+  rejected: { label: 'مرفوض', bg: '#FBE2DE', fg: '#B3261E' },
+  cancelled: { label: 'ملغي', bg: '#EEECF5', fg: '#6B5B8A' },
+};
+
+// حالة الطرف الفردي (شخص/جهة داخل العقد) — تُستخدم عبر StatusPill بنفس أسلوب
+// حالة العقد نفسها بدل نص عادي بلا لون.
+export const PARTY_STATUS_LABEL: Record<PartyStatus, { label: string; bg: string; fg: string }> = {
+  pending: { label: 'بانتظار التوقيع', bg: '#FDF1CE', fg: '#B8860B' },
+  viewed: { label: 'تمت المشاهدة', bg: '#E3ECFB', fg: '#2955D8' },
+  signed: { label: 'وقّع', bg: '#DFF3E3', fg: '#1F7A5C' },
+  rejected: { label: 'مرفوض', bg: '#FBE2DE', fg: '#B3261E' },
 };

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { FileText, Plus, Search, ShieldCheck, Trash2, TrendingUp, X } from 'lucide-react';
+import { Plus, Search, Trash2, X } from 'lucide-react';
 import { StatusPill } from '@/shared/ui/StatusPill';
 import { Button } from '@/shared/ui/Button';
 import {
@@ -58,28 +58,6 @@ function ContractCard({ contract, onDelete }: { contract: ContractListItem; onDe
   );
 }
 
-interface StatCardProps {
-  icon: typeof FileText;
-  label: string;
-  value: string | number;
-  accent: 'seal' | 'sage' | 'clay';
-}
-
-function StatCard({ icon: Icon, label, value, accent }: StatCardProps) {
-  const accentClass = { seal: 'bg-sealLight text-seal', sage: 'bg-sageLight text-sage', clay: 'bg-clayLight text-clay' }[accent];
-  return (
-    <div className="flex items-center gap-3 rounded-2xl border border-line bg-card p-4 shadow-sm">
-      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${accentClass}`}>
-        <Icon size={20} />
-      </div>
-      <div>
-        <p className="font-display text-xl font-extrabold text-ink">{value}</p>
-        <p className="text-xs text-slate">{label}</p>
-      </div>
-    </div>
-  );
-}
-
 function isTab(value: string | null): value is Tab {
   return value === 'new' || value === 'awaiting' || value === 'approved' || value === 'rejected';
 }
@@ -91,7 +69,6 @@ export function ContractsListPage() {
   const [contracts, setContracts] = useState<ContractListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [stats, setStats] = useState<{ total: number; completed: number; signedParties: number; totalParties: number } | null>(null);
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -133,20 +110,6 @@ export function ContractsListPage() {
     }
   };
 
-  useEffect(() => {
-    Promise.all([listActiveContracts(), listApprovedContracts()])
-      .then(([active, approved]) => {
-        const all = [...active, ...approved];
-        setStats({
-          total: all.length,
-          completed: approved.length,
-          signedParties: all.reduce((sum, c) => sum + c.signed_count, 0),
-          totalParties: all.reduce((sum, c) => sum + c.parties_count, 0),
-        });
-      })
-      .catch(() => setStats(null));
-  }, []);
-
   const chooseTab = (next: Tab) => {
     setTab(next);
     setSearchParams(next === 'new' ? {} : { tab: next });
@@ -178,20 +141,10 @@ export function ContractsListPage() {
     setSearchResults(null);
   };
 
-  const completionRate = stats && stats.totalParties > 0 ? Math.round((stats.signedParties / stats.totalParties) * 100) : 0;
   const visibleContracts = searchResults !== null ? searchResults : contracts;
 
   return (
     <div>
-      {stats && (
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard icon={FileText} label="إجمالي العقود" value={stats.total} accent="seal" />
-          <StatCard icon={ShieldCheck} label="عقود موثّقة" value={stats.completed} accent="sage" />
-          <StatCard icon={TrendingUp} label="نسبة إتمام التوقيع" value={`${completionRate}%`} accent="seal" />
-          <StatCard icon={FileText} label="أطراف وقّعت" value={`${stats.signedParties} / ${stats.totalParties}`} accent="clay" />
-        </div>
-      )}
-
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {searchOpen ? (
           <div className="flex flex-1 items-center gap-2 rounded-lg border border-line bg-card px-3 py-2 shadow-sm">
@@ -216,7 +169,7 @@ export function ContractsListPage() {
                   type="button"
                   onClick={() => chooseTab(t.key)}
                   className={`shrink-0 rounded-md px-3.5 py-2 text-xs font-bold transition sm:px-4 sm:text-sm ${
-                    tab === t.key ? 'bg-seal text-white' : 'text-slate hover:bg-paper'
+                    tab === t.key ? 'bg-seal text-white' : 'text-sealMuted hover:bg-sealLight'
                   }`}
                 >
                   {t.label}

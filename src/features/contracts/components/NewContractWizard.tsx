@@ -84,6 +84,25 @@ export function NewContractWizard() {
   const [resuming, setResuming] = useState(Boolean(guestDraft));
 
   const [step, setStep] = useState<Step>(guestDraft ? 'resuming' : 'parties');
+  // زر رجوع المتصفح كان يخرج من المعالج بالكامل بدل الرجوع لخطوة سابقة داخله، لأن
+  // التنقّل بين الخطوات كان يعتمد على حالة React فقط بلا أي أثر في history. نُسجّل
+  // كل خطوة كإدخال منفصل في history (بنفس رابط الصفحة) عبر goToStep بدل setStep
+  // المباشر، ونستمع لـ popstate لنعيد الخطوة السابقة محليًا بدل ترك المتصفح يغادر
+  // المعالج بالكامل؛ فقط بعد استنفاد خطوات المعالج المسجَّلة يخرج زر الرجوع فعليًا.
+  const goToStep = (next: Step) => {
+    setStep(next);
+    window.history.pushState({ wizardStep: next }, '');
+  };
+  useEffect(() => {
+    window.history.replaceState({ wizardStep: step }, '');
+    const onPopState = (e: PopStateEvent) => {
+      const s = (e.state as { wizardStep?: Step } | null)?.wizardStep;
+      if (s) setStep(s);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [method, setMethod] = useState<'pdf' | 'editor' | null>(guestDraft?.method ?? null);
   const [title, setTitle] = useState(guestDraft?.title ?? '');
   const [documentType] = useState<DocumentType>(guestDraft?.documentType ?? pendingIntent?.documentType ?? 'contract');
@@ -134,6 +153,7 @@ export function NewContractWizard() {
         i === 0
           ? {
               ...p,
+              is_self: true,
               full_name: profile.full_name || p.full_name,
               national_id: profile.national_id || p.national_id,
               nationality: profile.nationality || p.nationality,
@@ -246,7 +266,7 @@ export function NewContractWizard() {
     if (!guestDraft || sessionLoading || !resuming) return;
     if (!profile) {
       persistGuestDraft(guestDraft.resumeStep, guestDraft.method);
-      setStep('authGate');
+      goToStep('authGate');
       setResuming(false);
       return;
     }
@@ -269,13 +289,13 @@ export function NewContractWizard() {
           const createdFields = await createFieldsFromScratch(created.id, remapped, createdParties);
           setBody(remapped);
           setFields(createdFields);
-          setStep('review');
+          goToStep('review');
         } else {
-          setStep('upload');
+          goToStep('upload');
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'تعذّر استكمال العملية بعد تسجيل الدخول');
-        setStep('authGate');
+        goToStep('authGate');
       } finally {
         setBusy(false);
         setResuming(false);
@@ -291,7 +311,7 @@ export function NewContractWizard() {
       // المحتوى، ويُستبدل بمعرّف حقيقي بعد إنشاء الأطراف فعليًا لاحقًا.
       setDraftParties((prev) => prev.map((p) => (p.partyId ? p : { ...p, partyId: `guest-temp-${crypto.randomUUID()}` })));
     }
-    setStep('method');
+    goToStep('method');
   };
 
   const selectMethod = async (chosen: 'pdf' | 'editor') => {
@@ -303,9 +323,9 @@ export function NewContractWizard() {
         // رفع ملف PDF يتطلب تخزينه في القاعدة فورًا، لذا نطلب تسجيل الدخول الآن
         // بدل الانتظار حتى المراجعة كما في مسار كتابة المحتوى بالمحرر.
         persistGuestDraft('upload', chosen);
-        setStep('authGate');
+        goToStep('authGate');
       } else {
-        setStep('editor');
+        goToStep('editor');
       }
       return;
     }
@@ -318,7 +338,7 @@ export function NewContractWizard() {
     setBusy(true);
     try {
       await syncToBackend(chosen);
-      setStep(chosen === 'editor' ? 'editor' : 'upload');
+      goToStep(chosen === 'editor' ? 'editor' : 'upload');
     } catch (err) {
       setError(err instanceof Error ? err.message : `تعذّر إنشاء ${docLabel}`);
     } finally {
@@ -330,10 +350,10 @@ export function NewContractWizard() {
   const finishEditor = () => {
     if (isGuest) {
       persistGuestDraft('review', 'editor');
-      setStep('authGate');
+      goToStep('authGate');
       return;
     }
-    setStep('review');
+    goToStep('review');
   };
 
   const goToFields = async () => {
@@ -345,7 +365,7 @@ export function NewContractWizard() {
       setContract(updated);
       const url = await getOriginalPdfUrl(updated.original_file_path!);
       setPdfUrl(url);
-      setStep('fields');
+      goToStep('fields');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'تعذّر رفع الملف');
     } finally {
@@ -418,6 +438,7 @@ export function NewContractWizard() {
           documentType={documentType}
           poaMode={poaMode}
           isGuest={isGuest}
+          profile={profile}
           companyName={companyName}
           onCompanyNameChange={setCompanyName}
           companyCrNumber={companyCrNumber}
@@ -439,7 +460,7 @@ export function NewContractWizard() {
         />
       )}
 
-      {step === 'method' && <MethodStep documentType={documentType} onSelect={selectMethod} onBack={() => setStep('parties')} busy={busy} />}
+      {step === 'method' && <MethodStep documentType={documentType} onSelect={selectMethod} onBack={() => goToStep('parties')} busy={busy} />}
 
       {step === 'upload' && contract && (
         <UploadStep
@@ -448,7 +469,7 @@ export function NewContractWizard() {
             setFile(f);
             setPageCount(pages);
           }}
-          onBack={() => setStep('method')}
+          onBack={() => goToStep('method')}
           onNext={goToFields}
         />
       )}
@@ -461,8 +482,8 @@ export function NewContractWizard() {
           parties={parties}
           fields={fields}
           onFieldsChange={setFields}
-          onBack={() => setStep('upload')}
-          onNext={() => setStep('review')}
+          onBack={() => goToStep('upload')}
+          onNext={() => goToStep('review')}
         />
       )}
 
@@ -475,7 +496,7 @@ export function NewContractWizard() {
           onBodyChange={setBody}
           fields={fields}
           onFieldsChange={setFields}
-          onBack={() => setStep('method')}
+          onBack={() => goToStep('method')}
           onNext={finishEditor}
         />
       )}
@@ -488,7 +509,8 @@ export function NewContractWizard() {
           body={body}
           pdfUrl={pdfUrl}
           companyLogoDataUrl={companyLogoDataUrl}
-          onBack={() => setStep(method === 'editor' ? 'editor' : 'fields')}
+          profile={profile}
+          onBack={() => goToStep(method === 'editor' ? 'editor' : 'fields')}
         />
       )}
 
