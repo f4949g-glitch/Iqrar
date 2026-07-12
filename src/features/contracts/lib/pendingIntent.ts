@@ -1,3 +1,4 @@
+import type { JSONContent } from '@tiptap/react';
 import type { DocumentType, VerificationMethod } from '../types';
 
 // يُخزَّن الاختيار الذي يقوم به الزائر في نافذة "عدد الأطراف والسعر" على الصفحة
@@ -10,6 +11,11 @@ export interface PendingContractIntent {
   documentType: DocumentType;
   partyCount: number;
   verificationDefault: VerificationMethod;
+  // عند بدء عقد من قالب جاهز (صفحة "قوالبي"): معرّف القالب ومحتواه الثابت
+  // (body_json يحمل مراجع أطراف مؤقتة tmpl-party-* تُستبدل بمعرّفات حقيقية فور
+  // إنشاء الأطراف فعليًا في القاعدة — انظر NewContractWizard).
+  templateId?: string;
+  templateBody?: JSONContent;
 }
 
 export function setPendingContractIntent(intent: PendingContractIntent): void {

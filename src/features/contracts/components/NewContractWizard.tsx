@@ -21,6 +21,7 @@ import {
 import { createFieldsFromScratch } from '../lib/syncEditorContent';
 import { consumePendingContractIntent } from '../lib/pendingIntent';
 import { saveGuestDraft, consumeGuestDraft, type GuestResumeStep } from '../lib/guestDraft';
+import { syntheticContractParties, TEMPLATE_PARTY_PREFIX } from '../lib/syntheticParties';
 import { remapPartyIds } from '../editor/remapPartyIds';
 import {
   DOCUMENT_TYPE_DEFINITE_LABELS,
@@ -36,41 +37,6 @@ type Step = 'parties' | 'method' | 'upload' | 'fields' | 'editor' | 'review' | '
 
 const STEP_ORDER_PDF: Step[] = ['parties', 'method', 'upload', 'fields', 'review'];
 const STEP_ORDER_EDITOR: Step[] = ['parties', 'method', 'editor', 'review'];
-
-// يبني قائمة أطراف "شكلية" لاستخدامها داخل محرر النصوص أثناء كتابة زائر (بلا
-// حساب بعد) لمحتوى العقد، كي تعمل حقول الدمج والتعبئة بمعرّفات مؤقتة تُستبدل
-// بمعرّفات حقيقية بعد إنشاء الأطراف فعليًا في القاعدة (انظر remapPartyIds).
-function syntheticContractParties(draftParties: DraftParty[]): ContractParty[] {
-  return draftParties.map((p, i) => ({
-    id: p.partyId ?? `guest-temp-${i}`,
-    contract_id: '',
-    role_label: p.role_label === 'أخرى' ? p.custom_role.trim() || 'طرف' : p.role_label,
-    full_name: p.full_name || null,
-    national_id: p.national_id || null,
-    email: p.email || null,
-    phone: p.phone || null,
-    token: '',
-    status: 'pending',
-    order_index: i,
-    user_id: null,
-    signed_at: null,
-    created_at: '',
-    verification_method: p.verification_method,
-    date_of_birth: p.date_of_birth || null,
-    nafath_trans_id: null,
-    nafath_random_code: null,
-    nafath_status: null,
-    nafath_verified_at: null,
-    party_type: p.party_type,
-    entity_name: p.entity_name || null,
-    entity_cr_number: p.entity_cr_number || null,
-    nationality: p.nationality || null,
-    address: p.address || null,
-    reject_resend_count: 0,
-    signed_ip: null,
-    signed_user_agent: null,
-  }));
-}
 
 export function NewContractWizard() {
   const { profile, loading: sessionLoading } = useSession();
@@ -138,6 +104,16 @@ export function NewContractWizard() {
   const [discountCode, setDiscountCode] = useState('');
   const [draftParties, setDraftParties] = useState<DraftParty[]>(() => {
     if (guestDraft) return guestDraft.parties;
+    // بدء عقد من قالب جاهز: عدد خانات الأطراف ثابت بعدد القالب (party_count)،
+    // وكل خانة تحمل معرّفًا مؤقتًا tmpl-party-N يطابق مراجع الأطراف المضمَّنة في
+    // body_json القالب، ليُستبدل بمعرّف حقيقي فور إنشاء الأطراف فعليًا لاحقًا.
+    if (pendingIntent?.templateId) {
+      return Array.from({ length: pendingIntent.partyCount }, (_, i) => ({
+        ...emptyParty(i),
+        partyId: `${TEMPLATE_PARTY_PREFIX}${i}`,
+        verification_method: pendingIntent.verificationDefault,
+      }));
+    }
     // العقد يتطلب طرفين على الأقل (تفويض هو الاستثناء الوحيد بطرف واحد)، فتُهيَّأ
     // خانتان افتراضيًا بدل واحدة كي لا يفاجَأ المستخدم بخطأ التحقق لاحقًا.
     if (!pendingIntent) return poaMode ? [emptyParty()] : [emptyParty(0), emptyParty(1)];
@@ -177,7 +153,7 @@ export function NewContractWizard() {
   const [file, setFile] = useState<File | null>(null);
   const [pageCount, setPageCount] = useState(0);
   const [pdfUrl, setPdfUrl] = useState('');
-  const [body, setBody] = useState<JSONContent | null>(guestDraft?.body ?? null);
+  const [body, setBody] = useState<JSONContent | null>(guestDraft?.body ?? pendingIntent?.templateBody ?? null);
   const [fields, setFields] = useState<ContractField[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -267,6 +243,20 @@ export function NewContractWizard() {
     return { contract: created, parties: createdParties };
   };
 
+  // يستبدل معرّفات الأطراف المؤقتة (guest-temp-*/tmpl-party-*) داخل محتوى مؤلَّف
+  // مسبقًا (زائر كتب المحتوى قبل تسجيل الدخول، أو قالب جاهز) بمعرّفات الأطراف
+  // الحقيقية فور إنشائها فعليًا، ثم يُنشئ حقول العقد من المحتوى المُستبدَل.
+  const finalizeTemplateContent = async (contractId: string, currentBody: JSONContent, createdParties: ContractParty[]) => {
+    const idMap: Record<string, string> = {};
+    draftParties.forEach((p, i) => {
+      if (p.partyId) idMap[p.partyId] = createdParties[i].id;
+    });
+    const remapped = remapPartyIds(currentBody, idMap);
+    const createdFields = await createFieldsFromScratch(contractId, remapped, createdParties);
+    setBody(remapped);
+    setFields(createdFields);
+  };
+
   // استكمال مسودة زائر بعد تسجيل الدخول: يُنشئ العقد والأطراف فعليًا، ثم إن كان
   // قد ألّف محتوى العقد بالمحرر يُنشئ حقوله أيضًا (بعد استبدال معرّفات الأطراف
   // المؤقتة بمعرّفاتها الحقيقية)، ثم ينتقل مباشرة إلى خطوة المراجعة والدفع.
@@ -289,14 +279,7 @@ export function NewContractWizard() {
       try {
         const { contract: created, parties: createdParties } = await syncToBackend(guestDraft.method);
         if (guestDraft.method === 'editor' && body) {
-          const idMap: Record<string, string> = {};
-          draftParties.forEach((p, i) => {
-            if (p.partyId) idMap[p.partyId] = createdParties[i].id;
-          });
-          const remapped = remapPartyIds(body, idMap);
-          const createdFields = await createFieldsFromScratch(created.id, remapped, createdParties);
-          setBody(remapped);
-          setFields(createdFields);
+          await finalizeTemplateContent(created.id, body, createdParties);
           goToStep('review');
         } else {
           goToStep('upload');
@@ -314,6 +297,12 @@ export function NewContractWizard() {
   }, [profile, sessionLoading, resuming]);
 
   const goToMethod = () => {
+    // القالب الجاهز يعني ضمنيًا "محرر نصوص" (محتواه مكتوب بالفعل)، فلا داعي
+    // لعرض خطوة اختيار طريقة الإنشاء — ننتقل مباشرة لخطوة المحرر.
+    if (pendingIntent?.templateId) {
+      selectMethod('editor');
+      return;
+    }
     if (isGuest) {
       // نمنح كل طرف معرّفًا مؤقتًا ليُستخدم في حقول الدمج/التعبئة أثناء تأليف
       // المحتوى، ويُستبدل بمعرّف حقيقي بعد إنشاء الأطراف فعليًا لاحقًا.
@@ -345,7 +334,13 @@ export function NewContractWizard() {
     syncInFlightRef.current = true;
     setBusy(true);
     try {
-      await syncToBackend(chosen);
+      const { contract: created, parties: createdParties } = await syncToBackend(chosen);
+      // مستخدم مسجَّل دخوله يبدأ عقدًا من قالب جاهز مباشرة (بلا مرور بمسار
+      // الزائر/الاستكمال): يجب استبدال معرّفات الأطراف المؤقتة في body قبل عرض
+      // خطوة المحرر، وإلا يُثبَّت المحرر على المحتوى القديم عند أول عرض له.
+      if (chosen === 'editor' && pendingIntent?.templateId && body) {
+        await finalizeTemplateContent(created.id, body, createdParties);
+      }
       goToStep(chosen === 'editor' ? 'editor' : 'upload');
     } catch (err) {
       setError(err instanceof Error ? err.message : `تعذّر إنشاء ${docLabel}`);
@@ -467,6 +462,7 @@ export function NewContractWizard() {
           verificationPreset={verificationPreset}
           discountCode={discountCode}
           onDiscountCodeChange={setDiscountCode}
+          partyCountLocked={Boolean(pendingIntent?.templateId)}
           onNext={goToMethod}
         />
       )}

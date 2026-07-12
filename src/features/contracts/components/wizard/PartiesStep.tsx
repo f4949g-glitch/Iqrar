@@ -127,6 +127,10 @@ interface PartiesStepProps {
   // تلقائيًا على العقد الحقيقي هناك دون إعادة كتابته.
   discountCode: string;
   onDiscountCodeChange: (v: string) => void;
+  // صحيح عند بدء العقد من قالب جاهز: عدد الأطراف ثابت بعدد خانات القالب لأن
+  // حقوله مرتبطة بمعرّفات أطراف مؤقتة بنفس العدد — تغييره سيكسر هذا الربط، لذا
+  // تُخفى قائمة اختيار العدد وتُستبدل بنص ثابت بدل تعطيلها فقط.
+  partyCountLocked?: boolean;
   onNext: () => void;
 }
 
@@ -159,6 +163,7 @@ export function PartiesStep({
   verificationPreset = null,
   discountCode,
   onDiscountCodeChange,
+  partyCountLocked = false,
   onNext,
 }: PartiesStepProps) {
   const docLabel = DOCUMENT_TYPE_DEFINITE_LABELS[documentType];
@@ -538,42 +543,50 @@ export function PartiesStep({
           {!poaMode && (
             <div className="min-w-[150px] flex-1 basis-40">
               <label className="mb-1.5 block text-xs font-bold text-slate">عدد الأطراف</label>
-              <select
-                value={customCountMode ? 'custom' : parties.length <= 20 ? String(parties.length) : 'custom'}
-                onChange={(e) => {
-                  if (e.target.value === 'custom') {
-                    setCustomCountMode(true);
-                    setCustomCountInput(String(parties.length));
-                  } else {
-                    setCustomCountMode(false);
-                    setPartyCountTarget(Number(e.target.value));
-                  }
-                }}
-                className="h-10 w-full rounded-lg border border-line bg-white px-3 text-center text-sm text-ink outline-none focus:border-seal"
-              >
-                {PARTY_COUNT_OPTIONS.map((n) => (
-                  <option key={n} value={String(n)}>
-                    {n}
-                  </option>
-                ))}
-                <option value="custom">أخرى</option>
-              </select>
-              {customCountMode && (
-                <div className="mt-2 flex gap-1.5">
-                  <input
-                    type="number"
-                    min={2}
-                    inputMode="numeric"
-                    autoFocus
-                    value={customCountInput}
-                    onChange={(e) => setCustomCountInput(e.target.value)}
-                    placeholder="أدخل العدد"
-                    className="h-10 w-full rounded-lg border border-line bg-white px-3 text-center text-sm text-ink outline-none focus:border-seal"
-                  />
-                  <Button variant="secondary" className="h-10 px-3 text-xs" onClick={() => setPartyCountTarget(Number(customCountInput))}>
-                    تطبيق
-                  </Button>
+              {partyCountLocked ? (
+                <div className="flex h-10 items-center justify-center rounded-lg bg-paper px-3 text-sm font-bold text-ink">
+                  {parties.length} (محدَّد بواسطة القالب)
                 </div>
+              ) : (
+                <>
+                  <select
+                    value={customCountMode ? 'custom' : parties.length <= 20 ? String(parties.length) : 'custom'}
+                    onChange={(e) => {
+                      if (e.target.value === 'custom') {
+                        setCustomCountMode(true);
+                        setCustomCountInput(String(parties.length));
+                      } else {
+                        setCustomCountMode(false);
+                        setPartyCountTarget(Number(e.target.value));
+                      }
+                    }}
+                    className="h-10 w-full rounded-lg border border-line bg-white px-3 text-center text-sm text-ink outline-none focus:border-seal"
+                  >
+                    {PARTY_COUNT_OPTIONS.map((n) => (
+                      <option key={n} value={String(n)}>
+                        {n}
+                      </option>
+                    ))}
+                    <option value="custom">أخرى</option>
+                  </select>
+                  {customCountMode && (
+                    <div className="mt-2 flex gap-1.5">
+                      <input
+                        type="number"
+                        min={2}
+                        inputMode="numeric"
+                        autoFocus
+                        value={customCountInput}
+                        onChange={(e) => setCustomCountInput(e.target.value)}
+                        placeholder="أدخل العدد"
+                        className="h-10 w-full rounded-lg border border-line bg-white px-3 text-center text-sm text-ink outline-none focus:border-seal"
+                      />
+                      <Button variant="secondary" className="h-10 px-3 text-xs" onClick={() => setPartyCountTarget(Number(customCountInput))}>
+                        تطبيق
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

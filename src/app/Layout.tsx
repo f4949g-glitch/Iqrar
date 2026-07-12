@@ -7,7 +7,15 @@ import { WhatsAppButton } from '@/shared/ui/WhatsAppButton';
 import { Sidebar } from './Sidebar';
 import { NotificationsBell } from './NotificationsBell';
 
-export function Layout({ profile, children }: { profile: Profile | null; children: ReactNode }) {
+export function Layout({
+  profile,
+  templateCount = 0,
+  children,
+}: {
+  profile: Profile | null;
+  templateCount?: number;
+  children: ReactNode;
+}) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -69,7 +77,9 @@ export function Layout({ profile, children }: { profile: Profile | null; childre
         </div>
       </header>
       <div className="mx-auto flex max-w-7xl">
-        {profile && <Sidebar profile={profile} mobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />}
+        {profile && (
+          <Sidebar profile={profile} templateCount={templateCount} mobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
+        )}
         <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
       </div>
       <div className="no-print">

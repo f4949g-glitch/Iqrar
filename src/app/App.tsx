@@ -32,6 +32,10 @@ const PrivacyPolicyEditPage = lazy(() =>
   import('@/features/site/components/PrivacyPolicyEditPage').then((m) => ({ default: m.PrivacyPolicyEditPage })),
 );
 const BalancePage = lazy(() => import('@/features/contracts/components/BalancePage').then((m) => ({ default: m.BalancePage })));
+const ContractTemplatesPage = lazy(() =>
+  import('@/features/contracts/components/ContractTemplatesPage').then((m) => ({ default: m.ContractTemplatesPage })),
+);
+const MyTemplatesPage = lazy(() => import('@/features/contracts/components/MyTemplatesPage').then((m) => ({ default: m.MyTemplatesPage })));
 const ProfilePage = lazy(() => import('@/features/auth/components/ProfilePage').then((m) => ({ default: m.ProfilePage })));
 const SettingsPage = lazy(() => import('@/features/auth/components/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 const SigningPage = lazy(() => import('@/features/signing/components/SigningPage').then((m) => ({ default: m.SigningPage })));
@@ -69,7 +73,7 @@ function RegisterPage() {
 // يفتح "/app" بلا تسجيل دخول (تصفّح كضيف)؛ المسارات التي تُنشئ أو تُرسل عقودًا فعليًا
 // محمية بـ AuthGate لأنها تتطلب حسابًا حقيقيًا (created_by مربوط بـ auth.uid عبر RLS).
 function AppShell() {
-  const { loading, profile, refresh } = useSession();
+  const { loading, profile, refresh, myTemplateCount } = useSession();
 
   if (loading) return <LoadingScreen />;
 
@@ -78,7 +82,7 @@ function AppShell() {
   }
 
   return (
-    <Layout profile={profile}>
+    <Layout profile={profile} templateCount={myTemplateCount}>
       <Suspense fallback={<p className="text-sm text-slate">جارِ التحميل...</p>}>
         <Routes>
           <Route path="/" element={<Navigate to="/app/contracts" replace />} />
@@ -88,6 +92,11 @@ function AppShell() {
           <Route path="/contracts/new" element={<NewContractWizard />} />
           <Route path="/contracts/:id" element={profile ? <ContractDetailPage /> : <AuthGate />} />
           <Route path="/balance" element={profile ? <BalancePage /> : <AuthGate />} />
+          <Route path="/templates" element={profile ? <MyTemplatesPage /> : <AuthGate />} />
+          <Route
+            path="/contracts/templates"
+            element={!profile ? <AuthGate /> : hasAdminPermission(profile, 'manage_contract_templates') ? <ContractTemplatesPage /> : <AdminGate />}
+          />
           <Route path="/profile" element={profile ? <ProfilePage profile={profile} onUpdated={refresh} /> : <AuthGate />} />
           <Route path="/settings" element={profile ? <SettingsPage /> : <AuthGate />} />
           <Route path="/contact" element={<ContactPage />} />

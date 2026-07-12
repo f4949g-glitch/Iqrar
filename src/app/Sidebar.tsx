@@ -4,6 +4,7 @@ import {
   Home,
   FolderOpen,
   FileSignature,
+  LayoutTemplate,
   Settings,
   ShieldQuestion,
   ShieldCheck,
@@ -41,27 +42,32 @@ interface SidebarGroup {
 // جعل "الرئيسية" بلا وجهة مختلفة عن "عقودي" فبدت معطّلة عند التواجد أصلًا في
 // لوحة التحكم؛ التنقّل بين حالات العقود (جديدة/موافق عليها/بانتظار
 // الموافقة/مرفوضة) يبقى متاحًا كتبويبات داخل صفحة "عقودي" نفسها.
-const USER_GROUPS: SidebarGroup[] = [
-  {
-    title: null,
-    links: [
-      { to: '/', label: 'الرئيسية', icon: Home },
-      { to: '/app/contracts', label: 'عقودي', icon: FolderOpen },
-      { to: '/app/contracts/new', label: 'توثيق العقود', icon: FileSignature },
-      { to: '/verify', label: 'التحقق من وثيقة موثقة', icon: ShieldCheck },
-    ],
-  },
-  {
-    title: 'حسابي',
-    links: [
-      { to: '/app/profile', label: 'الملف الشخصي', icon: User },
-      { to: '/app/balance', label: 'رصيدي', icon: Wallet },
-      { to: '/app/settings', label: 'الإعدادات', icon: Settings },
-      { to: '/terms', label: 'سياسة الاستخدام والخصوصية', icon: ShieldQuestion },
-      { to: '/app/contact', label: 'اتصل بنا', icon: Phone },
-    ],
-  },
-];
+// "قوالبي" يظهر فقط لمستخدم لديه قالب عقد جاهز واحد على الأقل مخصَّص له من
+// الأدمن (templateCount > 0)، فلا يُثقَل الجميع برابط لا يخصهم.
+function buildUserGroups(templateCount: number): SidebarGroup[] {
+  const mainLinks: SidebarLink[] = [
+    { to: '/', label: 'الرئيسية', icon: Home },
+    { to: '/app/contracts', label: 'عقودي', icon: FolderOpen },
+    { to: '/app/contracts/new', label: 'توثيق العقود', icon: FileSignature },
+    { to: '/verify', label: 'التحقق من وثيقة موثقة', icon: ShieldCheck },
+  ];
+  if (templateCount > 0) {
+    mainLinks.push({ to: '/app/templates', label: 'قوالبي', icon: LayoutTemplate });
+  }
+  return [
+    { title: null, links: mainLinks },
+    {
+      title: 'حسابي',
+      links: [
+        { to: '/app/profile', label: 'الملف الشخصي', icon: User },
+        { to: '/app/balance', label: 'رصيدي', icon: Wallet },
+        { to: '/app/settings', label: 'الإعدادات', icon: Settings },
+        { to: '/terms', label: 'سياسة الاستخدام والخصوصية', icon: ShieldQuestion },
+        { to: '/app/contact', label: 'اتصل بنا', icon: Phone },
+      ],
+    },
+  ];
+}
 
 // روابط الإدارة تُبنى ديناميكيًا حسب دور المستخدم وصلاحياته: الأدمن الكامل يرى
 // الكل، والأدمن الفرعي يرى فقط ما يملك صلاحيته تحديدًا. تُقسَّم إلى مجموعتين:
@@ -92,6 +98,9 @@ function buildAdminGroups(profile: Profile): SidebarGroup[] {
   }
   if (hasAdminPermission(profile, 'manage_pricing') || hasAdminPermission(profile, 'manage_pricing_direct')) {
     systemLinks.push({ to: '/app/contracts/pricing', label: 'إعدادات التسعير', icon: SlidersHorizontal });
+  }
+  if (hasAdminPermission(profile, 'manage_contract_templates')) {
+    systemLinks.push({ to: '/app/contracts/templates', label: 'قوالب العقود', icon: LayoutTemplate });
   }
   if (isFullAdmin) {
     systemLinks.push(
@@ -138,6 +147,9 @@ function NavGroup({ group, isActive, onNavigate }: { group: SidebarGroup; isActi
 
 interface SidebarProps {
   profile: Profile;
+  // عدد قوالب العقود المخصَّصة لهذا المستخدم — يُتحكَّم به من الأدمن، ويُجلب
+  // مرة واحدة ضمن دورة تحديث الجلسة (SessionProvider) بدل استعلام منفصل هنا.
+  templateCount?: number;
   // تُستخدم فقط في وضع الجوال (أقل من md): القائمة تنزلق من الجهة اليمنى فوق
   // المحتوى بدل حجز عرض ثابت دائمًا، وتُغلق تلقائيًا عند اختيار رابط أو الضغط
   // على الخلفية المعتمة خلفها. في md فما فوق تبقى القائمة ثابتة الظهور كسابقًا.
@@ -145,7 +157,7 @@ interface SidebarProps {
   onMobileClose?: () => void;
 }
 
-export function Sidebar({ profile, mobileOpen = false, onMobileClose }: SidebarProps) {
+export function Sidebar({ profile, templateCount = 0, mobileOpen = false, onMobileClose }: SidebarProps) {
   const location = useLocation();
   const currentPath = `${location.pathname}${location.search}`;
   const isActive = (to: string) => currentPath === to || (!to.includes('?') && location.pathname === to);
@@ -161,7 +173,7 @@ export function Sidebar({ profile, mobileOpen = false, onMobileClose }: SidebarP
         }`}
       >
         <div>
-          {USER_GROUPS.map((group) => (
+          {buildUserGroups(templateCount).map((group) => (
             <NavGroup key={group.title ?? 'main'} group={group} isActive={isActive} onNavigate={onMobileClose} />
           ))}
 

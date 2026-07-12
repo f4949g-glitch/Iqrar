@@ -1,11 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { fetchCurrentProfile } from '../api/authApi';
+import { countMyTemplates } from '@/features/contracts/api/contractTemplatesApi';
 import type { Profile } from '../types';
 
 interface SessionState {
   loading: boolean;
   profile: Profile | null;
+  myTemplateCount: number;
 }
 
 interface SessionContextValue extends SessionState {
@@ -22,11 +24,15 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 // (SessionProvider) يُغلَّف حول التطبيق مرة واحدة، وuseSession() الآن مجرّد
 // مستهلك لهذا السياق المشترك بدل نسخة مستقلة من نفس المنطق.
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<SessionState>({ loading: true, profile: null });
+  const [state, setState] = useState<SessionState>({ loading: true, profile: null, myTemplateCount: 0 });
 
   const refresh = useCallback(async () => {
     const profile = await fetchCurrentProfile();
-    setState({ loading: false, profile });
+    // عدد القوالب المخصَّصة للمستخدم يُجلب ضمن نفس دورة تحديث الجلسة (بدل جلب
+    // منفصل في الشريط الجانبي عند كل تنقّل) كي لا يتكرّر نفس خلل الطلبات
+    // المضاعفة الذي أُصلِح أعلاه — يحدَّث فقط لمستخدم مسجَّل دخوله.
+    const myTemplateCount = profile ? await countMyTemplates().catch(() => 0) : 0;
+    setState({ loading: false, profile, myTemplateCount });
   }, []);
 
   useEffect(() => {
