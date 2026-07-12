@@ -1,10 +1,5 @@
-import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
-
-// نفس بيانات SMTP التي أُدخلت في Supabase (Authentication > Emails > SMTP Settings)
-// تُعاد إدخالها هنا كأسرار Edge Functions منفصلة (Project Settings > Edge Functions >
-// Secrets) لأن دوال Edge لا يمكنها قراءة إعدادات SMTP الداخلية الخاصة بنظام Auth.
 export function isEmailConfigured(): boolean {
-  return Boolean(Deno.env.get('SMTP_HOST') && Deno.env.get('SMTP_USERNAME') && Deno.env.get('SMTP_PASSWORD'));
+  return Boolean(Deno.env.get('RESEND_API_KEY'));
 }
 
 export interface SendEmailResult {
@@ -12,51 +7,42 @@ export interface SendEmailResult {
   detail?: string;
 }
 
-// يرسل بريدًا عبر SMTP إن كانت أسرار SMTP_HOST/SMTP_USERNAME/SMTP_PASSWORD مضبوطة،
-// وإلا يسجّل تحذيرًا فقط دون كسر بقية العملية — حتى تعمل منصة العقود كاملة (روابط
-// التوقيع، الحالة، PDF النهائي) قبل ربط مزوّد بريد فعلي.
+// يرسل بريدًا عبر Resend HTTP API إن كان السرّ RESEND_API_KEY مضبوطًا، وإلا يسجّل
+// تحذيرًا فقط دون كسر بقية العملية. لا يُستخدم SMTP الخام لأن Supabase Edge
+// Functions (Deno Deploy) لا تسمح باتصالات Socket خام — كل أمثلة Supabase
+// الرسمية لإرسال البريد من Edge Functions تستخدم حصريًا Resend عبر fetch()
+// لهذا السبب بالتحديد.
 // يُعيد نتيجة الإرسال (بدل إسكاتها بصمت) ليتمكن المستدعي من إخبار المستخدم عند
 // فشل إرسال رمز تحقق حسّاس بدل ادّعاء نجاح الإرسال.
 export async function sendEmail(to: string, subject: string, html: string): Promise<SendEmailResult> {
-  const host = Deno.env.get('SMTP_HOST');
-  const username = Deno.env.get('SMTP_USERNAME');
-  const password = Deno.env.get('SMTP_PASSWORD');
-  const port = Number(Deno.env.get('SMTP_PORT') ?? '587');
-  const from = Deno.env.get('NOTIFICATIONS_FROM_EMAIL') ?? username ?? '';
+  const apiKey = Deno.env.get('RESEND_API_KEY');
+  const from = Deno.env.get('NOTIFICATIONS_FROM_EMAIL') ?? 'إقرار <onboarding@resend.dev>';
 
-  if (!host || !username || !password) {
-    const detail = 'بوابة البريد الإلكتروني غير مُفعّلة بعد (إعدادات SMTP غير مضبوطة)';
+  if (!apiKey) {
+    const detail = 'بوابة البريد الإلكتروني غير مُفعّلة بعد (RESEND_API_KEY غير مضبوط)';
     console.warn(`${detail} — تم تخطي إرسال البريد إلى ${to}: ${subject}`);
     return { ok: false, detail };
   }
 
-  const client = new SMTPClient({
-    connection: {
-      hostname: host,
-      port,
-      tls: port === 465,
-      auth: { username, password },
-    },
-  });
-
   try {
-    await client.send({
-      from,
-      to,
-      subject,
-      content: 'يرجى تفعيل عرض HTML في برنامج البريد لقراءة هذه الرسالة.',
-      html,
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ from, to, subject, html }),
     });
+
+    if (!res.ok) {
+      const detail = await res.text();
+      console.error('فشل إرسال البريد عبر Resend', detail);
+      return { ok: false, detail: detail.slice(0, 500) };
+    }
     return { ok: true };
   } catch (err) {
     const detail = err instanceof Error ? err.message : 'خطأ غير معروف عند الاتصال ببوابة البريد الإلكتروني';
-    console.error('فشل إرسال البريد عبر SMTP', detail);
+    console.error('فشل الاتصال بـ Resend', detail);
     return { ok: false, detail };
-  } finally {
-    try {
-      await client.close();
-    } catch {
-      // تجاهل فشل إغلاق الاتصال — لا يؤثر على نتيجة الإرسال نفسها
-    }
   }
 }
