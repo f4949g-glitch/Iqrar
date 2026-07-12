@@ -6,6 +6,8 @@ import { GregorianDateInput } from '@/shared/ui/GregorianDateInput';
 import { fileToDataUrl } from '@/shared/lib/fileToDataUrl';
 import { NATIONALITIES } from '@/shared/lib/nationalities';
 import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '../../api/pricingApi';
+import { previewDiscountCode, type DiscountPreview } from '../../api/discountCodesApi';
+import { redeemCreditCode } from '../../api/creditCodesApi';
 import { addParty as addPartyApi } from '../../api/contractsApi';
 import { initiateNafathVerification, checkNafathStatus } from '../../api/nafathApi';
 import { findDuplicateNationalId } from '../../lib/findDuplicateNationalId';
@@ -25,6 +27,8 @@ import {
 import type { Contract } from '../../types';
 
 export type TermMode = 'none' | 'duration' | 'date';
+
+const PARTY_COUNT_OPTIONS = Array.from({ length: 19 }, (_, i) => i + 2);
 
 export interface DraftParty {
   partyId?: string;
@@ -119,6 +123,10 @@ interface PartiesStepProps {
   // الرئيسية — عندها تُعرَض الطريقة كشارة للقراءة فقط بدل بطاقتين تفاعليتين،
   // كي لا يُسأل نفس السؤال مرتين لنفس العقد.
   verificationPreset?: VerificationMethod | null;
+  // كود الخصم مُدار من المعالج الأب كي يصل لاحقًا لخطوة المراجعة ويُطبَّق
+  // تلقائيًا على العقد الحقيقي هناك دون إعادة كتابته.
+  discountCode: string;
+  onDiscountCodeChange: (v: string) => void;
   onNext: () => void;
 }
 
@@ -149,6 +157,8 @@ export function PartiesStep({
   onPartiesChange,
   ensureContract,
   verificationPreset = null,
+  discountCode,
+  onDiscountCodeChange,
   onNext,
 }: PartiesStepProps) {
   const docLabel = DOCUMENT_TYPE_DEFINITE_LABELS[documentType];
@@ -173,6 +183,64 @@ export function PartiesStep({
       .then(setPricing)
       .catch(() => setPricing(null));
   }, []);
+
+  const [discountPreview, setDiscountPreview] = useState<DiscountPreview | null>(null);
+  const [checkingDiscount, setCheckingDiscount] = useState(false);
+  const [creditCode, setCreditCode] = useState('');
+  const [creditResult, setCreditResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [redeemingCredit, setRedeemingCredit] = useState(false);
+  const [customCountMode, setCustomCountMode] = useState(false);
+  const [customCountInput, setCustomCountInput] = useState('');
+
+  // يُضيف أو يحذف بطاقات أطراف من نهاية القائمة لمطابقة العدد المطلوب من قائمة
+  // "عدد الأطراف" المنسدلة، بدل الاضطرار للنقر على "إضافة طرف" عدة مرات.
+  const setPartyCountTarget = (target: number) => {
+    const n = Math.max(2, Math.floor(target) || 2);
+    if (n === parties.length) return;
+    if (n > parties.length) {
+      const additions = Array.from({ length: n - parties.length }, (_, i) => {
+        const p = emptyParty(parties.length + i);
+        return verificationPreset ? { ...p, verification_method: verificationPreset } : p;
+      });
+      onPartiesChange([...parties, ...additions]);
+    } else {
+      onPartiesChange(parties.slice(0, n));
+    }
+  };
+
+  const applyDiscountCode = async () => {
+    if (!discountCode.trim()) return;
+    setCheckingDiscount(true);
+    setDiscountPreview(null);
+    try {
+      setDiscountPreview(await previewDiscountCode(discountCode.trim(), parties.length));
+    } catch (err) {
+      setDiscountPreview({
+        discount_code_id: null,
+        discount_percent: null,
+        base_amount: 0,
+        final_amount: 0,
+        message: err instanceof Error ? err.message : 'تعذّر التحقق من الكود',
+      });
+    } finally {
+      setCheckingDiscount(false);
+    }
+  };
+
+  const applyCreditCode = async () => {
+    if (!creditCode.trim()) return;
+    setRedeemingCredit(true);
+    setCreditResult(null);
+    try {
+      const added = await redeemCreditCode(creditCode.trim());
+      setCreditResult({ ok: true, message: `تم شحن رصيدك بمبلغ ${added.toFixed(2)} ريال` });
+      setCreditCode('');
+    } catch (err) {
+      setCreditResult({ ok: false, message: err instanceof Error ? err.message : 'تعذّر استخدام الكود' });
+    } finally {
+      setRedeemingCredit(false);
+    }
+  };
 
   const updateParty = (index: number, patch: Partial<DraftParty>) => {
     const next = parties.map((p, i) => (i === index ? { ...p, ...patch } : p));
@@ -462,15 +530,132 @@ export function PartiesStep({
         )}
       </div>
 
-      {invoice !== null && (
-        <div className="rounded-xl border border-line bg-paper p-4 text-center">
-          <p className="text-xs font-bold text-slate">الرسوم المتوقعة لعدد الأطراف الحالي ({parties.length})</p>
-          <p className="mt-1 font-display text-2xl font-extrabold text-seal">
-            {invoice.toFixed(2)} <span className="text-sm font-bold text-slate">ريال</span>
-          </p>
-          <p className="mt-1 text-xs text-slate">يمكن تطبيق كود خصم عند الدفع في خطوة المراجعة والإرسال</p>
+      {/* عدد الأطراف والتكلفة المتوقعة وكودا الخصم والشحن — فوق بطاقة الطرف الأول
+          مباشرة، لأن عدد الأطراف الفعلي معروف هنا فقط (يتغيّر بالإضافة/الحذف). */}
+      <div className="space-y-3">
+        {!poaMode ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-xs font-bold text-slate">عدد الأطراف</label>
+              <select
+                value={customCountMode ? 'custom' : parties.length <= 20 ? String(parties.length) : 'custom'}
+                onChange={(e) => {
+                  if (e.target.value === 'custom') {
+                    setCustomCountMode(true);
+                    setCustomCountInput(String(parties.length));
+                  } else {
+                    setCustomCountMode(false);
+                    setPartyCountTarget(Number(e.target.value));
+                  }
+                }}
+                className="w-full rounded-lg border border-line bg-white px-3 py-2.5 text-center text-ink outline-none focus:border-seal"
+              >
+                {PARTY_COUNT_OPTIONS.map((n) => (
+                  <option key={n} value={String(n)}>
+                    {n}
+                  </option>
+                ))}
+                <option value="custom">أخرى</option>
+              </select>
+              {customCountMode && (
+                <div className="mt-2 flex gap-2">
+                  <input
+                    type="number"
+                    min={2}
+                    inputMode="numeric"
+                    autoFocus
+                    value={customCountInput}
+                    onChange={(e) => setCustomCountInput(e.target.value)}
+                    placeholder="أدخل العدد"
+                    className="w-full rounded-lg border border-line bg-white px-3 py-2.5 text-center text-ink outline-none focus:border-seal"
+                  />
+                  <Button variant="secondary" onClick={() => setPartyCountTarget(Number(customCountInput))}>
+                    تطبيق
+                  </Button>
+                </div>
+              )}
+            </div>
+            {invoice !== null && (
+              <div className="rounded-xl border border-line bg-paper p-4 text-center">
+                <p className="text-xs font-bold text-slate">التكلفة المتوقعة للتوثيق</p>
+                {discountPreview?.discount_code_id ? (
+                  <p className="mt-1 font-display text-xl font-extrabold text-seal">
+                    <span className="ms-1 block text-xs font-bold text-slate line-through">{invoice.toFixed(2)}</span>
+                    {discountPreview.final_amount.toFixed(2)} <span className="text-xs font-bold text-slate">ريال</span>
+                  </p>
+                ) : (
+                  <p className="mt-1 font-display text-xl font-extrabold text-seal">
+                    {invoice.toFixed(2)} <span className="text-xs font-bold text-slate">ريال</span>
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          invoice !== null && (
+            <div className="rounded-xl border border-line bg-paper p-4 text-center">
+              <p className="text-xs font-bold text-slate">سعر الخدمة المتوقع</p>
+              <p className="mt-1 font-display text-2xl font-extrabold text-seal">
+                {invoice.toFixed(2)} <span className="text-sm font-bold text-slate">ريال سعودي</span>
+              </p>
+            </div>
+          )
+        )}
+
+        <div className="rounded-xl border border-line bg-card p-3">
+          <p className="mb-2 text-xs font-bold text-ink">كود الخصم (اختياري)</p>
+          <div className="flex gap-2">
+            <input
+              value={discountCode}
+              onChange={(e) => {
+                onDiscountCodeChange(e.target.value);
+                setDiscountPreview(null);
+              }}
+              placeholder="أدخل الكود"
+              className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-seal"
+            />
+            <button
+              type="button"
+              onClick={applyDiscountCode}
+              disabled={checkingDiscount || !discountCode.trim()}
+              className="shrink-0 rounded-lg bg-seal px-3 py-2 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {checkingDiscount ? 'جارِ التحقق...' : 'طبّق'}
+            </button>
+          </div>
+          {discountPreview && (
+            <p className={`mt-1.5 text-xs font-bold ${discountPreview.discount_code_id ? 'text-sage' : 'text-clay'}`}>
+              {discountPreview.discount_code_id ? `تم تطبيق الكود: خصم ${discountPreview.discount_percent}%` : discountPreview.message}
+            </p>
+          )}
         </div>
-      )}
+
+        {profile && (
+          <div className="rounded-xl border border-line bg-card p-3">
+            <p className="mb-2 text-xs font-bold text-ink">استخدام كود الشحن (اختياري)</p>
+            <div className="flex gap-2">
+              <input
+                value={creditCode}
+                onChange={(e) => {
+                  setCreditCode(e.target.value);
+                  setCreditResult(null);
+                }}
+                placeholder="أدخل الكود"
+                className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-seal"
+              />
+              <button
+                type="button"
+                onClick={applyCreditCode}
+                disabled={redeemingCredit || !creditCode.trim()}
+                className="shrink-0 rounded-lg bg-seal px-3 py-2 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {redeemingCredit ? 'جارِ الشحن...' : 'طبّق'}
+              </button>
+            </div>
+            {creditResult && <p className={`mt-1.5 text-xs font-bold ${creditResult.ok ? 'text-sage' : 'text-clay'}`}>{creditResult.message}</p>}
+          </div>
+        )}
+      </div>
 
       <div className="space-y-3">
         {parties.map((party, index) => {

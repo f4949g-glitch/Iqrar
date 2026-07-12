@@ -133,6 +133,9 @@ export function NewContractWizard() {
   // الأطراف؛ null يعني أنه فتح المعالج مباشرة بلا اختيار مسبق فتبقى البطاقتان
   // التفاعليتان معروضتين كسابقًا.
   const verificationPreset = pendingIntent?.verificationDefault ?? null;
+  // كود الخصم يُدخَل ويُعايَن مباشرة في خطوة بيانات الأطراف (PartiesStep)، ثم
+  // يُطبَّق تلقائيًا على العقد الحقيقي فور توفّره في خطوة المراجعة.
+  const [discountCode, setDiscountCode] = useState('');
   const [draftParties, setDraftParties] = useState<DraftParty[]>(() => {
     if (guestDraft) return guestDraft.parties;
     // العقد يتطلب طرفين على الأقل (تفويض هو الاستثناء الوحيد بطرف واحد)، فتُهيَّأ
@@ -462,6 +465,8 @@ export function NewContractWizard() {
           onPartiesChange={setDraftParties}
           ensureContract={ensureContract}
           verificationPreset={verificationPreset}
+          discountCode={discountCode}
+          onDiscountCodeChange={setDiscountCode}
           onNext={goToMethod}
         />
       )}
@@ -516,7 +521,7 @@ export function NewContractWizard() {
           pdfUrl={pdfUrl}
           companyLogoDataUrl={companyLogoDataUrl}
           profile={profile}
-          initialDiscountCode={pendingIntent?.discountCode}
+          initialDiscountCode={discountCode}
           onBack={() => goToStep(method === 'editor' ? 'editor' : 'fields')}
         />
       )}

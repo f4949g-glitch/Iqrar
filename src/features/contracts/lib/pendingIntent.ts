@@ -10,9 +10,6 @@ export interface PendingContractIntent {
   documentType: DocumentType;
   partyCount: number;
   verificationDefault: VerificationMethod;
-  // كود خصم طُبِّق ونجحت معاينته في نافذة الصفحة الرئيسية قبل إنشاء العقد فعليًا؛
-  // يُطبَّق تلقائيًا على العقد الحقيقي في خطوة المراجعة بدل مطالبة المستخدم بإعادة كتابته.
-  discountCode?: string;
 }
 
 export function setPendingContractIntent(intent: PendingContractIntent): void {
