@@ -1,6 +1,6 @@
 import { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom';
-import { useSession, LoginForm, RegisterForm, ForcedPasswordChange } from '@/features/auth';
+import { useSession, SessionProvider, LoginForm, RegisterForm, ForcedPasswordChange } from '@/features/auth';
 import { hasAdminPermission } from '@/features/auth/types';
 import { Layout } from './Layout';
 import { LandingPage } from './LandingPage';
@@ -136,17 +136,19 @@ function AppShell() {
 
 export function App() {
   return (
-    <Suspense fallback={<LoadingScreen />}>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordForm />} />
-        <Route path="/sign/:token" element={<SigningPage />} />
-        <Route path="/verify" element={<VerifyPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/app/*" element={<AppShell />} />
-      </Routes>
-    </Suspense>
+    <SessionProvider>
+      <Suspense fallback={<LoadingScreen />}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordForm />} />
+          <Route path="/sign/:token" element={<SigningPage />} />
+          <Route path="/verify" element={<VerifyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/app/*" element={<AppShell />} />
+        </Routes>
+      </Suspense>
+    </SessionProvider>
   );
 }

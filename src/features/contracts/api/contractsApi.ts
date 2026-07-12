@@ -7,6 +7,14 @@ export interface ContractListItem extends Contract {
   signed_count: number;
 }
 
+// أعمدة العقد المطلوبة فعليًا لعرضه ضمن قائمة (بطاقة العقد لا تعرض سوى العنوان
+// والحالة والتاريخ) — باستثناء body_json وfinal_html تحديدًا، فهما قد يكونان
+// كبيرين جدًا (محتوى المستند/المستند النهائي المُصيَّر بالكامل) ولا حاجة لهما إلا
+// في صفحة تفاصيل عقد واحد. جلبهما مع كل تبويب/بحث كان يُضاعف حجم كل استجابة قائمة
+// دون أي فائدة، ويرفع استهلاك الطلبات/Egress في سوبابيس بشكل ملحوظ.
+const CONTRACT_LIST_COLUMNS =
+  'id, title, status, source_type, document_type, verification_number, original_file_path, final_file_path, page_count, duration_days, expires_at, term_value, term_unit, term_end_date, discount_code_id, invoice_amount, company_name, company_cr_number, company_logo_path, created_by, created_at, updated_at, sent_at, completed_at';
+
 async function withPartyCounts(contracts: Contract[]): Promise<ContractListItem[]> {
   if (contracts.length === 0) return [];
   const ids = contracts.map((c) => c.id);
@@ -27,7 +35,7 @@ async function withPartyCounts(contracts: Contract[]): Promise<ContractListItem[
 export async function listActiveContracts(): Promise<ContractListItem[]> {
   const { data, error } = await supabase
     .from('contracts')
-    .select('*')
+    .select(CONTRACT_LIST_COLUMNS)
     .in('status', ['draft', 'pending', 'partially_completed'])
     .order('updated_at', { ascending: false });
   if (error) throw new Error(translateErrorMessage(error.message));
@@ -36,7 +44,11 @@ export async function listActiveContracts(): Promise<ContractListItem[]> {
 
 // العقود الموافق عليها: اكتمل توقيعها من جميع الأطراف فعليًا.
 export async function listApprovedContracts(): Promise<ContractListItem[]> {
-  const { data, error } = await supabase.from('contracts').select('*').eq('status', 'completed').order('updated_at', { ascending: false });
+  const { data, error } = await supabase
+    .from('contracts')
+    .select(CONTRACT_LIST_COLUMNS)
+    .eq('status', 'completed')
+    .order('updated_at', { ascending: false });
   if (error) throw new Error(translateErrorMessage(error.message));
   return withPartyCounts((data ?? []) as Contract[]);
 }
@@ -44,7 +56,7 @@ export async function listApprovedContracts(): Promise<ContractListItem[]> {
 export async function listRejectedContracts(): Promise<ContractListItem[]> {
   const { data, error } = await supabase
     .from('contracts')
-    .select('*')
+    .select(CONTRACT_LIST_COLUMNS)
     .in('status', ['rejected', 'expired', 'cancelled'])
     .order('updated_at', { ascending: false });
   if (error) throw new Error(translateErrorMessage(error.message));
@@ -67,7 +79,7 @@ export async function listContractsAwaitingMySignature(): Promise<ContractListIt
   const contractIds = [...new Set((parties ?? []).map((p) => p.contract_id))];
   if (contractIds.length === 0) return [];
 
-  const { data, error } = await supabase.from('contracts').select('*').in('id', contractIds).order('updated_at', { ascending: false });
+  const { data, error } = await supabase.from('contracts').select(CONTRACT_LIST_COLUMNS).in('id', contractIds).order('updated_at', { ascending: false });
   if (error) throw new Error(translateErrorMessage(error.message));
   return withPartyCounts((data ?? []) as Contract[]);
 }
@@ -79,7 +91,7 @@ export async function searchContracts(query: string): Promise<ContractListItem[]
   if (!trimmed) return [];
   const { data, error } = await supabase
     .from('contracts')
-    .select('*')
+    .select(CONTRACT_LIST_COLUMNS)
     .ilike('title', `%${trimmed}%`)
     .order('updated_at', { ascending: false })
     .limit(50);
