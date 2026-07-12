@@ -1,7 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
-import { sendEmail } from '../_shared/email.ts';
+import { isEmailConfigured, sendEmail } from '../_shared/email.ts';
 import { sendSms, isSmsConfigured } from '../_shared/sms.ts';
 import { generateOtpCode } from '../_shared/otp.ts';
 
@@ -63,15 +63,16 @@ Deno.serve(async (req: Request) => {
     });
     if (upsertError) return jsonResponse({ error: 'تعذّر إنشاء رمز التحقق' }, 500);
 
-    const emailConfigured = Boolean(Deno.env.get('RESEND_API_KEY'));
+    const emailConfigured = isEmailConfigured();
     if (emailConfigured) {
-      await sendEmail(
+      const sendResult = await sendEmail(
         profile.email,
         'رمز تأكيد تغيير البريد الإلكتروني',
         `<p>طلبتَ تغيير البريد الإلكتروني لحسابك في منصة إقرار إلى: ${newEmail}</p>
          <p>رمز التأكيد: <b>${code}</b> (صالح لمدة 10 دقائق)</p>
          <p>إن لم تطلب هذا التغيير، تجاهل هذه الرسالة.</p>`,
       );
+      if (!sendResult.ok) return jsonResponse({ error: 'تعذّر إرسال رمز التحقق عبر البريد الإلكتروني، حاول مرة أخرى' }, 502);
     }
     return jsonResponse({ ok: true, email_configured: emailConfigured, dev_code: emailConfigured ? undefined : code });
   }
