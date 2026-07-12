@@ -530,12 +530,13 @@ export function PartiesStep({
         )}
       </div>
 
-      {/* عدد الأطراف والتكلفة المتوقعة وكودا الخصم والشحن — فوق بطاقة الطرف الأول
-          مباشرة، لأن عدد الأطراف الفعلي معروف هنا فقط (يتغيّر بالإضافة/الحذف). */}
-      <div className="space-y-3">
-        {!poaMode ? (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
+      {/* عدد الأطراف والتكلفة المتوقعة وكودا الخصم والشحن — بطاقة أفقية واحدة
+          مدمجة فوق بطاقة الطرف الأول مباشرة؛ عدد الأطراف الفعلي معروف هنا فقط
+          (يتغيّر بالإضافة/الحذف). تلتف الأعمدة على الشاشات الضيقة تلقائيًا. */}
+      <div className="rounded-2xl border border-line bg-card p-4">
+        <div className="flex flex-wrap items-start gap-x-5 gap-y-4">
+          {!poaMode && (
+            <div className="min-w-[150px] flex-1 basis-40">
               <label className="mb-1.5 block text-xs font-bold text-slate">عدد الأطراف</label>
               <select
                 value={customCountMode ? 'custom' : parties.length <= 20 ? String(parties.length) : 'custom'}
@@ -548,7 +549,7 @@ export function PartiesStep({
                     setPartyCountTarget(Number(e.target.value));
                   }
                 }}
-                className="w-full rounded-lg border border-line bg-white px-3 py-2.5 text-center text-ink outline-none focus:border-seal"
+                className="h-10 w-full rounded-lg border border-line bg-white px-3 text-center text-sm text-ink outline-none focus:border-seal"
               >
                 {PARTY_COUNT_OPTIONS.map((n) => (
                   <option key={n} value={String(n)}>
@@ -558,7 +559,7 @@ export function PartiesStep({
                 <option value="custom">أخرى</option>
               </select>
               {customCountMode && (
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex gap-1.5">
                   <input
                     type="number"
                     min={2}
@@ -567,94 +568,85 @@ export function PartiesStep({
                     value={customCountInput}
                     onChange={(e) => setCustomCountInput(e.target.value)}
                     placeholder="أدخل العدد"
-                    className="w-full rounded-lg border border-line bg-white px-3 py-2.5 text-center text-ink outline-none focus:border-seal"
+                    className="h-10 w-full rounded-lg border border-line bg-white px-3 text-center text-sm text-ink outline-none focus:border-seal"
                   />
-                  <Button variant="secondary" onClick={() => setPartyCountTarget(Number(customCountInput))}>
+                  <Button variant="secondary" className="h-10 px-3 text-xs" onClick={() => setPartyCountTarget(Number(customCountInput))}>
                     تطبيق
                   </Button>
                 </div>
               )}
             </div>
-            {invoice !== null && (
-              <div className="rounded-xl border border-line bg-paper p-4 text-center">
-                <p className="text-xs font-bold text-slate">التكلفة المتوقعة للتوثيق</p>
-                {discountPreview?.discount_code_id ? (
-                  <p className="mt-1 font-display text-xl font-extrabold text-seal">
-                    <span className="ms-1 block text-xs font-bold text-slate line-through">{invoice.toFixed(2)}</span>
-                    {discountPreview.final_amount.toFixed(2)} <span className="text-xs font-bold text-slate">ريال</span>
-                  </p>
-                ) : (
-                  <p className="mt-1 font-display text-xl font-extrabold text-seal">
-                    {invoice.toFixed(2)} <span className="text-xs font-bold text-slate">ريال</span>
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        ) : (
-          invoice !== null && (
-            <div className="rounded-xl border border-line bg-paper p-4 text-center">
-              <p className="text-xs font-bold text-slate">سعر الخدمة المتوقع</p>
-              <p className="mt-1 font-display text-2xl font-extrabold text-seal">
-                {invoice.toFixed(2)} <span className="text-sm font-bold text-slate">ريال سعودي</span>
-              </p>
-            </div>
-          )
-        )}
-
-        <div className="rounded-xl border border-line bg-card p-3">
-          <p className="mb-2 text-xs font-bold text-ink">كود الخصم (اختياري)</p>
-          <div className="flex gap-2">
-            <input
-              value={discountCode}
-              onChange={(e) => {
-                onDiscountCodeChange(e.target.value);
-                setDiscountPreview(null);
-              }}
-              placeholder="أدخل الكود"
-              className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-seal"
-            />
-            <button
-              type="button"
-              onClick={applyDiscountCode}
-              disabled={checkingDiscount || !discountCode.trim()}
-              className="shrink-0 rounded-lg bg-seal px-3 py-2 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
-            >
-              {checkingDiscount ? 'جارِ التحقق...' : 'طبّق'}
-            </button>
-          </div>
-          {discountPreview && (
-            <p className={`mt-1.5 text-xs font-bold ${discountPreview.discount_code_id ? 'text-sage' : 'text-clay'}`}>
-              {discountPreview.discount_code_id ? `تم تطبيق الكود: خصم ${discountPreview.discount_percent}%` : discountPreview.message}
-            </p>
           )}
-        </div>
 
-        {profile && (
-          <div className="rounded-xl border border-line bg-card p-3">
-            <p className="mb-2 text-xs font-bold text-ink">استخدام كود الشحن (اختياري)</p>
-            <div className="flex gap-2">
+          {invoice !== null && (
+            <div className="min-w-[150px] flex-1 basis-40">
+              <p className="mb-1.5 truncate text-xs font-bold text-slate">{poaMode ? 'سعر الخدمة المتوقع' : 'التكلفة المتوقعة'}</p>
+              <div className="flex h-10 items-center justify-center gap-1.5 rounded-lg bg-sealLight px-3">
+                {discountPreview?.discount_code_id && (
+                  <span className="text-xs font-bold text-slate line-through">{invoice.toFixed(2)}</span>
+                )}
+                <span className="font-display text-base font-extrabold text-seal">
+                  {(discountPreview?.discount_code_id ? discountPreview.final_amount : invoice).toFixed(2)}
+                </span>
+                <span className="text-xs font-bold text-slate">ريال</span>
+              </div>
+            </div>
+          )}
+
+          <div className="min-w-[200px] flex-[1.4] basis-52">
+            <label className="mb-1.5 block text-xs font-bold text-slate">كود الخصم (اختياري)</label>
+            <div className="flex h-10 gap-1.5">
               <input
-                value={creditCode}
+                value={discountCode}
                 onChange={(e) => {
-                  setCreditCode(e.target.value);
-                  setCreditResult(null);
+                  onDiscountCodeChange(e.target.value);
+                  setDiscountPreview(null);
                 }}
                 placeholder="أدخل الكود"
-                className="flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-seal"
+                className="h-10 flex-1 rounded-lg border border-line bg-white px-3 text-sm text-ink outline-none focus:border-seal"
               />
               <button
                 type="button"
-                onClick={applyCreditCode}
-                disabled={redeemingCredit || !creditCode.trim()}
-                className="shrink-0 rounded-lg bg-seal px-3 py-2 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
+                onClick={applyDiscountCode}
+                disabled={checkingDiscount || !discountCode.trim()}
+                className="h-10 shrink-0 rounded-lg bg-seal px-3 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
               >
-                {redeemingCredit ? 'جارِ الشحن...' : 'طبّق'}
+                {checkingDiscount ? 'جارِ التحقق...' : 'طبّق'}
               </button>
             </div>
-            {creditResult && <p className={`mt-1.5 text-xs font-bold ${creditResult.ok ? 'text-sage' : 'text-clay'}`}>{creditResult.message}</p>}
+            {discountPreview && (
+              <p className={`mt-1.5 text-xs font-bold ${discountPreview.discount_code_id ? 'text-sage' : 'text-clay'}`}>
+                {discountPreview.discount_code_id ? `تم تطبيق الكود: خصم ${discountPreview.discount_percent}%` : discountPreview.message}
+              </p>
+            )}
           </div>
-        )}
+
+          {profile && (
+            <div className="min-w-[200px] flex-[1.4] basis-52">
+              <label className="mb-1.5 block text-xs font-bold text-slate">كود الشحن (اختياري)</label>
+              <div className="flex h-10 gap-1.5">
+                <input
+                  value={creditCode}
+                  onChange={(e) => {
+                    setCreditCode(e.target.value);
+                    setCreditResult(null);
+                  }}
+                  placeholder="أدخل الكود"
+                  className="h-10 flex-1 rounded-lg border border-line bg-white px-3 text-sm text-ink outline-none focus:border-seal"
+                />
+                <button
+                  type="button"
+                  onClick={applyCreditCode}
+                  disabled={redeemingCredit || !creditCode.trim()}
+                  className="h-10 shrink-0 rounded-lg bg-seal px-3 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
+                >
+                  {redeemingCredit ? 'جارِ الشحن...' : 'طبّق'}
+                </button>
+              </div>
+              {creditResult && <p className={`mt-1.5 text-xs font-bold ${creditResult.ok ? 'text-sage' : 'text-clay'}`}>{creditResult.message}</p>}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="space-y-3">
