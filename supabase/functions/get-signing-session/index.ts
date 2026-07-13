@@ -27,7 +27,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: party, error: partyError } = await admin
     .from('contract_parties')
-    .select('id, contract_id, role_label, full_name, status, national_id, verification_method')
+    .select('id, contract_id, role_label, full_name, status, national_id, verification_method, order_index')
     .eq('token', token)
     .maybeSingle();
 
@@ -58,11 +58,28 @@ Deno.serve(async (req: Request) => {
 
   const { data: contract, error: contractError } = await admin
     .from('contracts')
-    .select('id, title, status, page_count, original_file_path, source_type, body_json')
+    .select('id, title, status, page_count, original_file_path, source_type, body_json, sequential_signing')
     .eq('id', party.contract_id)
     .single();
 
   if (contractError || !contract) return jsonResponse({ error: 'العقد غير موجود' }, 404);
+
+  // ترتيب توقيع إلزامي: طرف لا يرى المحتوى إلا بعد توقيع كل من يسبقه بحسب
+  // order_index — يمنع مثلًا موظفًا يوقّع بعد البائع من التوقيع قبله.
+  if (contract.sequential_signing) {
+    const { data: earlierParties } = await admin
+      .from('contract_parties')
+      .select('status')
+      .eq('contract_id', contract.id)
+      .lt('order_index', party.order_index);
+    const waitingForTurn = (earlierParties ?? []).some((p) => p.status !== 'signed');
+    if (waitingForTurn) {
+      return jsonResponse({
+        party: { id: party.id, role_label: party.role_label, full_name: party.full_name },
+        waiting_for_turn: true,
+      });
+    }
+  }
 
   if (party.status === 'pending') {
     await admin.from('contract_parties').update({ status: 'viewed' }).eq('id', party.id);

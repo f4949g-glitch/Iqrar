@@ -322,6 +322,7 @@ export type Database = {
           id: string
           is_active: boolean
           party_count: number
+          sequential_signing: boolean
           title: string
           updated_at: string
         }
@@ -333,6 +334,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           party_count: number
+          sequential_signing?: boolean
           title: string
           updated_at?: string
         }
@@ -344,6 +346,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           party_count?: number
+          sequential_signing?: boolean
           title?: string
           updated_at?: string
         }
@@ -377,6 +380,7 @@ export type Database = {
           original_file_path: string | null
           page_count: number
           sent_at: string | null
+          sequential_signing: boolean
           source_type: string
           status: string
           term_end_date: string | null
@@ -405,6 +409,7 @@ export type Database = {
           original_file_path?: string | null
           page_count?: number
           sent_at?: string | null
+          sequential_signing?: boolean
           source_type?: string
           status?: string
           term_end_date?: string | null
@@ -433,6 +438,7 @@ export type Database = {
           original_file_path?: string | null
           page_count?: number
           sent_at?: string | null
+          sequential_signing?: boolean
           source_type?: string
           status?: string
           term_end_date?: string | null
@@ -1134,6 +1140,7 @@ export type Database = {
           original_file_path: string | null
           page_count: number
           sent_at: string | null
+          sequential_signing: boolean
           source_type: string
           status: string
           term_end_date: string | null
@@ -1171,6 +1178,7 @@ export type Database = {
           original_file_path: string | null
           page_count: number
           sent_at: string | null
+          sequential_signing: boolean
           source_type: string
           status: string
           term_end_date: string | null

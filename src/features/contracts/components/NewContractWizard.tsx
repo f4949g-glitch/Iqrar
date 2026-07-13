@@ -199,6 +199,7 @@ export function NewContractWizard() {
       term_value: termMode === 'duration' && termValue ? Number(termValue) : null,
       term_unit: termMode === 'duration' && termValue ? termUnit : null,
       term_end_date: termMode === 'date' && termEndDate ? termEndDate : null,
+      sequential_signing: pendingIntent?.templateSequentialSigning ?? false,
     });
     // شعار المنشأة اختياري: يُرفَع لتخزين الملفات بعد إنشاء العقد فعليًا (له معرّف
     // حقيقي)، ويُدرَج بارزًا في كل صفحات المستند النهائي عند التوليد.

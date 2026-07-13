@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Document, Page } from 'react-pdf';
-import { CheckCircle2, FileSignature, ShieldCheck, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock, FileSignature, ShieldCheck, XCircle } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { SignaturePad } from '@/shared/ui/SignaturePad';
 import {
@@ -216,7 +216,7 @@ export function SigningPage() {
   }, [load]);
 
   const submit = async () => {
-    if (!token || !session || session.otp_required) return;
+    if (!token || !session || session.otp_required || session.waiting_for_turn) return;
     if (!agreedToDeclaration) {
       setError('يجب الموافقة على إقرار التوقيع أدناه أولًا');
       return;
@@ -274,6 +274,21 @@ export function SigningPage() {
 
   if (session.otp_required) {
     return <SigningIdentityGate token={token ?? ''} party={session.party} onVerified={load} />;
+  }
+
+  if (session.waiting_for_turn) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-paper p-4" dir="rtl">
+        <div className="max-w-sm rounded-2xl bg-card p-8 text-center shadow-xl">
+          <Clock size={40} className="mx-auto mb-3 text-seal" />
+          <h2 className="mb-2 font-display text-lg font-bold text-ink">بانتظار توقيع الطرف الآخر</h2>
+          <p className="text-sm text-slate">
+            مرحبًا {session.party.full_name || session.party.role_label}، لن يظهر لك المستند إلا بعد توقيع الطرف الذي يسبقك في الترتيب. حاول فتح
+            الرابط مرة أخرى لاحقًا.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (rejected || session.party.status === 'rejected') {

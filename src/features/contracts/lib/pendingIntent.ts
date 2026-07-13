@@ -16,6 +16,7 @@ export interface PendingContractIntent {
   // إنشاء الأطراف فعليًا في القاعدة — انظر NewContractWizard).
   templateId?: string;
   templateBody?: JSONContent;
+  templateSequentialSigning?: boolean;
 }
 
 export function setPendingContractIntent(intent: PendingContractIntent): void {

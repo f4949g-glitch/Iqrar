@@ -9,6 +9,9 @@ export interface ContractTemplate {
   document_type: DocumentType;
   body_json: JSONContent;
   party_count: number;
+  // إن فُعِّل: الطرف صاحب order_index الأعلى لا يرى المحتوى ولا يمكنه التوقيع
+  // إلا بعد توقيع كل من يسبقه — انظر get-signing-session/submit-signature.
+  sequential_signing: boolean;
   is_active: boolean;
   created_by: string;
   created_at: string;
@@ -27,6 +30,7 @@ export interface NewContractTemplateInput {
   document_type: DocumentType;
   body_json: JSONContent;
   party_count: number;
+  sequential_signing: boolean;
 }
 
 export async function listAllTemplates(): Promise<ContractTemplate[]> {

@@ -26,6 +26,7 @@ export function MyTemplatesPage() {
       verificationDefault: 'manual',
       templateId: template.id,
       templateBody: template.body_json,
+      templateSequentialSigning: template.sequential_signing,
     });
     navigate('/app/contracts/new');
   };

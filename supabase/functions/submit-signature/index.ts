@@ -80,6 +80,19 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: 'هذا العقد لم يعد قابلًا للتوقيع' }, 400);
   }
 
+  // ترتيب توقيع إلزامي: فحص خادمي مستقل عن بوابة get-signing-session، وإلا
+  // أمكن تجاوزها بإرسال هذا الطلب مباشرة بتوكن طرف لم يحن دوره بعد.
+  if (contract.sequential_signing) {
+    const { data: earlierParties } = await admin
+      .from('contract_parties')
+      .select('status')
+      .eq('contract_id', contract.id)
+      .lt('order_index', party.order_index);
+    if ((earlierParties ?? []).some((p) => p.status !== 'signed')) {
+      return jsonResponse({ error: 'بانتظار توقيع الطرف الذي يسبقك في الترتيب' }, 403);
+    }
+  }
+
   if (action === 'reject') {
     await admin.from('contract_parties').update({ status: 'rejected' }).eq('id', party.id);
     await admin

@@ -75,6 +75,7 @@ export interface Contract {
   updated_at: string;
   sent_at: string | null;
   completed_at: string | null;
+  sequential_signing: boolean;
 }
 
 export type VerificationMethod = 'manual' | 'nafath';

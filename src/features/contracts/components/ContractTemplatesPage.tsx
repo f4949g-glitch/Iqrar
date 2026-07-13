@@ -25,6 +25,7 @@ const emptyForm = {
   title: '',
   documentType: 'contract' as DocumentType,
   partyCount: 2,
+  sequentialSigning: false,
 };
 
 export function ContractTemplatesPage() {
@@ -82,7 +83,12 @@ export function ContractTemplatesPage() {
   const startEdit = async (template: ContractTemplate) => {
     setError('');
     setEditingId(template.id);
-    setForm({ title: template.title, documentType: template.document_type, partyCount: template.party_count });
+    setForm({
+      title: template.title,
+      documentType: template.document_type,
+      partyCount: template.party_count,
+      sequentialSigning: template.sequential_signing,
+    });
     setBodyJson(template.body_json);
     try {
       const grants = await listTemplateAccess(template.id);
@@ -109,6 +115,7 @@ export function ContractTemplatesPage() {
         document_type: form.documentType,
         body_json: bodyJson,
         party_count: Math.max(1, Math.min(10, form.partyCount)),
+        sequential_signing: form.sequentialSigning,
       };
       const saved = editingId ? await updateTemplate(editingId, input) : await createTemplate(input);
       await setTemplateAccess(saved.id, selectedUserIds);
@@ -175,6 +182,15 @@ export function ContractTemplatesPage() {
             max={10}
           />
         </div>
+
+        <label className="flex cursor-pointer items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.sequentialSigning}
+            onChange={(e) => setForm((f) => ({ ...f, sequentialSigning: e.target.checked }))}
+          />
+          <span className="font-bold text-ink">ترتيب توقيع إلزامي (كل طرف يوقّع بعد من يسبقه بحسب ترتيب الأطراف)</span>
+        </label>
 
         <div>
           <p className="mb-2 text-xs font-bold text-slate">

@@ -139,6 +139,7 @@ export async function updateContractMeta(
     term_value?: number | null;
     term_unit?: 'day' | 'week' | 'month' | 'year' | null;
     term_end_date?: string | null;
+    sequential_signing?: boolean;
   },
 ): Promise<Contract> {
   const { data, error } = await supabase

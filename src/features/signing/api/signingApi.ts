@@ -19,8 +19,17 @@ export interface SigningIdentityGateSession {
   party: { id: string; role_label: string; full_name: string; verification_method: 'manual' | 'nafath' };
 }
 
+// طرف عقد ذي ترتيب توقيع إلزامي يفتح رابطه قبل أن يوقّع من يسبقه — لا يُعرض
+// له أي محتوى حتى يحين دوره (انظر ContractTemplatesPage: "ترتيب توقيع إلزامي").
+export interface SigningWaitingTurnSession {
+  otp_required?: false;
+  waiting_for_turn: true;
+  party: { id: string; role_label: string; full_name: string };
+}
+
 export interface SigningFullSession {
   otp_required?: false;
+  waiting_for_turn?: false;
   contract: { id: string; title: string; status: string; page_count: number; source_type: string; body_json: unknown };
   party: { id: string; role_label: string; full_name: string; status: string; has_saved_signature: boolean };
   fields: ContractField[];
@@ -28,7 +37,7 @@ export interface SigningFullSession {
   all_parties: SigningPartyData[] | null;
 }
 
-export type SigningSession = SigningIdentityGateSession | SigningFullSession;
+export type SigningSession = SigningIdentityGateSession | SigningWaitingTurnSession | SigningFullSession;
 
 export async function fetchSigningSession(token: string): Promise<SigningSession> {
   const { data, error } = await supabase.functions.invoke<SigningSession | { error: string }>('get-signing-session', {
