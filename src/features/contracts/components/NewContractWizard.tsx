@@ -70,7 +70,7 @@ export function NewContractWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [method, setMethod] = useState<'pdf' | 'editor' | null>(guestDraft?.method ?? null);
-  const [title, setTitle] = useState(guestDraft?.title ?? '');
+  const [title, setTitle] = useState(guestDraft?.title ?? pendingIntent?.templateTitle ?? '');
   const [documentType] = useState<DocumentType>(guestDraft?.documentType ?? pendingIntent?.documentType ?? 'contract');
   const poaMode = documentType === 'power_of_attorney';
   // مدة توثيق التفويض ثابتة عند 7 أيام ولا تُعرض للاختيار؛ مدة توثيق العقد تبدأ
@@ -226,9 +226,11 @@ export function NewContractWizard() {
         entity_name: p.party_type === 'entity' ? p.entity_name.trim() || undefined : undefined,
         entity_cr_number: p.party_type === 'entity' ? p.entity_cr_number.trim() || undefined : undefined,
       };
-      // معرّف الطرف المؤقت الذي وُلِّد أثناء تأليف زائر لمحتوى العقد ليس صفًا حقيقيًا
-      // في القاعدة بعد، فيجب إنشاؤه لا تحديثه.
-      const isRealPartyId = Boolean(p.partyId) && !p.partyId!.startsWith('guest-temp-');
+      // معرّف الطرف المؤقت الذي وُلِّد أثناء تأليف زائر لمحتوى العقد (guest-temp-*) أو
+      // عند بدء عقد من قالب جاهز (tmpl-party-*) ليس صفًا حقيقيًا في القاعدة بعد،
+      // فيجب إنشاؤه لا تحديثه.
+      const isRealPartyId =
+        Boolean(p.partyId) && !p.partyId!.startsWith('guest-temp-') && !p.partyId!.startsWith(TEMPLATE_PARTY_PREFIX);
       const party = isRealPartyId ? await updateParty(p.partyId!, payload) : await addParty(created.id, payload);
       createdParties.push(party);
       if (!isRealPartyId) newPartyIds[i] = party.id;

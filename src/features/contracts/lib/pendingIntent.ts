@@ -15,6 +15,7 @@ export interface PendingContractIntent {
   // (body_json يحمل مراجع أطراف مؤقتة tmpl-party-* تُستبدل بمعرّفات حقيقية فور
   // إنشاء الأطراف فعليًا في القاعدة — انظر NewContractWizard).
   templateId?: string;
+  templateTitle?: string;
   templateBody?: JSONContent;
   templateSequentialSigning?: boolean;
 }

@@ -25,6 +25,7 @@ export function MyTemplatesPage() {
       partyCount: template.party_count,
       verificationDefault: 'manual',
       templateId: template.id,
+      templateTitle: template.title,
       templateBody: template.body_json,
       templateSequentialSigning: template.sequential_signing,
     });
