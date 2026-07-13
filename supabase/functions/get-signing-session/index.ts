@@ -27,11 +27,25 @@ Deno.serve(async (req: Request) => {
 
   const { data: party, error: partyError } = await admin
     .from('contract_parties')
-    .select('id, contract_id, role_label, full_name, status, national_id')
+    .select('id, contract_id, role_label, full_name, status, national_id, verification_method')
     .eq('token', token)
     .maybeSingle();
 
   if (partyError || !party) return jsonResponse({ error: 'الرابط غير صالح أو منتهي' }, 404);
+
+  // طرف بطريقة "يدوي" يجب أن يتحقق من هويته برمز SMS (انظر
+  // request-signing-identity-otp/verify-signing-identity-otp) قبل رؤية أي جزء
+  // من محتوى العقد — طرف نفاذ معفى لأنه تحقَّق أصلًا عبر النظام الحكومي.
+  if (party.verification_method === 'manual') {
+    const { data: identityOtpRows } = await admin.rpc('rpc_get_signing_identity_otp', { p_party_id: party.id });
+    const identityVerified = Boolean(identityOtpRows?.[0]?.verified);
+    if (!identityVerified) {
+      return jsonResponse({
+        party: { id: party.id, role_label: party.role_label, full_name: party.full_name, verification_method: party.verification_method },
+        otp_required: true,
+      });
+    }
+  }
 
   // إن كان صاحب هذا الطرف (بمطابقة رقم الهوية) قد حفظ توقيعًا في ملفه الشخصي من
   // قبل، نتيح له خيار استخدامه بعد تحقق عبر رمز يُرسل لجواله المسجَّل (انظر

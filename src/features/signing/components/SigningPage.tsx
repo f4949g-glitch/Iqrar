@@ -4,9 +4,18 @@ import { Document, Page } from 'react-pdf';
 import { CheckCircle2, FileSignature, ShieldCheck, XCircle } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { SignaturePad } from '@/shared/ui/SignaturePad';
-import { fetchSigningSession, submitSignature, rejectSignature, requestSigningOtp, verifySigningOtp, type SigningSession } from '../api/signingApi';
+import {
+  fetchSigningSession,
+  submitSignature,
+  rejectSignature,
+  requestSigningOtp,
+  verifySigningOtp,
+  type SigningSession,
+  type SigningFullSession,
+} from '../api/signingApi';
 import { renderContractHtml, renderPartiesHeaderHtml, type JsonNode } from '@/features/contracts/editor/renderContractHtml';
 import { fileToDataUrl } from '@/shared/lib/fileToDataUrl';
+import { SigningIdentityGate } from './SigningIdentityGate';
 import '@/lib/pdf/setupWorker';
 
 // يتيح للطرف الموقّع استخدام توقيعه المحفوظ مسبقًا في ملفه الشخصي بدل الرسم من
@@ -101,7 +110,7 @@ function FieldInput({
   token,
   hasSavedSignature,
 }: {
-  field: SigningSession['fields'][number];
+  field: SigningFullSession['fields'][number];
   value: unknown;
   onChange: (v: unknown) => void;
   token: string;
@@ -207,7 +216,7 @@ export function SigningPage() {
   }, [load]);
 
   const submit = async () => {
-    if (!token || !session) return;
+    if (!token || !session || session.otp_required) return;
     if (!agreedToDeclaration) {
       setError('يجب الموافقة على إقرار التوقيع أدناه أولًا');
       return;
@@ -262,6 +271,10 @@ export function SigningPage() {
   }
 
   if (!session) return null;
+
+  if (session.otp_required) {
+    return <SigningIdentityGate token={token ?? ''} party={session.party} onVerified={load} />;
+  }
 
   if (rejected || session.party.status === 'rejected') {
     return (

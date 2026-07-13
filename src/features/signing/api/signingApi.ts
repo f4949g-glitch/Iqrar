@@ -11,13 +11,24 @@ export interface SigningPartyData {
   phone: string | null;
 }
 
-export interface SigningSession {
+// طرف بطريقة "يدوي" لم يتحقق بعد من هويته عبر رمز SMS (انظر
+// SigningIdentityGate): الجلسة تحمل بيانات الطرف الأساسية فقط دون أي محتوى
+// للعقد، حتى يكتمل التحقق.
+export interface SigningIdentityGateSession {
+  otp_required: true;
+  party: { id: string; role_label: string; full_name: string; verification_method: 'manual' | 'nafath' };
+}
+
+export interface SigningFullSession {
+  otp_required?: false;
   contract: { id: string; title: string; status: string; page_count: number; source_type: string; body_json: unknown };
   party: { id: string; role_label: string; full_name: string; status: string; has_saved_signature: boolean };
   fields: ContractField[];
   pdf_url: string | null;
   all_parties: SigningPartyData[] | null;
 }
+
+export type SigningSession = SigningIdentityGateSession | SigningFullSession;
 
 export async function fetchSigningSession(token: string): Promise<SigningSession> {
   const { data, error } = await supabase.functions.invoke<SigningSession | { error: string }>('get-signing-session', {
@@ -66,4 +77,26 @@ export async function verifySigningOtp(token: string, code: string): Promise<{ s
   if (error) throw await extractFunctionError(error);
   if (data && 'error' in data) throw new Error(data.error);
   return data as { signature_data_url: string };
+}
+
+// يطلب رمز تحقق عبر SMS لإثبات هوية طرف بطريقة "يدوي" قبل تمكينه من رؤية
+// محتوى العقد أصلًا — بوابة منفصلة تمامًا عن requestSigningOtp (تلك خاصة
+// بإعادة استخدام توقيع محفوظ لاحقًا أثناء التوقيع نفسه).
+export async function requestSigningIdentityOtp(
+  token: string,
+): Promise<{ ok: boolean; required: boolean; sms_configured?: boolean; dev_code?: string; phone_hint?: string }> {
+  const { data, error } = await supabase.functions.invoke<
+    { ok: boolean; required: boolean; sms_configured?: boolean; dev_code?: string; phone_hint?: string } | { error: string }
+  >('request-signing-identity-otp', { body: { token } });
+  if (error) throw await extractFunctionError(error);
+  if (data && 'error' in data) throw new Error(data.error);
+  return data as { ok: boolean; required: boolean; sms_configured?: boolean; dev_code?: string; phone_hint?: string };
+}
+
+export async function verifySigningIdentityOtp(token: string, code: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke<{ ok: boolean } | { error: string }>('verify-signing-identity-otp', {
+    body: { token, code },
+  });
+  if (error) throw await extractFunctionError(error);
+  if (data && 'error' in data) throw new Error(data.error);
 }

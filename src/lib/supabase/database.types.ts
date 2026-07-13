@@ -966,7 +966,7 @@ export type Database = {
         }[]
       }
       redeem_credit_code: { Args: { p_code: string }; Returns: number }
-      resend_to_rejected_party: {
+      resend_signing_link: {
         Args: { p_party_id: string }
         Returns: {
           address: string | null
@@ -1041,6 +1041,15 @@ export type Database = {
           expires_at: string
         }[]
       }
+      rpc_get_signing_identity_otp: {
+        Args: { p_party_id: string }
+        Returns: {
+          attempts: number
+          code: string
+          expires_at: string
+          verified: boolean
+        }[]
+      }
       rpc_get_signing_otp: {
         Args: { p_party_id: string }
         Returns: {
@@ -1062,7 +1071,15 @@ export type Database = {
         Args: { p_phone: string }
         Returns: undefined
       }
+      rpc_increment_signing_identity_otp_attempts: {
+        Args: { p_party_id: string }
+        Returns: undefined
+      }
       rpc_increment_signing_otp_attempts: {
+        Args: { p_party_id: string }
+        Returns: undefined
+      }
+      rpc_mark_signing_identity_otp_verified: {
         Args: { p_party_id: string }
         Returns: undefined
       }
@@ -1086,6 +1103,10 @@ export type Database = {
       }
       rpc_upsert_registration_otp: {
         Args: { p_code: string; p_expires_at: string; p_phone: string }
+        Returns: undefined
+      }
+      rpc_upsert_signing_identity_otp: {
+        Args: { p_code: string; p_expires_at: string; p_party_id: string }
         Returns: undefined
       }
       rpc_upsert_signing_otp: {

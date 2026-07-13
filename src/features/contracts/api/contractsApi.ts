@@ -338,8 +338,10 @@ export async function deleteDraftContract(contractId: string): Promise<void> {
   if (error) throw new Error(translateErrorMessage(error.message));
 }
 
-export async function resendToRejectedParty(contractId: string, partyId: string): Promise<ContractParty> {
-  const { data, error } = await supabase.rpc('resend_to_rejected_party', { p_party_id: partyId });
+// يعيد إرسال رابط التوقيع لأي طرف لم يوقّع بعد (بانتظار التوقيع/تمت
+// المشاهدة/مرفوض)، بحد أقصى 3 مرات لكل طرف — انظر resend_signing_link.
+export async function resendSigningLink(contractId: string, partyId: string): Promise<ContractParty> {
+  const { data, error } = await supabase.rpc('resend_signing_link', { p_party_id: partyId });
   if (error) throw new Error(translateErrorMessage(error.message));
 
   const { error: fnError } = await supabase.functions.invoke('send-contract-notifications', {

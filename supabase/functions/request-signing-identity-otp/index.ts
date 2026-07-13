@@ -28,36 +28,39 @@ Deno.serve(async (req: Request) => {
 
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
-  const { data: party, error: partyError } = await admin.from('contract_parties').select('id, national_id, status').eq('token', token).maybeSingle();
-  if (partyError || !party) return jsonResponse({ error: 'الرابط غير صالح أو منتهي' }, 404);
-  if (!party.national_id) return jsonResponse({ error: 'لا يوجد توقيع محفوظ مرتبط بهذا الطرف' }, 400);
-
-  const { data: ownerProfile } = await admin
-    .from('profiles')
-    .select('phone, signature_data_url')
-    .eq('national_id', party.national_id)
+  const { data: party, error: partyError } = await admin
+    .from('contract_parties')
+    .select('id, verification_method, phone')
+    .eq('token', token)
     .maybeSingle();
+  if (partyError || !party) return jsonResponse({ error: 'الرابط غير صالح أو منتهي' }, 404);
 
-  if (!ownerProfile?.signature_data_url || !ownerProfile.phone) {
-    return jsonResponse({ error: 'لا يوجد توقيع محفوظ مرتبط بهذا الطرف' }, 400);
+  // التحقق عبر رمز SMS إلزامي فقط للأطراف بطريقة "يدوي" — طرف نفاذ تحقَّقت
+  // هويته أصلًا عبر النظام الحكومي فلا داعي لتكرار التحقق.
+  if (party.verification_method !== 'manual') {
+    return jsonResponse({ ok: true, required: false });
+  }
+  if (!party.phone) {
+    return jsonResponse({ error: 'لا يوجد رقم جوال مسجَّل لهذا الطرف، تواصل مع منشئ العقد لإضافته' }, 400);
   }
 
   const code = generateOtpCode();
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-  const { error: upsertError } = await admin.rpc('rpc_upsert_signing_otp', { p_party_id: party.id, p_code: code, p_expires_at: expiresAt });
+  const { error: upsertError } = await admin.rpc('rpc_upsert_signing_identity_otp', { p_party_id: party.id, p_code: code, p_expires_at: expiresAt });
   if (upsertError) return jsonResponse({ error: 'تعذّر إنشاء رمز التحقق' }, 500);
 
   const smsConfigured = isSmsConfigured();
   if (smsConfigured) {
-    const sendResult = await sendSms(ownerProfile.phone, `رمز التحقق لاستخدام توقيعك المحفوظ في منصة إقرار: ${code} (صالح لمدة 5 دقائق)`);
+    const sendResult = await sendSms(party.phone, `رمز التحقق من هويتك لفتح رابط التوثيق في منصة إقرار: ${code} (صالح لمدة 5 دقائق)`);
     if (!sendResult.ok) return jsonResponse({ error: 'تعذّر إرسال رمز التحقق عبر الرسائل، حاول مرة أخرى' }, 502);
   }
 
   return jsonResponse({
     ok: true,
+    required: true,
     sms_configured: smsConfigured,
     dev_code: smsConfigured ? undefined : code,
-    phone_hint: maskPhone(ownerProfile.phone),
+    phone_hint: maskPhone(party.phone),
   });
 });

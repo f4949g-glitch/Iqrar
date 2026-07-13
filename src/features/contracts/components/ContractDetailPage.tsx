@@ -13,7 +13,7 @@ import {
   updateParty,
   deleteParty,
   sendContract,
-  resendToRejectedParty,
+  resendSigningLink,
   type NewPartyInput,
 } from '../api/contractsApi';
 import { supabase } from '@/lib/supabase/client';
@@ -73,7 +73,9 @@ export function ContractDetailPage() {
   const [editTermEndDate, setEditTermEndDate] = useState('');
   const [savingMeta, setSavingMeta] = useState(false);
   const [sending, setSending] = useState(false);
-  const [resendingPartyId, setResendingPartyId] = useState<string | null>(null);
+  const [resendPickerOpen, setResendPickerOpen] = useState(false);
+  const [resendSelectedIds, setResendSelectedIds] = useState<string[]>([]);
+  const [resendBusy, setResendBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -192,18 +194,40 @@ export function ContractDetailPage() {
     }
   };
 
-  const resendToParty = async (partyId: string) => {
-    if (!contract) return;
-    setResendingPartyId(partyId);
+  // زر "إعادة إرسال الرابط" العام يعمل لأي طرف لم يوقّع بعد (بانتظار
+  // التوقيع/تمت المشاهدة/مرفوض)؛ عند وجود طرف مؤهَّل واحد فقط يُرسَل له مباشرة،
+  // وعند تعدّدهم تُفتح لائحة اختيار بدل تخمين المقصود.
+  const eligibleResendParties = parties.filter((p) => p.status !== 'signed');
+
+  const toggleResendSelection = (partyId: string) => {
+    setResendSelectedIds((prev) => (prev.includes(partyId) ? prev.filter((id) => id !== partyId) : [...prev, partyId]));
+  };
+
+  const resendToParties = async (partyIds: string[]) => {
+    if (!contract || partyIds.length === 0) return;
+    setResendBusy(true);
     setError('');
     try {
-      await resendToRejectedParty(contract.id, partyId);
+      for (const partyId of partyIds) {
+        await resendSigningLink(contract.id, partyId);
+      }
+      setResendPickerOpen(false);
+      setResendSelectedIds([]);
       await load();
     } catch (err) {
       setError(getErrorMessage(err, 'تعذّر إعادة الإرسال'));
     } finally {
-      setResendingPartyId(null);
+      setResendBusy(false);
     }
+  };
+
+  const openResendPicker = () => {
+    if (eligibleResendParties.length === 1) {
+      resendToParties([eligibleResendParties[0].id]);
+      return;
+    }
+    setResendSelectedIds([]);
+    setResendPickerOpen(true);
   };
 
   if (loading) return <p className="text-sm text-slate">جارِ التحميل...</p>;
@@ -240,6 +264,16 @@ export function ContractDetailPage() {
         </div>
         <div className="flex items-center gap-3">
           <StatusPill label={info.label} bg={info.bg} fg={info.fg} />
+          {!isDraft && eligibleResendParties.length > 0 && (
+            <button
+              type="button"
+              onClick={openResendPicker}
+              disabled={resendBusy}
+              className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm font-bold text-ink hover:bg-paper disabled:opacity-50"
+            >
+              <RefreshCw size={14} /> {resendBusy ? 'جارِ الإرسال...' : 'إعادة إرسال الرابط'}
+            </button>
+          )}
           {downloadUrl && (
             <a
               href={downloadUrl}
@@ -257,6 +291,45 @@ export function ContractDetailPage() {
           )}
         </div>
       </div>
+
+      {resendPickerOpen && (
+        <div className="rounded-xl border border-line bg-card p-5">
+          <h2 className="mb-3 font-display text-sm font-bold text-ink">اختر الأطراف لإعادة إرسال رابط التوقيع لهم</h2>
+          <div className="space-y-2">
+            {eligibleResendParties.map((p) => {
+              const exhausted = p.reject_resend_count >= 3;
+              return (
+                <label
+                  key={p.id}
+                  className={`flex items-center gap-2 rounded-lg border border-line p-2.5 ${exhausted ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-paper'}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={resendSelectedIds.includes(p.id)}
+                    disabled={exhausted}
+                    onChange={() => toggleResendSelection(p.id)}
+                  />
+                  <span>
+                    <span className="block text-sm font-bold text-ink">{p.full_name || p.role_label}</span>
+                    <span className="block text-xs text-slate">
+                      {p.role_label} · {PARTY_STATUS_LABEL[p.status].label} ·{' '}
+                      {exhausted ? 'استُنفدت محاولات الإرسال (3/3)' : `متبقٍ ${3 - p.reject_resend_count} من 3`}
+                    </span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          <div className="mt-4 flex gap-2">
+            <Button onClick={() => resendToParties(resendSelectedIds)} disabled={resendBusy || resendSelectedIds.length === 0}>
+              {resendBusy ? 'جارِ الإرسال...' : `إرسال (${resendSelectedIds.length})`}
+            </Button>
+            <Button variant="secondary" onClick={() => setResendPickerOpen(false)} disabled={resendBusy}>
+              إلغاء
+            </Button>
+          </div>
+        </div>
+      )}
 
       {isDraft && (
         <div className="rounded-xl border border-line bg-card p-5">
@@ -420,20 +493,6 @@ export function ContractDetailPage() {
                       <Copy size={12} /> نسخ رابط التوقيع
                     </button>
                   )}
-                  {p.status === 'rejected' &&
-                    (p.reject_resend_count < 3 ? (
-                      <button
-                        type="button"
-                        onClick={() => resendToParty(p.id)}
-                        disabled={resendingPartyId === p.id}
-                        className="flex items-center gap-1.5 rounded-lg bg-seal px-2.5 py-1 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
-                      >
-                        <RefreshCw size={12} />
-                        {resendingPartyId === p.id ? 'جارِ الإرسال...' : `إعادة الإرسال (متبقٍ ${3 - p.reject_resend_count})`}
-                      </button>
-                    ) : (
-                      <span className="text-xs font-bold text-clay">استُنفدت محاولات إعادة الإرسال (3/3)</span>
-                    ))}
                 </div>
               </div>
             ),
