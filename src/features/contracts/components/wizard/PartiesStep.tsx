@@ -667,9 +667,10 @@ export function PartiesStep({
           // الطرف الذي فعّل "أضفني كطرف" يمثّل صاحب الحساب نفسه: هويته وجنسيته
           // ثابتة من بيانات حسابه المُتحقَّق منها بصرف النظر عن الصفة المختارة له
           // (بائع، مشترٍ...) أو تحوّله لتمثيل منشأة. في التفويض الطرف الوحيد هو
-          // المفوَّض (شخص آخر يُمنح الصلاحية)، فلا يُقفَل. الزائر بلا حساب بعد لا
+          // الموكِّل (صاحب الحساب نفسه، مُصدِر التفويض) — هو من يوقّع، لا الشخص
+          // المفوَّض له (يُذكَر اسمه داخل نص الوثيقة فقط). الزائر بلا حساب بعد لا
           // توجد له بيانات ليُقفَل عليها، فتبقى حقوله قابلة للتعديل كسابقًا حتى يسجّل الدخول.
-          const isPartyLocked = party.is_self && !poaMode && !isGuest;
+          const isPartyLocked = party.is_self && !isGuest;
           const isOpen = openIndexes.has(index);
           const summary = party.full_name.trim() || (party.party_type === 'entity' ? party.entity_name.trim() : '') || 'غير مكتمل';
           return (
@@ -682,7 +683,7 @@ export function PartiesStep({
               <div className="flex items-center gap-2">
                 <ChevronDown size={16} className={`shrink-0 text-sealMuted transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 <div>
-                  <p className="font-display text-sm font-bold text-ink">{poaMode ? 'بيانات المفوَّض' : `الطرف ${index + 1}`}</p>
+                  <p className="font-display text-sm font-bold text-ink">{poaMode ? 'بياناتك (الموكِّل)' : `الطرف ${index + 1}`}</p>
                   {!isOpen && <p className="mt-0.5 text-xs text-slate">{summary}</p>}
                 </div>
                 {party.is_self && (
@@ -842,11 +843,9 @@ export function PartiesStep({
                     <>
                       <Field
                         label={
-                          poaMode
-                            ? 'رقم هوية المفوَّض (10 أرقام)'
-                            : isPartyLocked
-                              ? 'رقم الهوية أو الإقامة (بيانات حسابك، غير قابلة للتعديل)'
-                              : 'رقم الهوية أو الإقامة (10 أرقام)'
+                          isPartyLocked
+                            ? 'رقم الهوية أو الإقامة (بيانات حسابك، غير قابلة للتعديل)'
+                            : 'رقم الهوية أو الإقامة (10 أرقام)'
                         }
                         value={party.national_id}
                         onChange={(v) => updateParty(index, { national_id: v })}
@@ -861,17 +860,15 @@ export function PartiesStep({
 
                   <Field
                     label={
-                      poaMode
-                        ? 'اسم المفوَّض'
-                        : isPartyLocked
-                          ? party.party_type === 'entity'
-                            ? 'اسم الممثل (بيانات حسابك، غير قابلة للتعديل)'
-                            : 'الاسم (بيانات حسابك، غير قابلة للتعديل)'
-                          : party.party_type === 'entity'
-                            ? 'اسم الممثل'
-                            : party.verification_method === 'nafath'
-                              ? 'الاسم (يُملأ تلقائيًا بعد التحقق، أو أدخله مؤقتًا)'
-                              : 'الاسم'
+                      isPartyLocked
+                        ? party.party_type === 'entity'
+                          ? 'اسم الممثل (بيانات حسابك، غير قابلة للتعديل)'
+                          : 'الاسم (بيانات حسابك، غير قابلة للتعديل)'
+                        : party.party_type === 'entity'
+                          ? 'اسم الممثل'
+                          : party.verification_method === 'nafath'
+                            ? 'الاسم (يُملأ تلقائيًا بعد التحقق، أو أدخله مؤقتًا)'
+                            : 'الاسم'
                     }
                     value={party.full_name}
                     onChange={(v) => updateParty(index, { full_name: v })}
@@ -882,11 +879,9 @@ export function PartiesStep({
                   {party.verification_method === 'manual' && (
                     <Field
                       label={
-                        poaMode
-                          ? 'رقم هوية المفوَّض'
-                          : isPartyLocked
-                            ? 'رقم الهوية أو الإقامة (بيانات حسابك، غير قابلة للتعديل)'
-                            : 'رقم الهوية أو الإقامة'
+                        isPartyLocked
+                          ? 'رقم الهوية أو الإقامة (بيانات حسابك، غير قابلة للتعديل)'
+                          : 'رقم الهوية أو الإقامة'
                       }
                       value={party.national_id}
                       onChange={(v) => updateParty(index, { national_id: v })}
@@ -898,7 +893,7 @@ export function PartiesStep({
                   )}
                   <label className="block text-sm">
                     <span className="mb-1 block font-bold text-ink">
-                      {poaMode ? 'جنسية المفوَّض' : isPartyLocked ? 'الجنسية (بيانات حسابك، غير قابلة للتعديل)' : 'الجنسية'}
+                      {isPartyLocked ? 'الجنسية (بيانات حسابك، غير قابلة للتعديل)' : 'الجنسية'}
                     </span>
                     <select
                       value={party.nationality}

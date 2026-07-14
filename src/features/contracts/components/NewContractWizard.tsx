@@ -121,15 +121,18 @@ export function NewContractWizard() {
     return Array.from({ length: count }, (_, i) => ({
       ...emptyParty(i),
       verification_method: pendingIntent.verificationDefault,
-      role_label: pendingIntent.documentType === 'power_of_attorney' ? 'المفوض' : emptyParty(i).role_label,
+      role_label: pendingIntent.documentType === 'power_of_attorney' ? 'الموكِّل' : emptyParty(i).role_label,
     }));
   });
-  // الطرف الأول لعقد (لا تفويض) يمثّل صاحب الحساب نفسه، فتُملأ بياناته الشخصية
-  // تلقائيًا من الحساب فور توفّرها (مرة واحدة فقط كي لا تُطمَس تعديلات لاحقة على
-  // الجوال/البريد، والاسم/الهوية/الجنسية مقفلة أصلًا في PartiesStep فلا تُعدَّل يدويًا).
+  // الطرف الوحيد في التفويض يمثّل صاحب الحساب نفسه (الموكِّل/مُصدِر التفويض)،
+  // فتُملأ بياناته الشخصية تلقائيًا من الحساب فور توفّرها ويكون هو من يستلم رابط
+  // التوقيع — لا الشخص المفوَّض له (اسمه يُذكَر داخل نص الوثيقة فقط، فهو لا يوقّع).
+  // نفس المنطق يسري على الطرف الأول لعقد عادي (مرة واحدة فقط كي لا تُطمَس
+  // تعديلات لاحقة على الجوال/البريد، والاسم/الهوية/الجنسية مقفلة أصلًا في
+  // PartiesStep فلا تُعدَّل يدويًا).
   const profileAppliedToPartyOneRef = useRef(false);
   useEffect(() => {
-    if (poaMode || !profile || profileAppliedToPartyOneRef.current) return;
+    if (!profile || profileAppliedToPartyOneRef.current) return;
     profileAppliedToPartyOneRef.current = true;
     setDraftParties((prev) => {
       if (prev.length === 0) return prev;
@@ -147,7 +150,7 @@ export function NewContractWizard() {
           : p,
       );
     });
-  }, [poaMode, profile]);
+  }, [profile]);
   const [contract, setContract] = useState<Contract | null>(null);
   const [parties, setParties] = useState<ContractParty[]>([]);
   const [file, setFile] = useState<File | null>(null);
