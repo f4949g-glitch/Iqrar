@@ -31,6 +31,18 @@ async function withPartyCounts(contracts: Contract[]): Promise<ContractListItem[
   });
 }
 
+// أحدث العقود (بصرف النظر عن الحالة) لملخّص لوحة التحكم — RLS تقصر النتائج
+// تلقائيًا على عقود أنشأها المستخدم أو هو طرف فيها.
+export async function listRecentContracts(limit = 6): Promise<ContractListItem[]> {
+  const { data, error } = await supabase
+    .from('contracts')
+    .select(CONTRACT_LIST_COLUMNS)
+    .order('updated_at', { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(translateErrorMessage(error.message));
+  return withPartyCounts((data ?? []) as Contract[]);
+}
+
 // عقود جديدة: مُرسلة ولا تزال بانتظار توقيع بقية الأطراف (المسودات لها تبويب مستقل).
 export async function listActiveContracts(): Promise<ContractListItem[]> {
   const { data, error } = await supabase

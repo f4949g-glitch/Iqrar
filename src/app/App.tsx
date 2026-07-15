@@ -12,6 +12,7 @@ import { ContactPage } from './ContactPage';
 // تحميل كسول للصفحات الثقيلة (محرر Tiptap، عارض PDF، توليد QR) كي لا يُحمَّل أي من
 // ذلك ضمن الحزمة الأولى للصفحة الرئيسية العامة — هذا هو سبب البطء بعد الشاشة الترحيبية.
 const ContractsListPage = lazy(() => import('@/features/contracts/components/ContractsListPage').then((m) => ({ default: m.ContractsListPage })));
+const DashboardPage = lazy(() => import('@/features/contracts/components/DashboardPage').then((m) => ({ default: m.DashboardPage })));
 const NewContractWizard = lazy(() => import('@/features/contracts/components/NewContractWizard').then((m) => ({ default: m.NewContractWizard })));
 const ContractDetailPage = lazy(() => import('@/features/contracts/components/ContractDetailPage').then((m) => ({ default: m.ContractDetailPage })));
 const DiscountCodesPage = lazy(() => import('@/features/contracts/components/DiscountCodesPage').then((m) => ({ default: m.DiscountCodesPage })));
@@ -85,7 +86,7 @@ function AppShell() {
     <Layout profile={profile} templateCount={myTemplateCount}>
       <Suspense fallback={<p className="text-sm text-slate">جارِ التحميل...</p>}>
         <Routes>
-          <Route path="/" element={<Navigate to="/app/contracts" replace />} />
+          <Route path="/" element={profile ? <DashboardPage /> : <Navigate to="/app/contracts" replace />} />
           <Route path="/contracts" element={profile ? <ContractsListPage /> : <AuthGate />} />
           {/* يُتاح المعالج للزائر أيضًا: يمكنه تعبئة الأطراف وكتابة محتوى العقد محليًا،
               ولا يُطلب منه تسجيل الدخول إلا قبل المراجعة والدفع مباشرة (انظر NewContractWizard). */}

@@ -90,9 +90,34 @@ const TRUST_POINTS = [
   { icon: ScanLine, label: 'رقم توثيق ورمز QR على كل مستند' },
 ];
 
+// روابط التنقّل الرئيسية للصفحة العامة: الرئيسية (تمرير لأعلى الصفحة نفسها)،
+// من نحن/الخدمات (تمرير لقسم مُعرَّف بـid ضمن نفس الصفحة)، اتصل بنا (صفحة مستقلة).
+function NavLinks({ className }: { className?: string }) {
+  const scrollToTop = (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  return (
+    <nav className={className}>
+      <a href="#top" onClick={scrollToTop} className="px-3 py-2 text-ink hover:text-seal">
+        الرئيسية
+      </a>
+      <a href="#about" className="px-3 py-2 text-ink hover:text-seal">
+        من نحن
+      </a>
+      <a href="#services" className="px-3 py-2 text-ink hover:text-seal">
+        الخدمات
+      </a>
+      <Link to="/app/contact" className="px-3 py-2 text-ink hover:text-seal">
+        اتصل بنا
+      </Link>
+    </nav>
+  );
+}
+
 function Nav({ profile, onLogout, orgName, logoUrl }: { profile: Profile | null; onLogout: () => void; orgName: string; logoUrl: string | null }) {
   return (
-    <header className="border-b border-line bg-card">
+    <header className="sticky top-0 z-40 border-b border-line bg-card">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 md:px-8">
         <div className="flex items-center gap-2.5">
           {logoUrl ? (
@@ -107,6 +132,7 @@ function Nav({ profile, onLogout, orgName, logoUrl }: { profile: Profile | null;
             <span className="hidden sm:inline">{orgName}</span>
           </span>
         </div>
+        <NavLinks className="hidden items-center gap-0.5 text-sm font-bold lg:flex" />
         <div className="flex items-center gap-0.5 text-xs font-bold sm:gap-1 sm:text-sm">
           {!profile && (
             <Link to="/verify" className="hidden items-center gap-1.5 px-3 py-2 text-ink hover:text-seal sm:flex">
@@ -350,7 +376,7 @@ export function LandingPage() {
 
       {activeFlow && <CreateEntryFlow documentType={activeFlow} onClose={() => setActiveFlow(null)} />}
 
-      <section className="border-b border-line bg-card">
+      <section id="about" className="scroll-mt-20 border-b border-line bg-card">
         <div className="mx-auto max-w-4xl px-4 py-14 text-center md:px-8">
           <SectionEyebrow>نبذة عنّا</SectionEyebrow>
           <h2 className="mb-3 font-display text-2xl font-extrabold text-ink md:text-3xl">من نحن</h2>
@@ -363,7 +389,7 @@ export function LandingPage() {
 
       <QuickVerify />
 
-      <section className="border-y border-line bg-card py-14">
+      <section id="services" className="scroll-mt-20 border-y border-line bg-card py-14">
         <div className="mx-auto max-w-6xl px-4 md:px-8">
           <div className="mx-auto mb-10 max-w-2xl text-center">
             <SectionEyebrow>خدماتنا</SectionEyebrow>
