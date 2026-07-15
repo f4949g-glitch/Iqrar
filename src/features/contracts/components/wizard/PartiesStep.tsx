@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Building2, ChevronDown, Plus, ShieldCheck, Trash2, User, UserCheck } from 'lucide-react';
+import { AlertTriangle, Building2, ChevronDown, Plus, ShieldCheck, Trash2, User, UserCheck } from 'lucide-react';
 import { Field } from '@/shared/ui/Field';
 import { Button } from '@/shared/ui/Button';
 import { GregorianDateInput } from '@/shared/ui/GregorianDateInput';
@@ -254,12 +254,14 @@ export function PartiesStep({
 
   // تفعيل/إلغاء "أضفني كطرف" لهذا الطرف: عند التفعيل تُملأ حقول هويته من بيانات
   // الحساب الحالي وتُقفَل، ويُلغى تفعيلها تلقائيًا عن أي طرف آخر (طرف واحد فقط
-  // يمكن أن يمثّل صاحب الحساب). عند الإلغاء تبقى البيانات كما هي لكن تصبح قابلة للتعديل.
+  // يمكن أن يمثّل صاحب الحساب). عند الإلغاء تُفرَّغ حقول الهوية المُعبَّأة تلقائيًا
+  // (لا تبقى بيانات حساب صاحب العقد ظاهرة لطرف لم يعد يمثّله).
   const toggleSelf = (index: number) => {
     const next = parties.map((p, i) => {
       if (i === index) {
         const nowSelf = !p.is_self;
-        return nowSelf && profile ? applyProfileToParty({ ...p, is_self: true }, profile) : { ...p, is_self: nowSelf };
+        if (nowSelf) return profile ? applyProfileToParty({ ...p, is_self: true }, profile) : { ...p, is_self: true };
+        return { ...p, is_self: false, full_name: '', national_id: '', nationality: NATIONALITIES[0], phone: '', email: '' };
       }
       return p.is_self ? { ...p, is_self: false } : p;
     });
@@ -343,20 +345,24 @@ export function PartiesStep({
     setFieldErrors({});
     if (!title.trim()) {
       setError(`عنوان ${docLabel} مطلوب`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     const duration = Number(durationDays);
     if (!durationDays.trim() || !Number.isInteger(duration) || duration < 1 || duration > 14) {
       setError('حدد صلاحية التوثيق كعدد صحيح من الأيام بين 1 و14');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     if (poaMode) {
       if (parties.length !== 1) {
         setError('لا يمكن أن يتضمن التفويض أكثر من طرف واحد');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
     } else if (parties.length < 2) {
       setError('يلزم طرفان على الأقل لإنشاء عقد');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     // تُجمع كل أخطاء الحقول الفارغة دفعة واحدة كي تظهر بجانب كل حقل ناقص مباشرةً
@@ -374,20 +380,28 @@ export function PartiesStep({
       if (!p.full_name.trim()) {
         markInvalid(index, 'full_name', p.party_type === 'entity' ? 'اسم ممثل المنشأة مطلوب' : 'الاسم مطلوب');
       }
+      if (!p.national_id.trim()) {
+        markInvalid(index, 'national_id', 'رقم الهوية أو الإقامة مطلوب');
+      }
+      if (!p.phone.trim()) {
+        markInvalid(index, 'phone', 'رقم الجوال مطلوب');
+      }
       if (p.role_label === 'أخرى' && !p.custom_role.trim()) {
         markInvalid(index, 'custom_role', 'حدد مسمّى الصفة');
       }
     });
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
-      setError('أكمل الحقول المطلوبة المُعلَّمة أدناه');
+      setError('أكمل الحقول المطلوبة المُعلَّمة أدناه، وهي مُعلَّمة باللون الأحمر بجانب كل حقل');
       if (firstInvalidIndex !== null) setOpenIndexes((prev) => new Set(prev).add(firstInvalidIndex as number));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     const duplicate = findDuplicateNationalId(parties.map((p) => p.national_id));
     if (duplicate) {
       setError(`رقم الهوية مكرر بين الطرف ${duplicate.firstIndex + 1} والطرف ${duplicate.secondIndex + 1} — لا يمكن أن يتطابق رقم الهوية بين طرفين مختلفين`);
       setOpenIndexes((prev) => new Set(prev).add(duplicate.firstIndex).add(duplicate.secondIndex));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     onNext();
@@ -397,6 +411,12 @@ export function PartiesStep({
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div role="alert" className="flex items-start gap-2 rounded-xl border-2 border-clay bg-clayLight p-4 text-sm font-bold text-clay">
+          <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label={`عنوان ${docLabel}`} value={title} onChange={onTitleChange} required />
         {poaMode ? (
@@ -853,6 +873,7 @@ export function PartiesStep({
                         digitsOnly
                         maxLength={10}
                         disabled={isPartyLocked}
+                        error={fieldErrors[`${index}.national_id`]}
                       />
                       <Field label="تاريخ الميلاد" value={party.date_of_birth} onChange={(v) => updateParty(index, { date_of_birth: v })} type="date" required />
                     </>
@@ -885,10 +906,12 @@ export function PartiesStep({
                       }
                       value={party.national_id}
                       onChange={(v) => updateParty(index, { national_id: v })}
+                      required
                       digitsOnly
                       maxLength={10}
                       hint="10 أرقام فقط"
                       disabled={isPartyLocked}
+                      error={fieldErrors[`${index}.national_id`]}
                     />
                   )}
                   <label className="block text-sm">
@@ -912,7 +935,14 @@ export function PartiesStep({
                     <>
                       <Field label="العنوان" value={party.address} onChange={(v) => updateParty(index, { address: v })} />
                       <Field label="البريد الإلكتروني" value={party.email} onChange={(v) => updateParty(index, { email: v })} type="email" />
-                      <Field label="رقم الجوال" value={party.phone} onChange={(v) => updateParty(index, { phone: v })} phone />
+                      <Field
+                        label="رقم الجوال"
+                        value={party.phone}
+                        onChange={(v) => updateParty(index, { phone: v })}
+                        phone
+                        required
+                        error={fieldErrors[`${index}.phone`]}
+                      />
                     </>
                   )}
                 </div>
@@ -972,7 +1002,12 @@ export function PartiesStep({
         </Button>
       )}
 
-      {error && <p className="text-sm font-bold text-clay">{error}</p>}
+      {error && (
+        <div role="alert" className="flex items-start gap-2 rounded-xl border-2 border-clay bg-clayLight p-4 text-sm font-bold text-clay">
+          <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
       <div className="flex justify-end">
         <Button onClick={submit}>التالي: طريقة إنشاء {docLabel}</Button>

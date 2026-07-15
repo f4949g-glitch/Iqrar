@@ -8,6 +8,7 @@ import {
   listActiveContracts,
   listApprovedContracts,
   listContractsAwaitingMySignature,
+  listDraftContracts,
   listRejectedContracts,
   searchContracts,
   type ContractListItem,
@@ -15,9 +16,10 @@ import {
 import { CONTRACT_STATUS_LABEL } from '../types';
 import { formatDate } from '@/shared/lib/formatDate';
 
-type Tab = 'new' | 'approved' | 'awaiting' | 'rejected';
+type Tab = 'draft' | 'new' | 'approved' | 'awaiting' | 'rejected';
 
 const TABS: { key: Tab; label: string }[] = [
+  { key: 'draft', label: 'مسودة' },
   { key: 'new', label: 'عقود جديدة' },
   { key: 'approved', label: 'العقود الموافق عليها' },
   { key: 'awaiting', label: 'طلبات الموافقة' },
@@ -59,7 +61,7 @@ function ContractCard({ contract, onDelete }: { contract: ContractListItem; onDe
 }
 
 function isTab(value: string | null): value is Tab {
-  return value === 'new' || value === 'awaiting' || value === 'approved' || value === 'rejected';
+  return value === 'draft' || value === 'new' || value === 'awaiting' || value === 'approved' || value === 'rejected';
 }
 
 export function ContractsListPage() {
@@ -80,13 +82,15 @@ export function ContractsListPage() {
     setError('');
     try {
       const data =
-        activeTab === 'new'
-          ? await listActiveContracts()
-          : activeTab === 'approved'
-            ? await listApprovedContracts()
-            : activeTab === 'rejected'
-              ? await listRejectedContracts()
-              : await listContractsAwaitingMySignature();
+        activeTab === 'draft'
+          ? await listDraftContracts()
+          : activeTab === 'new'
+            ? await listActiveContracts()
+            : activeTab === 'approved'
+              ? await listApprovedContracts()
+              : activeTab === 'rejected'
+                ? await listRejectedContracts()
+                : await listContractsAwaitingMySignature();
       setContracts(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'تعذّر تحميل العقود');

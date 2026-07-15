@@ -31,12 +31,23 @@ async function withPartyCounts(contracts: Contract[]): Promise<ContractListItem[
   });
 }
 
-// عقود جديدة: مسودة، أو مُرسلة ولا تزال بانتظار توقيع بقية الأطراف.
+// عقود جديدة: مُرسلة ولا تزال بانتظار توقيع بقية الأطراف (المسودات لها تبويب مستقل).
 export async function listActiveContracts(): Promise<ContractListItem[]> {
   const { data, error } = await supabase
     .from('contracts')
     .select(CONTRACT_LIST_COLUMNS)
-    .in('status', ['draft', 'pending', 'partially_completed'])
+    .in('status', ['pending', 'partially_completed'])
+    .order('updated_at', { ascending: false });
+  if (error) throw new Error(translateErrorMessage(error.message));
+  return withPartyCounts((data ?? []) as Contract[]);
+}
+
+// المسودات: عقود لم تُرسَل بعد لأي طرف (لم تكتمل خطوات إنشائها).
+export async function listDraftContracts(): Promise<ContractListItem[]> {
+  const { data, error } = await supabase
+    .from('contracts')
+    .select(CONTRACT_LIST_COLUMNS)
+    .eq('status', 'draft')
     .order('updated_at', { ascending: false });
   if (error) throw new Error(translateErrorMessage(error.message));
   return withPartyCounts((data ?? []) as Contract[]);

@@ -1,4 +1,16 @@
+import { useId } from 'react';
 import { GregorianDateInput } from './GregorianDateInput';
+
+// نطاقات بريد شائعة تُقترَح تلقائيًا أثناء الكتابة في أي حقل بريد إلكتروني
+// (type="email")، مع بقاء حرية كتابة أي نطاق آخر يدويًا كاملًا.
+const COMMON_EMAIL_DOMAINS = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 'icloud.com'];
+
+function emailSuggestions(value: string): string[] {
+  const at = value.indexOf('@');
+  const local = (at === -1 ? value : value.slice(0, at)).trim();
+  if (!local) return [];
+  return COMMON_EMAIL_DOMAINS.map((domain) => `${local}@${domain}`);
+}
 
 interface FieldProps {
   label: string;
@@ -38,6 +50,7 @@ export function Field({
   phone,
   disabled,
 }: FieldProps) {
+  const datalistId = useId();
   const handleChange = (raw: string) => {
     let next = raw;
     if (digitsOnly) next = next.replace(/[^0-9]/g, '');
@@ -84,20 +97,31 @@ export function Field({
       {type === 'date' ? (
         <GregorianDateInput value={value} onChange={onChange} required={required} />
       ) : (
-        <input
-          type={type}
-          inputMode={digitsOnly ? 'numeric' : undefined}
-          value={value}
-          required={required}
-          placeholder={placeholder}
-          min={min}
-          max={max}
-          maxLength={maxLength}
-          disabled={disabled}
-          onChange={(e) => handleChange(e.target.value)}
-          className="w-full rounded-lg border bg-white px-3 py-2 text-ink outline-none focus:border-seal disabled:cursor-not-allowed disabled:bg-paper disabled:text-slate"
-          style={{ borderColor: error ? '#B5533C' : '#E5E1D6' }}
-        />
+        <>
+          <input
+            type={type}
+            inputMode={digitsOnly ? 'numeric' : undefined}
+            value={value}
+            required={required}
+            placeholder={placeholder}
+            min={min}
+            max={max}
+            maxLength={maxLength}
+            disabled={disabled}
+            list={type === 'email' ? datalistId : undefined}
+            autoComplete={type === 'email' ? 'off' : undefined}
+            onChange={(e) => handleChange(e.target.value)}
+            className="w-full rounded-lg border bg-white px-3 py-2 text-ink outline-none focus:border-seal disabled:cursor-not-allowed disabled:bg-paper disabled:text-slate"
+            style={{ borderColor: error ? '#B5533C' : '#E5E1D6' }}
+          />
+          {type === 'email' && (
+            <datalist id={datalistId}>
+              {emailSuggestions(value).map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
+          )}
+        </>
       )}
       {hint && !error && <span className="mt-1 block text-xs text-slate">{hint}</span>}
       {error && <span className="mt-1 block text-xs font-bold text-clay">{error}</span>}
