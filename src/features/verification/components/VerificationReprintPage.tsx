@@ -69,7 +69,7 @@ export function VerificationReprintPage() {
               </span>
             </Button>
           </div>
-          <iframe title="معاينة" srcDoc={result.html} className="h-[500px] w-full rounded-lg border border-line bg-white" />
+          <iframe title="معاينة" srcDoc={result.html} className="h-[500px] w-full rounded-lg border border-line bg-card" />
         </div>
       )}
     </div>

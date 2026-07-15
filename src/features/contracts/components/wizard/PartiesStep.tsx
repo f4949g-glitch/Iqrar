@@ -431,7 +431,7 @@ export function PartiesStep({
               value={durationDays}
               onChange={(e) => onDurationChange(e.target.value)}
               required
-              className="w-full rounded-lg border border-line bg-white px-3 py-2.5 text-ink outline-none focus:border-seal"
+              className="w-full rounded-lg border border-line bg-card px-3 py-2.5 text-ink outline-none focus:border-seal"
             >
               {Array.from({ length: 14 }, (_, i) => i + 1).map((day) => (
                 <option key={day} value={String(day)}>
@@ -469,7 +469,7 @@ export function PartiesStep({
               </div>
               <div className="flex items-center gap-3">
                 {companyLogoDataUrl ? (
-                  <img src={companyLogoDataUrl} alt="شعار المنشأة" className="h-14 w-14 rounded-lg border border-line bg-white object-contain p-1" />
+                  <img src={companyLogoDataUrl} alt="شعار المنشأة" className="h-14 w-14 rounded-lg border border-line bg-card object-contain p-1" />
                 ) : (
                   <div className="flex h-14 w-14 items-center justify-center rounded-lg border border-dashed border-line text-[10px] text-slate">لا يوجد</div>
                 )}
@@ -535,7 +535,7 @@ export function PartiesStep({
                   <select
                     value={termUnit}
                     onChange={(e) => onTermUnitChange(e.target.value as TermUnit)}
-                    className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
+                    className="w-full rounded-lg border border-line bg-card px-3 py-2 text-ink outline-none focus:border-seal"
                   >
                     {Object.entries(TERM_UNIT_LABELS).map(([value, label]) => (
                       <option key={value} value={value}>
@@ -580,7 +580,7 @@ export function PartiesStep({
                         setPartyCountTarget(Number(e.target.value));
                       }
                     }}
-                    className="h-10 w-full rounded-lg border border-line bg-white px-3 text-center text-sm text-ink outline-none focus:border-seal"
+                    className="h-10 w-full rounded-lg border border-line bg-card px-3 text-center text-sm text-ink outline-none focus:border-seal"
                   >
                     {PARTY_COUNT_OPTIONS.map((n) => (
                       <option key={n} value={String(n)}>
@@ -599,7 +599,7 @@ export function PartiesStep({
                         value={customCountInput}
                         onChange={(e) => setCustomCountInput(e.target.value)}
                         placeholder="أدخل العدد"
-                        className="h-10 w-full rounded-lg border border-line bg-white px-3 text-center text-sm text-ink outline-none focus:border-seal"
+                        className="h-10 w-full rounded-lg border border-line bg-card px-3 text-center text-sm text-ink outline-none focus:border-seal"
                       />
                       <Button variant="secondary" className="h-10 px-3 text-xs" onClick={() => setPartyCountTarget(Number(customCountInput))}>
                         تطبيق
@@ -636,7 +636,7 @@ export function PartiesStep({
                   setDiscountPreview(null);
                 }}
                 placeholder="أدخل الكود"
-                className="h-10 flex-1 rounded-lg border border-line bg-white px-3 text-sm text-ink outline-none focus:border-seal"
+                className="h-10 flex-1 rounded-lg border border-line bg-card px-3 text-sm text-ink outline-none focus:border-seal"
               />
               <button
                 type="button"
@@ -665,7 +665,7 @@ export function PartiesStep({
                     setCreditResult(null);
                   }}
                   placeholder="أدخل الكود"
-                  className="h-10 flex-1 rounded-lg border border-line bg-white px-3 text-sm text-ink outline-none focus:border-seal"
+                  className="h-10 flex-1 rounded-lg border border-line bg-card px-3 text-sm text-ink outline-none focus:border-seal"
                 />
                 <button
                   type="button"
@@ -858,7 +858,7 @@ export function PartiesStep({
                       <select
                         value={party.role_label}
                         onChange={(e) => updateParty(index, { role_label: e.target.value })}
-                        className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
+                        className="w-full rounded-lg border border-line bg-card px-3 py-2 text-ink outline-none focus:border-seal"
                       >
                         {PARTY_ROLE_OPTIONS.map((r) => (
                           <option key={r} value={r}>
@@ -941,7 +941,7 @@ export function PartiesStep({
                       value={party.nationality}
                       onChange={(e) => updateParty(index, { nationality: e.target.value })}
                       disabled={isPartyLocked}
-                      className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal disabled:cursor-not-allowed disabled:bg-paper disabled:text-slate"
+                      className="w-full rounded-lg border border-line bg-card px-3 py-2 text-ink outline-none focus:border-seal disabled:cursor-not-allowed disabled:bg-paper disabled:text-slate"
                     >
                       {NATIONALITIES.map((n) => (
                         <option key={n} value={n}>

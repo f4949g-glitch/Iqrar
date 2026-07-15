@@ -12,7 +12,7 @@ export function AuthGate() {
         لإنشاء عقد أو إرساله للتوثيق يجب أن يكون لديك حساب. سجّل الدخول أو أنشئ حسابًا جديدًا برقم هويتك خلال دقيقة.
       </p>
       <div className="flex gap-3">
-        <Link to="/login" className="rounded-full bg-white px-6 py-2.5 text-sm font-bold text-ink shadow-sm hover:bg-paper">
+        <Link to="/login" className="rounded-full bg-card px-6 py-2.5 text-sm font-bold text-ink shadow-sm hover:bg-paper">
           تسجيل الدخول
         </Link>
         <Link to="/register" className="rounded-full bg-seal px-6 py-2.5 text-sm font-bold text-white hover:opacity-90">

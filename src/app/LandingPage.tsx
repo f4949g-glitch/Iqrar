@@ -491,7 +491,7 @@ export function LandingPage() {
           <p className="mx-auto mb-8 max-w-xl text-sm text-white/70 md:text-base">
             أنشئ حسابك الآن مجانًا وابدأ بتوثيق عقودك الأولى خلال دقائق.
           </p>
-          <Link to="/register" className="inline-block rounded-md bg-white px-8 py-3.5 text-sm font-bold text-ink hover:bg-white/90">
+          <Link to="/register" className="inline-block rounded-md bg-card px-8 py-3.5 text-sm font-bold text-ink hover:bg-card/90">
             إنشاء حساب مجانًا
           </Link>
         </div>

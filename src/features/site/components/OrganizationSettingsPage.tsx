@@ -75,7 +75,7 @@ export function OrganizationSettingsPage() {
         <h2 className="mb-4 font-display text-sm font-bold text-ink">الشعار والاسم</h2>
         <div className="mb-4 flex items-center gap-4">
           {logoPreview ? (
-            <img src={logoPreview} alt="شعار المنشأة" className="h-16 w-16 rounded-lg border border-line bg-white object-contain p-1" />
+            <img src={logoPreview} alt="شعار المنشأة" className="h-16 w-16 rounded-lg border border-line bg-card object-contain p-1" />
           ) : (
             <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-line text-xs text-slate">لا يوجد</div>
           )}

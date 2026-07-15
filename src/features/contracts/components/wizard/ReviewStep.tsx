@@ -161,7 +161,7 @@ export function ReviewStep({
           </div>
           {editorPreviewHtml ? (
             <div
-              className="prose max-h-64 max-w-none overflow-y-auto rounded-lg border border-line bg-paper p-4 text-sm text-ink"
+              className="prose max-h-64 max-w-none overflow-y-auto rounded-lg border border-line bg-white p-4 text-sm text-ink"
               dangerouslySetInnerHTML={{ __html: editorPreviewHtml }}
             />
           ) : (
@@ -279,7 +279,7 @@ export function ReviewStep({
             </div>
             <div className="overflow-y-auto p-6">
               {editorPreviewHtml ? (
-                <div className="prose max-w-none text-sm text-ink" dangerouslySetInnerHTML={{ __html: editorPreviewHtml }} />
+                <div className="prose max-w-none rounded-lg bg-white p-4 text-sm text-ink" dangerouslySetInnerHTML={{ __html: editorPreviewHtml }} />
               ) : pdfUrl ? (
                 <iframe src={pdfUrl} title="معاينة المستند" className="h-[70vh] w-full rounded-lg border border-line" />
               ) : null}

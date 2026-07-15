@@ -85,7 +85,7 @@ export function RegisterForm({ onRegistered }: RegisterFormProps) {
   };
 
   const inputClass =
-    'w-full rounded-lg border border-line bg-white px-3 py-2.5 text-right text-ink outline-none focus:border-seal';
+    'w-full rounded-lg border border-line bg-card px-3 py-2.5 text-right text-ink outline-none focus:border-seal';
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-hero p-4" dir="rtl">
@@ -139,7 +139,7 @@ export function RegisterForm({ onRegistered }: RegisterFormProps) {
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-slate">الجوال</label>
-                <div className="flex items-center overflow-hidden rounded-lg border border-line bg-white focus-within:border-seal" dir="ltr">
+                <div className="flex items-center overflow-hidden rounded-lg border border-line bg-card focus-within:border-seal" dir="ltr">
                   <span className="border-l border-line bg-paper px-3 py-2.5 text-sm font-bold text-slate">966</span>
                   <input
                     required

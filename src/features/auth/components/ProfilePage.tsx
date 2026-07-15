@@ -295,7 +295,7 @@ function ProfileDetailsSection({ profile, onUpdated }: { profile: Profile; onUpd
               <select
                 value={fields.nationality}
                 onChange={(e) => setFields((f) => ({ ...f, nationality: e.target.value }))}
-                className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
+                className="w-full rounded-lg border border-line bg-card px-3 py-2 text-ink outline-none focus:border-seal"
               >
                 {NATIONALITIES.map((n) => (
                   <option key={n} value={n}>
@@ -359,7 +359,7 @@ function SignatureSection({ profile }: { profile: Profile }) {
 
       {signature && !pendingSignature && (
         <div className="mb-4">
-          <img src={signature} alt="التوقيع المحفوظ" className="h-24 rounded-lg border border-line bg-white p-2" />
+          <img src={signature} alt="التوقيع المحفوظ" className="h-24 rounded-lg border border-line bg-card p-2" />
           <button type="button" onClick={() => save(null)} disabled={saving} className="mt-2 text-xs font-bold text-clay">
             حذف التوقيع المحفوظ
           </button>
@@ -368,7 +368,7 @@ function SignatureSection({ profile }: { profile: Profile }) {
 
       {pendingSignature && (
         <div className="mb-4">
-          <img src={pendingSignature} alt="معاينة التوقيع الجديد" className="h-24 rounded-lg border border-line bg-white p-2" />
+          <img src={pendingSignature} alt="معاينة التوقيع الجديد" className="h-24 rounded-lg border border-line bg-card p-2" />
         </div>
       )}
 

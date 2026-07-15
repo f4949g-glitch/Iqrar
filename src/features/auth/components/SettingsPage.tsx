@@ -49,7 +49,7 @@ export function SettingsPage() {
     }
   };
 
-  const inputClass = 'w-full rounded-lg border border-line bg-white px-3 py-2.5 text-right text-ink outline-none focus:border-seal';
+  const inputClass = 'w-full rounded-lg border border-line bg-card px-3 py-2.5 text-right text-ink outline-none focus:border-seal';
 
   return (
     <div className="space-y-6">

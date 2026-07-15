@@ -34,7 +34,7 @@ export function LoginForm({ onSignedIn }: LoginFormProps) {
   };
 
   const inputClass =
-    'w-full rounded-lg border border-line bg-white px-3 py-2.5 text-right text-ink outline-none focus:border-seal';
+    'w-full rounded-lg border border-line bg-card px-3 py-2.5 text-right text-ink outline-none focus:border-seal';
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-hero p-4" dir="rtl">

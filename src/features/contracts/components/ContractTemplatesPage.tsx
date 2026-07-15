@@ -164,7 +164,7 @@ export function ContractTemplatesPage() {
             <select
               value={form.documentType}
               onChange={(e) => setForm((f) => ({ ...f, documentType: e.target.value as DocumentType }))}
-              className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
+              className="w-full rounded-lg border border-line bg-card px-3 py-2 text-ink outline-none focus:border-seal"
             >
               {(Object.keys(DOCUMENT_TYPE_LABELS) as DocumentType[]).map((dt) => (
                 <option key={dt} value={dt}>
@@ -203,7 +203,7 @@ export function ContractTemplatesPage() {
 
         <div>
           <p className="mb-2 text-xs font-bold text-ink">المستخدمون المسموح لهم باستخدام هذا القالب ({selectedUserIds.length})</p>
-          <div className="mb-2 flex items-center gap-2 rounded-lg border border-line bg-white px-3 py-2">
+          <div className="mb-2 flex items-center gap-2 rounded-lg border border-line bg-card px-3 py-2">
             <Search size={15} className="text-slate" />
             <input
               value={userSearch}

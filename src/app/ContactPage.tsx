@@ -132,7 +132,7 @@ export function ContactPage() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             rows={4}
-            className="w-full rounded-lg border border-line bg-white px-3 py-2.5 text-ink outline-none focus:border-seal"
+            className="w-full rounded-lg border border-line bg-card px-3 py-2.5 text-ink outline-none focus:border-seal"
           />
         </div>
         {error && <p className="text-sm font-bold text-clay">{error}</p>}

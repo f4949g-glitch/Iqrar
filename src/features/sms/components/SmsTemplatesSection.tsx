@@ -38,7 +38,7 @@ function TemplateCard({ template, onSaved }: { template: SmsTemplate; onSaved: (
         onChange={(e) => setBody(e.target.value)}
         rows={3}
         dir="rtl"
-        className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
+        className="w-full rounded-lg border border-line bg-card px-3 py-2 text-ink outline-none focus:border-seal"
       />
       {error && <p className="mt-2 text-xs font-bold text-clay">{error}</p>}
       {success && <p className="mt-2 text-xs font-bold text-sage">تم الحفظ</p>}

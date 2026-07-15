@@ -68,7 +68,7 @@ export function Field({
       <label className="block text-sm">
         <span className="mb-1 block font-bold text-ink">{label}</span>
         <div
-          className="flex items-center overflow-hidden rounded-lg border bg-white focus-within:border-seal"
+          className="flex items-center overflow-hidden rounded-lg border bg-card focus-within:border-seal"
           style={{ borderColor: error ? '#B5533C' : '#E5E1D6' }}
           dir="ltr"
         >
@@ -111,7 +111,7 @@ export function Field({
             list={type === 'email' ? datalistId : undefined}
             autoComplete={type === 'email' ? 'off' : undefined}
             onChange={(e) => handleChange(e.target.value)}
-            className="w-full rounded-lg border bg-white px-3 py-2 text-ink outline-none focus:border-seal disabled:cursor-not-allowed disabled:bg-paper disabled:text-slate"
+            className="w-full rounded-lg border bg-card px-3 py-2 text-ink outline-none focus:border-seal disabled:cursor-not-allowed disabled:bg-paper disabled:text-slate"
             style={{ borderColor: error ? '#B5533C' : '#E5E1D6' }}
           />
           {type === 'email' && (

@@ -386,7 +386,7 @@ export function ContractDetailPage() {
                       <select
                         value={editTermUnit}
                         onChange={(e) => setEditTermUnit(e.target.value as TermUnit)}
-                        className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
+                        className="w-full rounded-lg border border-line bg-card px-3 py-2 text-ink outline-none focus:border-seal"
                       >
                         {Object.entries(TERM_UNIT_LABELS).map(([value, label]) => (
                           <option key={value} value={value}>
@@ -431,7 +431,8 @@ export function ContractDetailPage() {
       {previewHtml && (
         <div className="rounded-xl border border-line bg-card p-5">
           <h2 className="mb-3 font-display text-sm font-bold text-ink">معاينة محتوى العقد</h2>
-          <div className="prose max-w-none text-sm text-ink" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+          {/* بيضاء دائمًا (كسابقتها في المحرر): محتوى رسمي نصّه أسود ثابت عبر .prose. */}
+          <div className="prose max-w-none rounded-lg bg-white p-4 text-sm text-ink" dangerouslySetInnerHTML={{ __html: previewHtml }} />
         </div>
       )}
 
@@ -445,7 +446,7 @@ export function ContractDetailPage() {
                   <select
                     value={p.role_label}
                     onChange={(e) => patchParty(p.id, { role_label: e.target.value })}
-                    className="rounded-lg border border-line bg-white px-2 py-1 text-xs text-ink outline-none focus:border-seal"
+                    className="rounded-lg border border-line bg-card px-2 py-1 text-xs text-ink outline-none focus:border-seal"
                   >
                     {PARTY_ROLE_OPTIONS.map((r) => (
                       <option key={r} value={r}>

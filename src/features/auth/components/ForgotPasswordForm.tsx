@@ -14,7 +14,7 @@ export function ForgotPasswordForm() {
   const [submitting, setSubmitting] = useState(false);
 
   const inputClass =
-    'w-full rounded-lg border border-line bg-white px-3 py-2.5 text-right text-ink outline-none focus:border-seal';
+    'w-full rounded-lg border border-line bg-card px-3 py-2.5 text-right text-ink outline-none focus:border-seal';
 
   const submitRequest = async (e: React.FormEvent) => {
     e.preventDefault();

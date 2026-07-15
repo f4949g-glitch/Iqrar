@@ -169,7 +169,7 @@ export function ContractEditor({ parties, content, onChange }: ContractEditorPro
           </p>
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorForParty(parties, mergeParty) }} aria-hidden="true" />
-            <select value={mergeParty} onChange={(e) => setMergeParty(e.target.value)} className="rounded-lg border border-line bg-white px-2 py-1 text-xs text-ink">
+            <select value={mergeParty} onChange={(e) => setMergeParty(e.target.value)} className="rounded-lg border border-line bg-card px-2 py-1 text-xs text-ink">
               {parties.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.role_label} — {p.full_name || 'بلا اسم'}
@@ -182,7 +182,7 @@ export function ContractEditor({ parties, content, onChange }: ContractEditorPro
                 if (e.target.value) insertMergeField(e.target.value as MergeFieldKey);
                 e.target.value = '';
               }}
-              className="rounded-lg border border-seal bg-white px-2 py-1 text-xs font-bold text-seal"
+              className="rounded-lg border border-seal bg-card px-2 py-1 text-xs font-bold text-seal"
             >
               <option value="" disabled>
                 + إدراج حقل دمج
@@ -202,27 +202,34 @@ export function ContractEditor({ parties, content, onChange }: ContractEditorPro
           </p>
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorForParty(parties, fillParty) }} aria-hidden="true" />
-            <select value={fillParty} onChange={(e) => setFillParty(e.target.value)} className="rounded-lg border border-line bg-white px-2 py-1 text-xs text-ink">
+            <select value={fillParty} onChange={(e) => setFillParty(e.target.value)} className="rounded-lg border border-line bg-card px-2 py-1 text-xs text-ink">
               {parties.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.role_label} — {p.full_name || 'بلا اسم'}
                 </option>
               ))}
             </select>
-            <select value={fillType} onChange={(e) => setFillType(e.target.value as FieldType)} className="rounded-lg border border-line bg-white px-2 py-1 text-xs text-ink">
+            <select value={fillType} onChange={(e) => setFillType(e.target.value as FieldType)} className="rounded-lg border border-line bg-card px-2 py-1 text-xs text-ink">
               {FILLABLE_TYPES.map((t) => (
                 <option key={t} value={t}>
                   {FIELD_TYPE_LABELS[t]}
                 </option>
               ))}
             </select>
-            <button type="button" onClick={insertFillField} className="rounded-lg border border-sage bg-white px-2 py-1 text-xs font-bold text-sage">
+            <button type="button" onClick={insertFillField} className="rounded-lg border border-sage bg-card px-2 py-1 text-xs font-bold text-sage">
               + إدراج
             </button>
           </div>
         </div>
       </div>
-      <EditorContent editor={editor} className="prose max-w-none p-4 text-ink [&_.ProseMirror]:min-h-[300px] [&_.ProseMirror]:outline-none" />
+      {/* سطح التحرير أبيض دائمًا بصرف النظر عن وضع الموقع (فاتح/داكن): محتواه
+          مستند رسمي (نص أسود ثابت عبر .prose، انظر index.css) يُطبَع/يُنزَّل
+          بهذا الشكل تمامًا، فبقاؤه كورقة بيضاء أوضح للمستخدم من تتبّع تبديل
+          الوضع الداكن، ويتفادى نصًا أسود غير مقروء فوق خلفية داكنة. */}
+      <EditorContent
+        editor={editor}
+        className="prose max-w-none rounded-b-xl bg-white p-4 text-ink [&_.ProseMirror]:min-h-[300px] [&_.ProseMirror]:outline-none"
+      />
     </div>
   );
 }

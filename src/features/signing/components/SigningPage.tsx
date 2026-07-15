@@ -75,7 +75,7 @@ function SavedSignatureField({ token, onChange }: { token: string; onChange: (da
           onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
           inputMode="numeric"
           placeholder="رمز التحقق"
-          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-center text-sm text-ink outline-none focus:border-seal"
+          className="w-full rounded-lg border border-line bg-card px-3 py-2 text-center text-sm text-ink outline-none focus:border-seal"
         />
         {error && <p className="text-xs font-bold text-clay">{error}</p>}
         <Button onClick={verify} disabled={verifying || code.trim().length < 4}>
@@ -191,7 +191,7 @@ function FieldInput({
         <select
           value={(value as string) ?? ''}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-seal"
+          className="w-full rounded-lg border border-line bg-card px-3 py-2 text-sm text-ink outline-none focus:border-seal"
         >
           <option value="" disabled>
             اختر...
@@ -209,7 +209,7 @@ function FieldInput({
           value={(value as string) ?? ''}
           onChange={(e) => onChange(e.target.value)}
           rows={3}
-          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-seal"
+          className="w-full rounded-lg border border-line bg-card px-3 py-2 text-sm text-ink outline-none focus:border-seal"
         />
       );
     case 'image':
@@ -233,7 +233,7 @@ function FieldInput({
           type={field.field_type === 'date' ? 'date' : field.field_type === 'time' ? 'time' : field.field_type === 'number' ? 'number' : 'text'}
           value={(value as string) ?? ''}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-seal"
+          className="w-full rounded-lg border border-line bg-card px-3 py-2 text-sm text-ink outline-none focus:border-seal"
         />
       );
   }
@@ -408,8 +408,10 @@ export function SigningPage() {
       <main className="mx-auto max-w-3xl space-y-6 p-4">
         {session.contract.source_type === 'editor' && Boolean(session.contract.body_json) && session.all_parties && (
           <div className="rounded-xl border border-line bg-card p-6">
+            {/* بيضاء دائمًا: محتوى العقد الرسمي نصّه أسود ثابت عبر .prose (انظر
+                index.css)، بصرف النظر عن وضع الموقع لدى الطرف الموقِّع. */}
             <div
-              className="prose max-w-none text-sm text-ink"
+              className="prose max-w-none rounded-lg bg-white p-4 text-sm text-ink"
               dangerouslySetInnerHTML={{
                 __html: renderPartiesHeaderHtml(session.all_parties) + renderContractHtml(session.contract.body_json as JsonNode, session.all_parties),
               }}
@@ -510,7 +512,7 @@ export function SigningPage() {
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               rows={3}
-              className="mb-3 w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-clay"
+              className="mb-3 w-full rounded-lg border border-line bg-card px-3 py-2 text-sm text-ink outline-none focus:border-clay"
             />
             <div className="flex gap-2">
               <Button variant="secondary" onClick={() => setShowRejectForm(false)} disabled={rejecting} className="flex-1">

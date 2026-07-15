@@ -202,7 +202,7 @@ function UserEditRow({ user, onSaved, onDeleted }: { user: Profile; onSaved: (up
           <select
             value={fields.nationality}
             onChange={(e) => setFields((f) => ({ ...f, nationality: e.target.value }))}
-            className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
+            className="w-full rounded-lg border border-line bg-card px-3 py-2 text-ink outline-none focus:border-seal"
           >
             {NATIONALITIES.map((n) => (
               <option key={n} value={n}>

@@ -98,7 +98,7 @@ export function SendSmsPage() {
                   onChange={(e) => setMessage(e.target.value)}
                   maxLength={900}
                   rows={4}
-                  className="w-full rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
+                  className="w-full rounded-lg border border-line bg-card px-3 py-2 text-ink outline-none focus:border-seal"
                 />
                 <span className="mt-1 block text-xs text-slate">{message.length} / 900 حرفًا</span>
               </label>

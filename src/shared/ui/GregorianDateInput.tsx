@@ -53,7 +53,7 @@ export function GregorianDateInput({ value, onChange, required }: GregorianDateI
     );
   };
 
-  const selectClass = 'min-w-0 flex-1 rounded-lg border border-line bg-white px-2 py-2.5 text-center text-sm text-ink outline-none focus:border-seal';
+  const selectClass = 'min-w-0 flex-1 rounded-lg border border-line bg-card px-2 py-2.5 text-center text-sm text-ink outline-none focus:border-seal';
 
   return (
     <div className="flex gap-2" dir="ltr">

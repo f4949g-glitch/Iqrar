@@ -428,7 +428,7 @@ export function NewContractWizard() {
             {method === 'pdf' ? 'رفع المستند و' : ''}المراجعة والدفع.
           </p>
           <div className="flex gap-3">
-            <Link to="/login?return=/app/contracts/new" className="rounded-full bg-white px-6 py-2.5 text-sm font-bold text-ink shadow-sm hover:bg-paper">
+            <Link to="/login?return=/app/contracts/new" className="rounded-full bg-card px-6 py-2.5 text-sm font-bold text-ink shadow-sm hover:bg-paper">
               تسجيل الدخول
             </Link>
             <Link to="/register?return=/app/contracts/new" className="rounded-full bg-seal px-6 py-2.5 text-sm font-bold text-white hover:opacity-90">

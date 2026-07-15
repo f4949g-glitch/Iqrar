@@ -63,7 +63,7 @@ export function PrivacyPolicyEditPage() {
           onChange={(e) => setContent(e.target.value)}
           rows={18}
           dir="rtl"
-          className="w-full rounded-lg border border-line bg-white px-3 py-2 font-mono text-sm text-ink outline-none focus:border-seal"
+          className="w-full rounded-lg border border-line bg-card px-3 py-2 font-mono text-sm text-ink outline-none focus:border-seal"
         />
       </div>
 

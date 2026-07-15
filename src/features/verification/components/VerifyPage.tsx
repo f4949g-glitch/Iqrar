@@ -121,7 +121,7 @@ export function VerifyPage() {
           </Button>
           <Link
             to="/"
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-line bg-paper py-2 text-sm font-bold text-ink transition hover:bg-white"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-line bg-paper py-2 text-sm font-bold text-ink transition hover:bg-card"
           >
             <Home size={15} /> العودة إلى الصفحة الرئيسية
           </Link>

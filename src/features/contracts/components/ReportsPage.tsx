@@ -237,7 +237,7 @@ export function ReportsPage() {
                   type="date"
                   value={paymentsFrom}
                   onChange={(e) => setPaymentsFrom(e.target.value)}
-                  className="rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
+                  className="rounded-lg border border-line bg-card px-3 py-2 text-ink outline-none focus:border-seal"
                 />
               </label>
               <label className="text-sm">
@@ -246,7 +246,7 @@ export function ReportsPage() {
                   type="date"
                   value={paymentsTo}
                   onChange={(e) => setPaymentsTo(e.target.value)}
-                  className="rounded-lg border border-line bg-white px-3 py-2 text-ink outline-none focus:border-seal"
+                  className="rounded-lg border border-line bg-card px-3 py-2 text-ink outline-none focus:border-seal"
                 />
               </label>
               <Button variant="secondary" onClick={loadPayments} disabled={loadingPayments}>
