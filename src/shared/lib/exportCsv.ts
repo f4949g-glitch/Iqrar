@@ -2,7 +2,7 @@
 // CSV بدل مكتبة xlsx خارجية لأن Excel يفتح CSV أصلًا دون أي إضافات، وبادئة BOM
 // (﻿) هي ما يجعل Excel تحديدًا (لا كل قارئ CSV) يتعرّف على ترميز UTF-8
 // بدل عرض العربية كرموز غير مفهومة.
-type CsvCell = string | number | null | undefined;
+export type CsvCell = string | number | null | undefined;
 
 function escapeCsvCell(value: CsvCell): string {
   const text = value === null || value === undefined ? '' : String(value);

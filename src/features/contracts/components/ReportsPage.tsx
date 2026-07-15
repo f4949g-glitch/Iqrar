@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { FileDown, Printer } from 'lucide-react';
+import { FileDown, FileText, Printer } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { formatDate, formatDateTime } from '@/shared/lib/formatDate';
-import { exportToCsv } from '@/shared/lib/exportCsv';
+import { exportToCsv, type CsvCell } from '@/shared/lib/exportCsv';
+import { exportToPdf } from '@/shared/lib/exportPdf';
 import { CONTRACT_STATUS_LABEL, DOCUMENT_TYPE_LABELS, type ContractStatus, type DocumentType } from '../types';
 import {
   fetchUsersReport,
@@ -37,24 +38,58 @@ function firstOfMonthIso() {
   return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
 }
 
-function ExportButton({ onClick }: { onClick: () => void }) {
+function ExportButton({ icon: Icon, label, onClick }: { icon: typeof FileDown; label: string; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className="no-print flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1 text-xs font-bold text-ink hover:bg-paper"
     >
-      <FileDown size={13} /> تصدير Excel
+      <Icon size={13} /> {label}
     </button>
   );
 }
 
-function Card({ title, onExport, children }: { title: string; onExport?: () => void; children: React.ReactNode }) {
+// زوج أزرار تصدير (Excel وPDF) لجدول واحد، مبنيّان على نفس رؤوس الأعمدة
+// والصفوف كي لا تتكرر بيانات كل قسم في مكانين.
+function exportButtons(filename: string, headers: string[], rows: CsvCell[][]) {
+  return {
+    onExportCsv: () => exportToCsv(filename, headers, rows),
+    onExportPdf: () => exportToPdf(filename, headers, rows),
+  };
+}
+
+function DualExportButtons({ filename, headers, rows }: { filename: string; headers: string[]; rows: CsvCell[][] }) {
+  const { onExportCsv, onExportPdf } = exportButtons(filename, headers, rows);
+  return (
+    <div className="flex items-center gap-2">
+      <ExportButton icon={FileDown} label="Excel" onClick={onExportCsv} />
+      <ExportButton icon={FileText} label="PDF" onClick={onExportPdf} />
+    </div>
+  );
+}
+
+function Card({
+  title,
+  onExportCsv,
+  onExportPdf,
+  children,
+}: {
+  title: string;
+  onExportCsv?: () => void;
+  onExportPdf?: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <div className="rounded-xl border border-line bg-card p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-display text-sm font-bold text-ink">{title}</h2>
-        {onExport && <ExportButton onClick={onExport} />}
+        {(onExportCsv || onExportPdf) && (
+          <div className="flex items-center gap-2">
+            {onExportCsv && <ExportButton icon={FileDown} label="Excel" onClick={onExportCsv} />}
+            {onExportPdf && <ExportButton icon={FileText} label="PDF" onClick={onExportPdf} />}
+          </div>
+        )}
       </div>
       {children}
     </div>
@@ -63,27 +98,24 @@ function Card({ title, onExport, children }: { title: string; onExport?: () => v
 
 // عقود بأطرافها (تقرير العقود المعلّقة/التفويضات) تُصدَّر كصف واحد لكل طرف
 // (تتكرر بيانات العقد لكل طرف)، وهو الشكل المعتاد لتفريغ بيانات متداخلة في جدول.
-function exportContractsWithParties(filename: string, contracts: PendingContractRow[]) {
-  exportToCsv(
-    filename,
-    ['عنوان العقد', 'النوع', 'الحالة', 'المنشئ', 'القيمة', 'تاريخ الإرسال', 'اسم الطرف', 'الصفة', 'الجوال', 'رقم الهوية', 'حالة الطرف'],
-    contracts.flatMap((c) =>
-      (c.parties.length > 0 ? c.parties : [null]).map((p) => [
-        c.title,
-        DOCUMENT_TYPE_LABELS[c.document_type as DocumentType] ?? c.document_type,
-        CONTRACT_STATUS_LABEL[c.status as ContractStatus]?.label ?? c.status,
-        c.creator_name,
-        c.invoice_amount,
-        c.sent_at ? formatDateTime(c.sent_at) : '',
-        p?.full_name,
-        p?.role_label,
-        p?.phone,
-        p?.national_id,
-        p ? (p.status === 'signed' ? 'وقّع' : p.status === 'viewed' ? 'شاهد' : p.status === 'rejected' ? 'رفض' : 'بانتظار') : '',
-      ]),
-    ),
+function contractsWithPartiesExportRows(contracts: PendingContractRow[]): CsvCell[][] {
+  return contracts.flatMap((c) =>
+    (c.parties.length > 0 ? c.parties : [null]).map((p) => [
+      c.title,
+      DOCUMENT_TYPE_LABELS[c.document_type as DocumentType] ?? c.document_type,
+      CONTRACT_STATUS_LABEL[c.status as ContractStatus]?.label ?? c.status,
+      c.creator_name,
+      c.invoice_amount,
+      c.sent_at ? formatDateTime(c.sent_at) : '',
+      p?.full_name,
+      p?.role_label,
+      p?.phone,
+      p?.national_id,
+      p ? (p.status === 'signed' ? 'وقّع' : p.status === 'viewed' ? 'شاهد' : p.status === 'rejected' ? 'رفض' : 'بانتظار') : '',
+    ]),
   );
 }
+const CONTRACTS_WITH_PARTIES_HEADERS = ['عنوان العقد', 'النوع', 'الحالة', 'المنشئ', 'القيمة', 'تاريخ الإرسال', 'اسم الطرف', 'الصفة', 'الجوال', 'رقم الهوية', 'حالة الطرف'];
 
 function KpiTile({ label, value }: { label: string; value: string }) {
   return (
@@ -271,13 +303,11 @@ export function ReportsPage() {
         <>
           <Card
             title="المدفوعات حسب نطاق تاريخ"
-            onExport={() =>
-              exportToCsv(
-                'المدفوعات',
-                ['التاريخ', 'عدد العمليات', 'الإجمالي (ريال)'],
-                (payments?.daily ?? []).map((d) => [formatDate(d.date), d.count, d.total]),
-              )
-            }
+            {...exportButtons(
+              'المدفوعات',
+              ['التاريخ', 'عدد العمليات', 'الإجمالي (ريال)'],
+              (payments?.daily ?? []).map((d) => [formatDate(d.date), d.count, d.total]),
+            )}
           >
             <div className="no-print mb-4 flex flex-wrap items-end gap-3">
               <label className="text-sm">
@@ -340,16 +370,14 @@ export function ReportsPage() {
 
           <Card
             title="الإيرادات حسب نوع الوثيقة"
-            onExport={() =>
-              exportToCsv(
-                'الإيرادات_حسب_نوع_الوثيقة',
-                ['نوع الوثيقة', 'عدد الفواتير', 'الإجمالي (ريال)'],
-                documentTypes.map((dt) => {
-                  const row = revenueByType.find((r) => r.document_type === dt);
-                  return [DOCUMENT_TYPE_LABELS[dt], row?.count ?? 0, row?.total ?? 0];
-                }),
-              )
-            }
+            {...exportButtons(
+              'الإيرادات_حسب_نوع_الوثيقة',
+              ['نوع الوثيقة', 'عدد الفواتير', 'الإجمالي (ريال)'],
+              documentTypes.map((dt) => {
+                const row = revenueByType.find((r) => r.document_type === dt);
+                return [DOCUMENT_TYPE_LABELS[dt], row?.count ?? 0, row?.total ?? 0];
+              }),
+            )}
           >
             <div className="overflow-x-auto">
               <table className="w-full min-w-[360px] border-collapse text-xs">
@@ -378,13 +406,11 @@ export function ReportsPage() {
 
           <Card
             title="الأثر المالي لأكواد الخصم"
-            onExport={() =>
-              exportToCsv(
-                'الأثر_المالي_لأكواد_الخصم',
-                ['الكود', 'نسبة الخصم', 'عدد العقود', 'الإيراد بعد الخصم', 'قيمة الخصم الممنوح'],
-                (discountImpact?.byCode ?? []).map((r) => [r.code, `${r.discount_percent}%`, r.contracts_used_on, r.revenue_after_discount, r.discount_given]),
-              )
-            }
+            {...exportButtons(
+              'الأثر_المالي_لأكواد_الخصم',
+              ['الكود', 'نسبة الخصم', 'عدد العقود', 'الإيراد بعد الخصم', 'قيمة الخصم الممنوح'],
+              (discountImpact?.byCode ?? []).map((r) => [r.code, `${r.discount_percent}%`, r.contracts_used_on, r.revenue_after_discount, r.discount_given]),
+            )}
           >
             {discountImpact && (
               <p className="mb-3 text-sm font-bold text-seal">
@@ -428,22 +454,18 @@ export function ReportsPage() {
 
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-display text-xs font-bold text-ink">كل أكواد الخصم الصادرة ({discountCodes.length})</h3>
-              <ExportButton
-                onClick={() =>
-                  exportToCsv(
-                    'أكواد_الخصم',
-                    ['الكود', 'الخصم', 'الحالة', 'مرات الاستخدام', 'الحد الأقصى', 'الانتهاء', 'مُنتهٍ؟'],
-                    discountCodes.map((c) => [
-                      c.code,
-                      `${c.discount_percent}%`,
-                      c.approval_status === 'approved' ? (c.is_active ? 'مُفعَّل' : 'مُعطَّل') : c.approval_status === 'pending' ? 'بانتظار الموافقة' : 'مرفوض',
-                      c.uses_count,
-                      c.max_uses ?? '',
-                      c.ends_at ? formatDate(c.ends_at) : '',
-                      c.is_expired ? 'نعم' : 'لا',
-                    ]),
-                  )
-                }
+              <DualExportButtons
+                filename="أكواد_الخصم"
+                headers={['الكود', 'الخصم', 'الحالة', 'مرات الاستخدام', 'الحد الأقصى', 'الانتهاء', 'مُنتهٍ؟']}
+                rows={discountCodes.map((c) => [
+                  c.code,
+                  `${c.discount_percent}%`,
+                  c.approval_status === 'approved' ? (c.is_active ? 'مُفعَّل' : 'مُعطَّل') : c.approval_status === 'pending' ? 'بانتظار الموافقة' : 'مرفوض',
+                  c.uses_count,
+                  c.max_uses ?? '',
+                  c.ends_at ? formatDate(c.ends_at) : '',
+                  c.is_expired ? 'نعم' : 'لا',
+                ])}
               />
             </div>
             <div className="overflow-x-auto">
@@ -488,13 +510,11 @@ export function ReportsPage() {
 
           <Card
             title={`أكواد الشحن / المحفظة (${creditReport?.codes.length ?? 0})`}
-            onExport={() =>
-              exportToCsv(
-                'أكواد_الشحن',
-                ['الكود', 'القيمة', 'الحالة', 'مرات الاستخدام', 'الحد الأقصى'],
-                (creditReport?.codes ?? []).map((c) => [c.code, c.amount, c.is_active ? 'مُفعَّل' : 'مُعطَّل', c.uses_count, c.max_uses ?? '']),
-              )
-            }
+            {...exportButtons(
+              'أكواد_الشحن',
+              ['الكود', 'القيمة', 'الحالة', 'مرات الاستخدام', 'الحد الأقصى'],
+              (creditReport?.codes ?? []).map((c) => [c.code, c.amount, c.is_active ? 'مُفعَّل' : 'مُعطَّل', c.uses_count, c.max_uses ?? '']),
+            )}
           >
             <div className="overflow-x-auto mb-5">
               <table className="w-full min-w-[480px] border-collapse text-xs">
@@ -533,14 +553,10 @@ export function ReportsPage() {
 
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-display text-xs font-bold text-ink">المستخدمون المستفيدون من الشحن</h3>
-              <ExportButton
-                onClick={() =>
-                  exportToCsv(
-                    'عمليات_الشحن',
-                    ['المستخدم', 'الجوال', 'الكود', 'المبلغ', 'التاريخ'],
-                    (creditReport?.redemptions ?? []).map((r) => [r.user_name, r.user_phone, r.code, r.amount, formatDateTime(r.created_at)]),
-                  )
-                }
+              <DualExportButtons
+                filename="عمليات_الشحن"
+                headers={['المستخدم', 'الجوال', 'الكود', 'المبلغ', 'التاريخ']}
+                rows={(creditReport?.redemptions ?? []).map((r) => [r.user_name, r.user_phone, r.code, r.amount, formatDateTime(r.created_at)])}
               />
             </div>
             <div className="overflow-x-auto">
@@ -586,23 +602,21 @@ export function ReportsPage() {
         <>
           <Card
             title={`المستخدمون وأعمالهم (${users.length})`}
-            onExport={() =>
-              exportToCsv(
-                'المستخدمون',
-                ['الاسم', 'رقم الهوية', 'الجوال', 'البريد', 'الصفة', 'عقود موثّقة', 'وقّع كطرف', 'الرصيد', 'تاريخ التسجيل'],
-                users.map((u) => [
-                  u.full_name,
-                  u.national_id,
-                  u.phone,
-                  u.email,
-                  ROLE_LABEL[u.role] ?? u.role,
-                  u.contracts_completed,
-                  u.contracts_signed_as_party,
-                  u.credit_balance,
-                  formatDate(u.created_at),
-                ]),
-              )
-            }
+            {...exportButtons(
+              'المستخدمون',
+              ['الاسم', 'رقم الهوية', 'الجوال', 'البريد', 'الصفة', 'عقود موثّقة', 'وقّع كطرف', 'الرصيد', 'تاريخ التسجيل'],
+              users.map((u) => [
+                u.full_name,
+                u.national_id,
+                u.phone,
+                u.email,
+                ROLE_LABEL[u.role] ?? u.role,
+                u.contracts_completed,
+                u.contracts_signed_as_party,
+                u.credit_balance,
+                formatDate(u.created_at),
+              ]),
+            )}
           >
             <div className="overflow-x-auto">
               <table className="w-full min-w-[720px] border-collapse text-xs">
@@ -646,17 +660,15 @@ export function ReportsPage() {
 
           <Card
             title="العقود حسب الحالة ونوع الوثيقة"
-            onExport={() =>
-              exportToCsv(
-                'العقود_حسب_الحالة_والنوع',
-                ['الحالة', ...documentTypes.map((dt) => DOCUMENT_TYPE_LABELS[dt]), 'الإجمالي'],
-                statuses.map((st) => [
-                  CONTRACT_STATUS_LABEL[st]?.label ?? st,
-                  ...documentTypes.map((dt) => breakdownCount(st, dt)),
-                  documentTypes.reduce((sum, dt) => sum + breakdownCount(st, dt), 0),
-                ]),
-              )
-            }
+            {...exportButtons(
+              'العقود_حسب_الحالة_والنوع',
+              ['الحالة', ...documentTypes.map((dt) => DOCUMENT_TYPE_LABELS[dt]), 'الإجمالي'],
+              statuses.map((st) => [
+                CONTRACT_STATUS_LABEL[st]?.label ?? st,
+                ...documentTypes.map((dt) => breakdownCount(st, dt)),
+                documentTypes.reduce((sum, dt) => sum + breakdownCount(st, dt), 0),
+              ]),
+            )}
           >
             <div className="overflow-x-auto">
               <table className="w-full min-w-[560px] border-collapse text-xs">
@@ -691,11 +703,17 @@ export function ReportsPage() {
             </div>
           </Card>
 
-          <Card title={`تقرير التفويضات (${poaContracts.length})`} onExport={() => exportContractsWithParties('تقرير_التفويضات', poaContracts)}>
+          <Card
+            title={`تقرير التفويضات (${poaContracts.length})`}
+            {...exportButtons('تقرير_التفويضات', CONTRACTS_WITH_PARTIES_HEADERS, contractsWithPartiesExportRows(poaContracts))}
+          >
             <ContractsWithPartiesList contracts={poaContracts} emptyLabel="لا توجد تفويضات مُصدَرة حتى الآن" />
           </Card>
 
-          <Card title={`العقود المعلّقة (${pendingContracts.length})`} onExport={() => exportContractsWithParties('العقود_المعلقة', pendingContracts)}>
+          <Card
+            title={`العقود المعلّقة (${pendingContracts.length})`}
+            {...exportButtons('العقود_المعلقة', CONTRACTS_WITH_PARTIES_HEADERS, contractsWithPartiesExportRows(pendingContracts))}
+          >
             <ContractsWithPartiesList contracts={pendingContracts} emptyLabel="لا توجد عقود معلّقة حاليًا" />
           </Card>
         </>
