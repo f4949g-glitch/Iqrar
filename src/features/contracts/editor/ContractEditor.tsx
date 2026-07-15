@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useEditor, EditorContent, type JSONContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { TableKit } from '@tiptap/extension-table';
+import TextAlign from '@tiptap/extension-text-align';
 import {
   Bold,
   Italic,
@@ -13,6 +14,10 @@ import {
   Heading2,
   Braces,
   PenLine,
+  AlignRight,
+  AlignCenter,
+  AlignLeft,
+  AlignJustify,
 } from 'lucide-react';
 import Underline from '@tiptap/extension-underline';
 import { MergeFieldNode, FillFieldNode } from './extensions';
@@ -53,7 +58,14 @@ export function ContractEditor({ parties, content, onChange }: ContractEditorPro
   const [fillType, setFillType] = useState<FieldType>('signature');
 
   const editor = useEditor({
-    extensions: [StarterKit, Underline, TableKit.configure({ table: { resizable: false } }), MergeFieldNode, FillFieldNode],
+    extensions: [
+      StarterKit,
+      Underline,
+      TableKit.configure({ table: { resizable: false } }),
+      TextAlign.configure({ types: ['heading', 'paragraph'], defaultAlignment: 'right' }),
+      MergeFieldNode,
+      FillFieldNode,
+    ],
     content: content ?? '<p></p>',
     onUpdate: ({ editor: e }) => onChange(e.getJSON()),
   });
@@ -130,6 +142,19 @@ export function ContractEditor({ parties, content, onChange }: ContractEditorPro
         </ToolbarButton>
         <ToolbarButton title="إدراج جدول" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
           <TableIcon size={16} />
+        </ToolbarButton>
+        <span className="mx-1 h-5 w-px shrink-0 bg-line" aria-hidden="true" />
+        <ToolbarButton title="محاذاة لليمين" active={editor.isActive({ textAlign: 'right' })} onClick={() => editor.chain().focus().setTextAlign('right').run()}>
+          <AlignRight size={16} />
+        </ToolbarButton>
+        <ToolbarButton title="توسيط" active={editor.isActive({ textAlign: 'center' })} onClick={() => editor.chain().focus().setTextAlign('center').run()}>
+          <AlignCenter size={16} />
+        </ToolbarButton>
+        <ToolbarButton title="محاذاة لليسار" active={editor.isActive({ textAlign: 'left' })} onClick={() => editor.chain().focus().setTextAlign('left').run()}>
+          <AlignLeft size={16} />
+        </ToolbarButton>
+        <ToolbarButton title="ضبط" active={editor.isActive({ textAlign: 'justify' })} onClick={() => editor.chain().focus().setTextAlign('justify').run()}>
+          <AlignJustify size={16} />
         </ToolbarButton>
       </div>
 

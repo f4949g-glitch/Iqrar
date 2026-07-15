@@ -99,6 +99,55 @@ body {
 .signatures-section {
   color: #000;
 }
+/* تنسيق أساسي لعناصر Tiptap الشائعة (قوائم/جداول/عناوين/اقتباس) داخل محرر
+   محتوى العقد ومعاينة المستند النهائي كليهما — بلا هذا التنسيق تُنتَج عناصر
+   HTML صحيحة (ul/ol/table) لكن بلا أي مظهر مميّز فتبدو "معطّلة" للمستخدم. */
+.prose ul,
+.prose ol {
+  margin: 8px 0;
+  padding-inline-start: 24px;
+}
+.prose ul {
+  list-style: disc;
+}
+.prose ol {
+  list-style: decimal;
+}
+.prose li {
+  margin: 2px 0;
+}
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+}
+.prose th,
+.prose td {
+  border: 1px solid var(--color-line);
+  padding: 6px 10px;
+  text-align: right;
+}
+.prose th {
+  background: var(--color-paper);
+  font-weight: 700;
+}
+.prose blockquote {
+  margin: 8px 0;
+  border-inline-start: 3px solid var(--color-line);
+  padding-inline-start: 12px;
+  font-style: italic;
+  color: var(--color-slate);
+}
+.prose h1 {
+  margin: 12px 0 8px;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+.prose h2 {
+  margin: 10px 0 6px;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
 .parties-table,
 .signatures-table {
   width: 100%;
