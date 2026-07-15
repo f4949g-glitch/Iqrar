@@ -235,6 +235,11 @@ export function ContractDetailPage() {
   if (!contract) return null;
 
   const isDraft = contract.status === 'draft';
+  // عقد مرفوض من أحد الأطراف ليس نهاية المطاف: يمكن لمنشئ العقد تعديل بياناته
+  // (والأطراف التي لم توقّع بعد) ثم إعادة إرسال رابط التوقيع — زر "إعادة إرسال
+  // الرابط" الموجود أصلًا يُعيد حالة العقد نفسه إلى "بانتظار التوقيع" تلقائيًا.
+  const isRejected = contract.status === 'rejected';
+  const canEditMeta = isDraft || isRejected;
   const info = CONTRACT_STATUS_LABEL[contract.status];
   const termLabel =
     contract.term_value && contract.term_unit
@@ -331,9 +336,14 @@ export function ContractDetailPage() {
         </div>
       )}
 
-      {isDraft && (
+      {canEditMeta && (
         <div className="rounded-xl border border-line bg-card p-5">
-          <h2 className="mb-3 font-display text-sm font-bold text-ink">تعديل العقد (مسودة)</h2>
+          <h2 className="mb-3 font-display text-sm font-bold text-ink">{isRejected ? 'تعديل العقد قبل إعادة الإرسال' : 'تعديل العقد (مسودة)'}</h2>
+          {isRejected && (
+            <p className="mb-3 text-xs text-slate">
+              رفض أحد الأطراف هذا العقد. يمكنك تعديل بياناته وبيانات الأطراف التي لم توقّع بعد أدناه، ثم الضغط على "إعادة إرسال الرابط" أعلى الصفحة.
+            </p>
+          )}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="عنوان العقد" value={editTitle} onChange={setEditTitle} required />
             <Field label="صلاحية التوثيق (أيام)" value={editDuration} onChange={setEditDuration} type="number" min={1} max={14} placeholder="من 1 إلى 14" />
@@ -429,7 +439,7 @@ export function ContractDetailPage() {
         <h2 className="mb-3 font-display text-sm font-bold text-ink">الأطراف {!isDraft && 'وسجل التوقيعات'}</h2>
         <div className="space-y-3">
           {parties.map((p) =>
-            isDraft ? (
+            isDraft || (isRejected && p.status !== 'signed') ? (
               <div key={p.id} className="rounded-lg border border-line p-3">
                 <div className="mb-2 flex items-center justify-between">
                   <select
@@ -443,9 +453,11 @@ export function ContractDetailPage() {
                       </option>
                     ))}
                   </select>
-                  <button type="button" onClick={() => removeDraftParty(p.id)} className="text-clay">
-                    <Trash2 size={16} />
-                  </button>
+                  {isDraft && (
+                    <button type="button" onClick={() => removeDraftParty(p.id)} className="text-clay">
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <Field label="الاسم" value={p.full_name ?? ''} onChange={(v) => patchParty(p.id, { full_name: v })} />
