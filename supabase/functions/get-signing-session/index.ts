@@ -58,11 +58,18 @@ Deno.serve(async (req: Request) => {
 
   const { data: contract, error: contractError } = await admin
     .from('contracts')
-    .select('id, title, status, page_count, original_file_path, source_type, body_json, sequential_signing')
+    .select('id, title, status, page_count, original_file_path, source_type, body_json, sequential_signing, expires_at')
     .eq('id', party.contract_id)
     .single();
 
   if (contractError || !contract) return jsonResponse({ error: 'العقد غير موجود' }, 404);
+
+  // انتهت مدة صلاحية التوثيق: يُنقَل العقد لحالة "منتهي" فورًا (بدل انتظار
+  // الوظيفة المجدولة كل 15 دقيقة) ويُمنع أي طرف من رؤية المحتوى أو التوقيع.
+  if (['pending', 'partially_completed'].includes(contract.status) && contract.expires_at && new Date(contract.expires_at) < new Date()) {
+    await admin.from('contracts').update({ status: 'expired', updated_at: new Date().toISOString() }).eq('id', contract.id);
+    return jsonResponse({ error: 'انتهت مدة صلاحية توثيق هذا العقد ولم يعد قابلًا للتوقيع' }, 410);
+  }
 
   // ترتيب توقيع إلزامي: طرف لا يرى المحتوى إلا بعد توقيع كل من يسبقه بحسب
   // order_index — يمنع مثلًا موظفًا يوقّع بعد البائع من التوقيع قبله.

@@ -80,6 +80,14 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: 'هذا العقد لم يعد قابلًا للتوقيع' }, 400);
   }
 
+  // انتهت مدة صلاحية التوثيق: فحص خادمي مستقل عن بوابة get-signing-session
+  // (وعن الوظيفة المجدولة كل 15 دقيقة)، وإلا أمكن تجاوزها بإرسال هذا الطلب
+  // مباشرة بتوكن صالح بعد انتهاء المدة مباشرة.
+  if (contract.expires_at && new Date(contract.expires_at as string) < new Date()) {
+    await admin.from('contracts').update({ status: 'expired', updated_at: new Date().toISOString() }).eq('id', contract.id);
+    return jsonResponse({ error: 'انتهت مدة صلاحية توثيق هذا العقد ولم يعد قابلًا للتوقيع' }, 410);
+  }
+
   // ترتيب توقيع إلزامي: فحص خادمي مستقل عن بوابة get-signing-session، وإلا
   // أمكن تجاوزها بإرسال هذا الطلب مباشرة بتوكن طرف لم يحن دوره بعد.
   if (contract.sequential_signing) {
