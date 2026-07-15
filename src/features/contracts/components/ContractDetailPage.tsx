@@ -1,6 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Copy, Download, Plus, Printer, RefreshCw, Trash2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  Bell,
+  CheckCircle2,
+  Copy,
+  Download,
+  Eye,
+  History,
+  Plus,
+  Printer,
+  RefreshCw,
+  Send,
+  ShieldCheck,
+  Trash2,
+  XCircle,
+  type LucideIcon,
+} from 'lucide-react';
 import { StatusPill } from '@/shared/ui/StatusPill';
 import { Field } from '@/shared/ui/Field';
 import { Button } from '@/shared/ui/Button';
@@ -31,6 +47,20 @@ import {
   type ContractParty,
   type TermUnit,
 } from '../types';
+
+// أيقونة ولون لكل نوع حدث في سجل الأحداث، لتمييز الأحداث الإيجابية (توقيع/اكتمال)
+// عن التحذيرية (رفض/فشل) عن المحايدة (مشاهدة/إعادة إرسال) بنظرة سريعة بدل نص مسطّح.
+const EVENT_TYPE_META: Record<string, { icon: LucideIcon; className: string }> = {
+  viewed: { icon: Eye, className: 'text-slate' },
+  party_signed: { icon: CheckCircle2, className: 'text-emerald-600' },
+  completed: { icon: CheckCircle2, className: 'text-emerald-600' },
+  party_rejected: { icon: XCircle, className: 'text-clay' },
+  completion_failed: { icon: AlertTriangle, className: 'text-clay' },
+  resent_to_party: { icon: Send, className: 'text-seal' },
+  next_turn_notified: { icon: Bell, className: 'text-seal' },
+  admin_correction: { icon: ShieldCheck, className: 'text-slate' },
+};
+const DEFAULT_EVENT_META: { icon: LucideIcon; className: string } = { icon: History, className: 'text-slate' };
 
 const PRINT_STYLES = `
   body { font-family: 'Tajawal', 'Arial', sans-serif; color: #000; padding: 32px; line-height: 1.8; }
@@ -537,13 +567,20 @@ export function ContractDetailPage() {
 
       <div className="rounded-xl border border-line bg-card p-5">
         <h2 className="mb-3 font-display text-sm font-bold text-ink">سجل الأحداث</h2>
-        <ul className="space-y-2 text-sm text-slate">
-          {events.map((e) => (
-            <li key={e.id} className="flex justify-between border-b border-line pb-2 last:border-0">
-              <span>{e.message ?? e.event_type}</span>
-              <span className="text-xs">{formatDateTime(e.created_at)}</span>
-            </li>
-          ))}
+        <ul className="space-y-2 text-sm">
+          {events.map((e) => {
+            const meta = EVENT_TYPE_META[e.event_type] ?? DEFAULT_EVENT_META;
+            const Icon = meta.icon;
+            return (
+              <li key={e.id} className="flex items-start justify-between gap-3 border-b border-line pb-2 last:border-0">
+                <span className={`flex items-start gap-2 ${meta.className}`}>
+                  <Icon size={15} className="mt-0.5 shrink-0" />
+                  <span className="text-ink">{e.message ?? e.event_type}</span>
+                </span>
+                <span className="shrink-0 text-xs text-slate">{formatDateTime(e.created_at)}</span>
+              </li>
+            );
+          })}
           {events.length === 0 && <li className="text-xs text-slate">لا توجد أحداث بعد</li>}
         </ul>
       </div>

@@ -67,6 +67,7 @@ Deno.serve(async (req: Request) => {
   // الحجية القانونية للتوثيق الإلكتروني إلى جانب رقم الهوية ووقت التوقيع.
   const clientIp = (req.headers.get('x-forwarded-for') ?? req.headers.get('cf-connecting-ip') ?? '').split(',')[0].trim() || null;
   const userAgent = req.headers.get('user-agent') || null;
+  const origin = Deno.env.get('APP_ORIGIN') ?? req.headers.get('origin') ?? '';
 
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
@@ -162,8 +163,55 @@ Deno.serve(async (req: Request) => {
     await admin.from('contracts').update({ status: 'partially_completed', updated_at: new Date().toISOString() }).eq('id', contract.id);
   }
 
+  if (!allSigned && contract.sequential_signing) {
+    await notifyNextPartyTurn(admin, contract, party.order_index, origin);
+  }
+
   return jsonResponse({ success: true, completed: allSigned });
 });
+
+// ترتيب توقيع إلزامي: بعد توقيع طرف بنجاح، الطرف التالي في الترتيب لا يعرف أن
+// دوره حان الآن إلا إذا فتح الرابط بنفسه ليكتشف زوال بوابة الانتظار — نُشعِره
+// فورًا بدل تركه ينتظر بصمت.
+// deno-lint-ignore no-explicit-any
+async function notifyNextPartyTurn(admin: ReturnType<typeof createClient>, contract: any, signedOrderIndex: number, origin: string) {
+  const { data: nextParty } = await admin
+    .from('contract_parties')
+    .select('id, full_name, email, phone, token')
+    .eq('contract_id', contract.id)
+    .gt('order_index', signedOrderIndex)
+    .neq('status', 'signed')
+    .order('order_index', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (!nextParty) return;
+
+  const link = `${origin}/sign/${nextParty.token}`;
+
+  if (nextParty.email) {
+    await sendEmail(
+      nextParty.email,
+      'حان دورك للتوقيع',
+      `<p>مرحبًا ${nextParty.full_name}،</p><p>وقّع الطرف الذي يسبقك في العقد "${contract.title}"، وقد حان دورك الآن لمراجعته والتوقيع عليه عبر منصة إقرار.</p><p><a href="${link}">اضغط هنا للتوقيع</a></p>`,
+    );
+  }
+  if (nextParty.phone) {
+    const text = await renderSmsTemplate(
+      admin,
+      'next_turn_to_sign',
+      { link },
+      `حان دورك الآن للتوقيع عبر منصة إقرار. رابط التوقيع: ${link}`,
+    );
+    await sendSms(nextParty.phone, text);
+  }
+
+  await admin.from('contract_events').insert({
+    contract_id: contract.id,
+    party_id: nextParty.id,
+    event_type: 'next_turn_notified',
+    message: `تم إشعار ${nextParty.full_name} بأن دوره قد حان للتوقيع`,
+  });
+}
 
 async function finalizeContract(admin: ReturnType<typeof createClient>, contractId: string) {
   const { data: contract } = await admin.from('contracts').select('*').eq('id', contractId).single();
