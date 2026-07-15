@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Building2, ChevronDown, Plus, ShieldCheck, Trash2, User, UserCheck } from 'lucide-react';
+import { AlertTriangle, Building2, CheckCircle2, ChevronDown, Plus, ShieldCheck, Trash2, User, UserCheck } from 'lucide-react';
 import { Field } from '@/shared/ui/Field';
 import { Button } from '@/shared/ui/Button';
 import { GregorianDateInput } from '@/shared/ui/GregorianDateInput';
@@ -802,33 +802,52 @@ export function PartiesStep({
                     <span className="text-xs font-normal text-slate">(اختِيرت مسبقًا)</span>
                   </div>
                 ) : (
-                  <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      onClick={() => updateParty(index, { verification_method: 'manual' })}
-                      className={`flex items-center gap-2 rounded-xl border-2 p-3 text-start transition ${
-                        party.verification_method === 'manual' ? 'border-seal bg-sealLight' : 'border-line bg-card hover:border-sealMuted'
-                      }`}
-                    >
-                      <User size={18} className={party.verification_method === 'manual' ? 'text-seal' : 'text-sealMuted'} />
-                      <span>
-                        <span className="block text-sm font-bold text-ink">إدخال يدوي</span>
-                        <span className="block text-[11px] text-slate">إدخال البيانات مباشرة بلا تحقق رسمي</span>
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updateParty(index, { verification_method: 'nafath' })}
-                      className={`flex items-center gap-2 rounded-xl border-2 p-3 text-start transition ${
-                        party.verification_method === 'nafath' ? 'border-seal bg-sealLight' : 'border-line bg-card hover:border-sealMuted'
-                      }`}
-                    >
-                      <ShieldCheck size={18} className={party.verification_method === 'nafath' ? 'text-seal' : 'text-sealMuted'} />
-                      <span>
-                        <span className="block text-sm font-bold text-ink">تحقق عبر نفاذ</span>
-                        <span className="block text-[11px] text-slate">تحقق رسمي من الهوية عبر تطبيق نفاذ</span>
-                      </span>
-                    </button>
+                  <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {(
+                      [
+                        {
+                          method: 'manual' as const,
+                          Icon: User,
+                          title: 'إدخال يدوي',
+                          desc: 'إدخال البيانات مباشرة بلا تحقق رسمي',
+                        },
+                        {
+                          method: 'nafath' as const,
+                          Icon: ShieldCheck,
+                          title: 'تحقق عبر نفاذ',
+                          desc: 'تحقق رسمي من الهوية عبر تطبيق نفاذ',
+                        },
+                      ] as const
+                    ).map(({ method, Icon, title, desc }) => {
+                      const selected = party.verification_method === method;
+                      return (
+                        <button
+                          key={method}
+                          type="button"
+                          onClick={() => updateParty(index, { verification_method: method })}
+                          className={`relative flex items-start gap-3 rounded-2xl border-2 p-4 text-start shadow-sm transition ${
+                            selected ? 'border-seal bg-sealLight shadow-md' : 'border-line bg-card hover:border-sealMuted hover:shadow-md'
+                          }`}
+                        >
+                          {selected && (
+                            <span className="absolute left-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-seal text-white">
+                              <CheckCircle2 size={14} />
+                            </span>
+                          )}
+                          <span
+                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                              selected ? 'bg-seal text-white' : 'bg-paper text-sealMuted'
+                            }`}
+                          >
+                            <Icon size={20} />
+                          </span>
+                          <span>
+                            <span className="block font-display text-sm font-bold text-ink">{title}</span>
+                            <span className="mt-0.5 block text-xs text-slate">{desc}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
 

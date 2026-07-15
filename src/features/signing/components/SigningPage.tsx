@@ -103,26 +103,82 @@ function SavedSignatureField({ token, onChange }: { token: string; onChange: (da
   );
 }
 
+// بطاقتا اختيار طريقة التوقيع (رسم/صورة مرفقة) — تظهر مرة واحدة فقط لكل طرف
+// (عند أول حقل توقيع بلا توقيع محفوظ)، وتُطبَّق الطريقة المُختارة تلقائيًا على
+// أي حقل توقيع لاحق لنفس الطرف في هذا العقد.
+function SignatureMethodChoice({ onChoose }: { onChoose: (method: 'draw' | 'upload') => void }) {
+  return (
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <button
+        type="button"
+        onClick={() => onChoose('draw')}
+        className="flex items-center gap-2 rounded-xl border-2 border-line bg-card p-3 text-start shadow-sm transition hover:border-sealMuted hover:shadow-md"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-paper text-sealMuted">
+          <FileSignature size={18} />
+        </span>
+        <span>
+          <span className="block text-sm font-bold text-ink">رسم التوقيع</span>
+          <span className="block text-[11px] text-slate">وقّع بإصبعك أو الفأرة</span>
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={() => onChoose('upload')}
+        className="flex items-center gap-2 rounded-xl border-2 border-line bg-card p-3 text-start shadow-sm transition hover:border-sealMuted hover:shadow-md"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-paper text-sealMuted">
+          <CheckCircle2 size={18} />
+        </span>
+        <span>
+          <span className="block text-sm font-bold text-ink">إرفاق صورة توقيع</span>
+          <span className="block text-[11px] text-slate">ارفع صورة توقيعك الجاهزة</span>
+        </span>
+      </button>
+    </div>
+  );
+}
+
 function FieldInput({
   field,
   value,
   onChange,
   token,
   hasSavedSignature,
+  signatureMethod,
+  onChooseSignatureMethod,
 }: {
   field: SigningFullSession['fields'][number];
   value: unknown;
   onChange: (v: unknown) => void;
   token: string;
   hasSavedSignature: boolean;
+  signatureMethod: 'draw' | 'upload' | null;
+  onChooseSignatureMethod: (method: 'draw' | 'upload') => void;
 }) {
   switch (field.field_type) {
-    case 'signature':
-      return hasSavedSignature ? (
-        <SavedSignatureField token={token} onChange={(dataUrl) => onChange(dataUrl)} />
-      ) : (
-        <SignaturePad onChange={(dataUrl) => onChange(dataUrl)} />
-      );
+    case 'signature': {
+      if (hasSavedSignature) {
+        return <SavedSignatureField token={token} onChange={(dataUrl) => onChange(dataUrl)} />;
+      }
+      if (signatureMethod === null) {
+        return <SignatureMethodChoice onChoose={onChooseSignatureMethod} />;
+      }
+      if (signatureMethod === 'upload') {
+        return (
+          <input
+            type="file"
+            accept="image/*"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (file) onChange(await fileToDataUrl(file));
+            }}
+            className="w-full text-xs"
+          />
+        );
+      }
+      return <SignaturePad onChange={(dataUrl) => onChange(dataUrl)} />;
+    }
     case 'checkbox':
       return (
         <label className="flex items-center gap-2 text-sm text-ink">
@@ -196,6 +252,10 @@ export function SigningPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [rejecting, setRejecting] = useState(false);
   const [agreedToDeclaration, setAgreedToDeclaration] = useState(false);
+  // طريقة توقيع واحدة لكامل حقول التوقيع في هذا العقد (رسم أو صورة مرفقة) —
+  // تُختار مرة واحدة عند أول حقل توقيع ثم تُطبَّق تلقائيًا على أي حقل توقيع آخر
+  // لنفس الطرف، بدل السماح بخلط الطريقتين داخل العقد الواحد.
+  const [signatureMethod, setSignatureMethod] = useState<'draw' | 'upload' | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -383,6 +443,8 @@ export function SigningPage() {
                             onChange={(v) => setValues((prev) => ({ ...prev, [f.id]: v }))}
                             token={token ?? ''}
                             hasSavedSignature={session.party.has_saved_signature}
+                            signatureMethod={signatureMethod}
+                            onChooseSignatureMethod={setSignatureMethod}
                           />
                         </div>
                       </div>
@@ -407,6 +469,8 @@ export function SigningPage() {
                   onChange={(v) => setValues((prev) => ({ ...prev, [f.id]: v }))}
                   token={token ?? ''}
                   hasSavedSignature={session.party.has_saved_signature}
+                  signatureMethod={signatureMethod}
+                  onChooseSignatureMethod={setSignatureMethod}
                 />
               </div>
             ))}
