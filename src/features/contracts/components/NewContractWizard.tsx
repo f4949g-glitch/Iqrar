@@ -21,6 +21,7 @@ import {
 import { createFieldsFromScratch } from '../lib/syncEditorContent';
 import { consumePendingContractIntent } from '../lib/pendingIntent';
 import { saveGuestDraft, consumeGuestDraft, type GuestResumeStep } from '../lib/guestDraft';
+import { saveWizardProgress, loadWizardProgress, type WizardProgressState } from '../lib/wizardProgress';
 import { syntheticContractParties, TEMPLATE_PARTY_PREFIX } from '../lib/syntheticParties';
 import { remapPartyIds } from '../editor/remapPartyIds';
 import {
@@ -47,9 +48,15 @@ export function NewContractWizard() {
   const [pendingIntent] = useState(() => consumePendingContractIntent());
   // مسودة زائر عاد للتو من تسجيل الدخول/إنشاء الحساب لإكمال عقد بدأه دون حساب.
   const [guestDraft] = useState(() => consumeGuestDraft());
+  // تقدّم محفوظ من نفس المعالج إن غادره المستخدم لصفحة أخرى وعاد إليه — يُتجاهل
+  // إن كان قادمًا من استكمال مسودة زائر أو قالب جاهز (كلاهما نية "بداية جديدة"
+  // أوضح من أي تقدّم قديم متروك في sessionStorage).
+  const [wizardProgress] = useState<WizardProgressState | null>(() =>
+    guestDraft || pendingIntent?.templateId ? null : loadWizardProgress(),
+  );
   const [resuming, setResuming] = useState(Boolean(guestDraft));
 
-  const [step, setStep] = useState<Step>(guestDraft ? 'resuming' : 'parties');
+  const [step, setStep] = useState<Step>(guestDraft ? 'resuming' : (wizardProgress?.step as Step | undefined) ?? 'parties');
   // زر رجوع المتصفح كان يخرج من المعالج بالكامل بدل الرجوع لخطوة سابقة داخله، لأن
   // التنقّل بين الخطوات كان يعتمد على حالة React فقط بلا أي أثر في history. نُسجّل
   // كل خطوة كإدخال منفصل في history (بنفس رابط الصفحة) عبر goToStep بدل setStep
@@ -69,13 +76,13 @@ export function NewContractWizard() {
     return () => window.removeEventListener('popstate', onPopState);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const [method, setMethod] = useState<'pdf' | 'editor' | null>(guestDraft?.method ?? null);
-  const [title, setTitle] = useState(guestDraft?.title ?? pendingIntent?.templateTitle ?? '');
-  const [documentType] = useState<DocumentType>(guestDraft?.documentType ?? pendingIntent?.documentType ?? 'contract');
+  const [method, setMethod] = useState<'pdf' | 'editor' | null>(guestDraft?.method ?? wizardProgress?.method ?? null);
+  const [title, setTitle] = useState(guestDraft?.title ?? wizardProgress?.title ?? pendingIntent?.templateTitle ?? '');
+  const [documentType] = useState<DocumentType>(guestDraft?.documentType ?? wizardProgress?.documentType ?? pendingIntent?.documentType ?? 'contract');
   const poaMode = documentType === 'power_of_attorney';
   // مدة توثيق التفويض ثابتة عند 7 أيام ولا تُعرض للاختيار؛ مدة توثيق العقد تبدأ
   // بـ3 أيام افتراضيًا وتبقى قابلة للتعديل زيادةً أو نقصانًا (1-14 يومًا).
-  const [durationDays, setDurationDays] = useState(guestDraft?.durationDays ?? (poaMode ? '7' : '3'));
+  const [durationDays, setDurationDays] = useState(guestDraft?.durationDays ?? wizardProgress?.durationDays ?? (poaMode ? '7' : '3'));
   const docLabel = DOCUMENT_TYPE_DEFINITE_LABELS[documentType];
   const stepLabels: Record<Step, string> = {
     parties: 'بيانات الأطراف',
@@ -87,13 +94,15 @@ export function NewContractWizard() {
     authGate: 'تسجيل الدخول',
     resuming: 'استكمال',
   };
-  const [companyName, setCompanyName] = useState(guestDraft?.companyName ?? '');
-  const [companyCrNumber, setCompanyCrNumber] = useState(guestDraft?.companyCrNumber ?? '');
-  const [companyLogoDataUrl, setCompanyLogoDataUrl] = useState<string | null>(guestDraft?.companyLogoDataUrl ?? null);
-  const [termMode, setTermMode] = useState<TermMode>(guestDraft?.termMode ?? 'none');
-  const [termValue, setTermValue] = useState(guestDraft?.termValue ?? '');
-  const [termUnit, setTermUnit] = useState<TermUnit>(guestDraft?.termUnit ?? 'month');
-  const [termEndDate, setTermEndDate] = useState(guestDraft?.termEndDate ?? '');
+  const [companyName, setCompanyName] = useState(guestDraft?.companyName ?? wizardProgress?.companyName ?? '');
+  const [companyCrNumber, setCompanyCrNumber] = useState(guestDraft?.companyCrNumber ?? wizardProgress?.companyCrNumber ?? '');
+  const [companyLogoDataUrl, setCompanyLogoDataUrl] = useState<string | null>(
+    guestDraft?.companyLogoDataUrl ?? wizardProgress?.companyLogoDataUrl ?? null,
+  );
+  const [termMode, setTermMode] = useState<TermMode>(guestDraft?.termMode ?? wizardProgress?.termMode ?? 'none');
+  const [termValue, setTermValue] = useState(guestDraft?.termValue ?? wizardProgress?.termValue ?? '');
+  const [termUnit, setTermUnit] = useState<TermUnit>(guestDraft?.termUnit ?? wizardProgress?.termUnit ?? 'month');
+  const [termEndDate, setTermEndDate] = useState(guestDraft?.termEndDate ?? wizardProgress?.termEndDate ?? '');
   // إن وصل المستخدم عبر نافذة الصفحة الرئيسية (pendingIntent) فقد اختار طريقة
   // التصديق هناك بالفعل — لا داعي لسؤاله نفس السؤال مجددًا في خطوة بيانات
   // الأطراف؛ null يعني أنه فتح المعالج مباشرة بلا اختيار مسبق فتبقى البطاقتان
@@ -104,6 +113,7 @@ export function NewContractWizard() {
   const [discountCode, setDiscountCode] = useState('');
   const [draftParties, setDraftParties] = useState<DraftParty[]>(() => {
     if (guestDraft) return guestDraft.parties;
+    if (wizardProgress) return wizardProgress.draftParties;
     // بدء عقد من قالب جاهز: عدد خانات الأطراف ثابت بعدد القالب (party_count)،
     // وكل خانة تحمل معرّفًا مؤقتًا tmpl-party-N يطابق مراجع الأطراف المضمَّنة في
     // body_json القالب، ليُستبدل بمعرّف حقيقي فور إنشاء الأطراف فعليًا لاحقًا.
@@ -151,16 +161,65 @@ export function NewContractWizard() {
       );
     });
   }, [profile]);
-  const [contract, setContract] = useState<Contract | null>(null);
-  const [parties, setParties] = useState<ContractParty[]>([]);
+  const [contract, setContract] = useState<Contract | null>(guestDraft ? null : wizardProgress?.contract ?? null);
+  const [parties, setParties] = useState<ContractParty[]>(guestDraft ? [] : wizardProgress?.parties ?? []);
   const [file, setFile] = useState<File | null>(null);
-  const [pageCount, setPageCount] = useState(0);
-  const [pdfUrl, setPdfUrl] = useState('');
-  const [body, setBody] = useState<JSONContent | null>(guestDraft?.body ?? pendingIntent?.templateBody ?? null);
-  const [fields, setFields] = useState<ContractField[]>([]);
+  const [pageCount, setPageCount] = useState(guestDraft ? 0 : wizardProgress?.pageCount ?? 0);
+  const [pdfUrl, setPdfUrl] = useState(guestDraft ? '' : wizardProgress?.pdfUrl ?? '');
+  const [body, setBody] = useState<JSONContent | null>(guestDraft?.body ?? wizardProgress?.body ?? pendingIntent?.templateBody ?? null);
+  const [fields, setFields] = useState<ContractField[]>(guestDraft ? [] : wizardProgress?.fields ?? []);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const syncInFlightRef = useRef(false);
+
+  // حفظ مستمر لتقدّم المعالج كي لا يُفقَد إن غادر المستخدم لصفحة أخرى (مثل الملف
+  // الشخصي) ثم عاد؛ يُتجاهل أثناء شاشتي الاستكمال/تسجيل الدخول (لا تقدّم حقيقي
+  // بعد)، ويُمسَح صراحةً في ReviewStep بعد إرسال العقد بنجاح.
+  useEffect(() => {
+    if (step === 'resuming' || step === 'authGate') return;
+    saveWizardProgress({
+      step: step as WizardProgressState['step'],
+      method,
+      documentType,
+      title,
+      durationDays,
+      companyName,
+      companyCrNumber,
+      companyLogoDataUrl,
+      termMode,
+      termValue,
+      termUnit,
+      termEndDate,
+      draftParties,
+      body,
+      contract,
+      parties,
+      pdfUrl,
+      pageCount,
+      fields,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    step,
+    method,
+    documentType,
+    title,
+    durationDays,
+    companyName,
+    companyCrNumber,
+    companyLogoDataUrl,
+    termMode,
+    termValue,
+    termUnit,
+    termEndDate,
+    draftParties,
+    body,
+    contract,
+    parties,
+    pdfUrl,
+    pageCount,
+    fields,
+  ]);
 
   const persistGuestDraft = (resumeStep: GuestResumeStep, chosenMethod: 'pdf' | 'editor') => {
     saveGuestDraft({

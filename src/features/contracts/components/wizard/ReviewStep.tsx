@@ -6,6 +6,7 @@ import { Field } from '@/shared/ui/Field';
 import { Button } from '@/shared/ui/Button';
 import { getErrorMessage } from '@/shared/lib/errorMessage';
 import { sendContract, updateParty, type NewPartyInput } from '../../api/contractsApi';
+import { clearWizardProgress } from '../../lib/wizardProgress';
 import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '../../api/pricingApi';
 import { previewDiscountCode, setContractDiscountCode, type DiscountPreview } from '../../api/discountCodesApi';
 import { renderContractHtml, renderPartiesHeaderHtml, renderTermLineHtml, escapeHtml, type JsonNode } from '../../editor/renderContractHtml';
@@ -133,6 +134,7 @@ export function ReviewStep({
     setError('');
     try {
       await sendContract(contract.id);
+      clearWizardProgress();
       navigate(`/app/contracts/${contract.id}`);
     } catch (err) {
       setError(getErrorMessage(err, `تعذّر إرسال ${docLabel}`));
