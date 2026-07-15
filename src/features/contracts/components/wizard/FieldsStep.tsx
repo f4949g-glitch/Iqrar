@@ -41,7 +41,15 @@ export function FieldsStep({ contractId, pdfUrl, pageCount, parties, fields, onF
   const [selectedParty, setSelectedParty] = useState(parties[0]?.id ?? '');
   const [selectedType, setSelectedType] = useState<FieldType>('signature');
   const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number } | null>(null);
+  const [resizing, setResizing] = useState<{
+    id: string;
+    startClientX: number;
+    startClientY: number;
+    startWidth: number;
+    startHeight: number;
+  } | null>(null);
   const [error, setError] = useState('');
+  const MIN_FIELD_SIZE = 2;
 
   const partyIndex = (partyId: string) => parties.findIndex((p) => p.id === partyId);
   const colorFor = (partyId: string) => PARTY_COLORS[partyIndex(partyId) % PARTY_COLORS.length] ?? '#5B6B82';
@@ -96,7 +104,39 @@ export function FieldsStep({ contractId, pdfUrl, pageCount, parties, fields, onF
     setDragging({ id: field.id, offsetX: e.clientX - rect.left - fieldXPx, offsetY: e.clientY - rect.top - fieldYPx });
   };
 
+  const startResize = (field: ContractField, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setResizing({
+      id: field.id,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      startWidth: field.width ?? MIN_FIELD_SIZE,
+      startHeight: field.height ?? MIN_FIELD_SIZE,
+    });
+  };
+
   const onPageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (resizing) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const field = fields.find((f) => f.id === resizing.id);
+      if (!field) return;
+      const deltaWidthPct = ((e.clientX - resizing.startClientX) / rect.width) * 100;
+      const deltaHeightPct = ((e.clientY - resizing.startClientY) / rect.height) * 100;
+      const maxWidth = 100 - (field.pos_x ?? 0);
+      const maxHeight = 100 - (field.pos_y ?? 0);
+      onFieldsChange(
+        fields.map((f) =>
+          f.id === resizing.id
+            ? {
+                ...f,
+                width: Math.max(MIN_FIELD_SIZE, Math.min(maxWidth, resizing.startWidth + deltaWidthPct)),
+                height: Math.max(MIN_FIELD_SIZE, Math.min(maxHeight, resizing.startHeight + deltaHeightPct)),
+              }
+            : f,
+        ),
+      );
+      return;
+    }
     if (!dragging) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const field = fields.find((f) => f.id === dragging.id);
@@ -117,6 +157,17 @@ export function FieldsStep({ contractId, pdfUrl, pageCount, parties, fields, onF
   };
 
   const endDrag = async () => {
+    if (resizing) {
+      const field = fields.find((f) => f.id === resizing.id);
+      setResizing(null);
+      if (!field) return;
+      try {
+        await updateField(field.id, { width: field.width ?? MIN_FIELD_SIZE, height: field.height ?? MIN_FIELD_SIZE });
+      } catch {
+        // تجاهل فشل حفظ الحجم النهائي؛ يبقى الحقل كما هو محليًا حتى إعادة تحميل الصفحة
+      }
+      return;
+    }
     if (!dragging) return;
     const field = fields.find((f) => f.id === dragging.id);
     setDragging(null);
@@ -164,7 +215,9 @@ export function FieldsStep({ contractId, pdfUrl, pageCount, parties, fields, onF
           </button>
         ))}
       </div>
-      <p className="text-xs text-slate">اضغط على مكان في المستند لإضافة الحقل المحدد، واسحب الحقول الموضوعة لتغيير مكانها.</p>
+      <p className="text-xs text-slate">
+        اضغط على مكان في المستند لإضافة الحقل المحدد، واسحب الحقول الموضوعة لتغيير مكانها، أو اسحب المقبض الدائري في زاويتها لتغيير حجمها.
+      </p>
 
       <div className="flex items-center justify-center gap-3">
         <button
@@ -226,6 +279,12 @@ export function FieldsStep({ contractId, pdfUrl, pageCount, parties, fields, onF
               >
                 <Trash2 size={10} />
               </button>
+              <div
+                onMouseDown={(e) => startResize(field, e)}
+                title="اسحب لتغيير حجم الحقل"
+                className="absolute -bottom-1.5 -right-1.5 hidden h-3.5 w-3.5 cursor-nwse-resize rounded-full border-2 border-white group-hover:block"
+                style={{ background: colorFor(field.party_id) }}
+              />
             </div>
           ))}
         </div>
