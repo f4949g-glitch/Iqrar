@@ -57,6 +57,10 @@ Deno.serve(async (req: Request) => {
   const { error: updateError } = await admin.auth.admin.updateUserById(profile.id, { password: newPassword });
   if (updateError) return jsonResponse({ error: 'تعذّر تحديث كلمة المرور: ' + updateError.message }, 500);
 
+  // اختار المستخدم كلمة مروره بنفسه هنا (وليس النظام)، فلا داعي لإجباره على
+  // تغييرها مجددًا عند الدخول التالي حتى لو كان الحساب أُنشئ أصلًا بكلمة مرور مؤقتة.
+  await admin.from('profiles').update({ must_change_password: false }).eq('id', profile.id);
+
   await admin.rpc('rpc_delete_password_reset_otp', { p_national_id: nationalId });
 
   return jsonResponse({ ok: true });

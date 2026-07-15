@@ -77,9 +77,19 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: createError?.message ?? 'تعذّر إنشاء الحساب' }, 500);
   }
 
+  // must_change_password يفترض true افتراضيًا لكل حساب جديد (ليناسب الحسابات
+  // التي ينشئها النظام بكلمة مرور مؤقتة عشوائية — ensurePartyAccount/admin-create-user)،
+  // لكن هذا المستخدم اختار كلمة مروره بنفسه هنا فلا داعي لإجباره على تغييرها فورًا.
   const { error: profileError } = await admin
     .from('profiles')
-    .update({ full_name: fullName, national_id: nationalId, nationality: nationality || null, date_of_birth: dateOfBirth || null, phone })
+    .update({
+      full_name: fullName,
+      national_id: nationalId,
+      nationality: nationality || null,
+      date_of_birth: dateOfBirth || null,
+      phone,
+      must_change_password: false,
+    })
     .eq('id', created.user.id);
   if (profileError) {
     return jsonResponse({ error: 'أُنشئ الحساب لكن تعذّر حفظ بيانات الهوية: ' + profileError.message }, 500);
