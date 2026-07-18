@@ -4,6 +4,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { sendSms, isSmsConfigured } from '../_shared/sms.ts';
 import { generateOtpCode } from '../_shared/otp.ts';
 import { maskPhone } from '../_shared/phone.ts';
+import { otpCooldownMessage } from '../_shared/otpCooldown.ts';
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -41,6 +42,10 @@ Deno.serve(async (req: Request) => {
   if (!ownerProfile?.signature_data_url || !ownerProfile.phone) {
     return jsonResponse({ error: 'لا يوجد توقيع محفوظ مرتبط بهذا الطرف' }, 400);
   }
+
+  const { data: existingOtpRows } = await admin.rpc('rpc_get_signing_otp', { p_party_id: party.id });
+  const cooldownError = otpCooldownMessage(existingOtpRows?.[0]?.created_at);
+  if (cooldownError) return jsonResponse({ error: cooldownError }, 429);
 
   const code = generateOtpCode();
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();

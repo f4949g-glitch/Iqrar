@@ -48,14 +48,17 @@ export async function confirmPasswordReset(nationalId: string, code: string, new
   });
 }
 
+// يُنجز البحث عن البريد الإلكتروني المرتبط برقم الهوية والتحقق من كلمة المرور
+// بالكامل على الخادم (دالة login-with-national-id)، ولا يصل البريد الإلكتروني
+// للمتصفح إطلاقًا — بخلاف التصميم السابق الذي كان يكشف بريد أي حساب لأي طرف
+// يستدعي RPC مباشرة بمجرد معرفة رقم الهوية (ثغرة تسريب بيانات).
 export async function signInWithNationalId(nationalId: string, password: string) {
-  const { data: email, error: lookupError } = await supabase.rpc('login_email_for_national_id', {
-    p_national_id: nationalId.trim(),
-  });
-  if (lookupError || !email) throw new Error('رقم الهوية أو كلمة المرور غير صحيحة');
-
-  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-  if (signInError) throw new Error('رقم الهوية أو كلمة المرور غير صحيحة');
+  const { access_token, refresh_token } = await invokeAuthFunction<{ access_token: string; refresh_token: string }>(
+    'login-with-national-id',
+    { national_id: nationalId.trim(), password },
+  );
+  const { error: setSessionError } = await supabase.auth.setSession({ access_token, refresh_token });
+  if (setSessionError) throw new Error('رقم الهوية أو كلمة المرور غير صحيحة');
 }
 
 export async function fetchCurrentProfile(): Promise<Profile | null> {

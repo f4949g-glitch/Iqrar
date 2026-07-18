@@ -4,6 +4,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { sendSms, isSmsConfigured } from '../_shared/sms.ts';
 import { sendEmail, isEmailConfigured } from '../_shared/email.ts';
 import { generateOtpCode } from '../_shared/otp.ts';
+import { otpCooldownMessage } from '../_shared/otpCooldown.ts';
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -46,6 +47,10 @@ Deno.serve(async (req: Request) => {
 
   const { data: existingEmail } = await admin.from('profiles').select('id').eq('email', email).maybeSingle();
   if (existingEmail) return jsonResponse({ error: 'يوجد حساب مسجَّل بهذا البريد الإلكتروني بالفعل' }, 409);
+
+  const { data: existingOtpRows } = await admin.rpc('rpc_get_registration_otp', { p_phone: phone });
+  const cooldownError = otpCooldownMessage(existingOtpRows?.[0]?.created_at);
+  if (cooldownError) return jsonResponse({ error: cooldownError }, 429);
 
   const code = generateOtpCode();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();

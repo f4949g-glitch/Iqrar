@@ -4,6 +4,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { sendSms, isSmsConfigured } from '../_shared/sms.ts';
 import { sendEmail, isEmailConfigured } from '../_shared/email.ts';
 import { generateOtpCode } from '../_shared/otp.ts';
+import { otpCooldownMessage } from '../_shared/otpCooldown.ts';
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -32,6 +33,10 @@ Deno.serve(async (req: Request) => {
   if (!profile || (!profile.phone && !profile.email)) {
     return jsonResponse({ error: 'لا يوجد حساب برقم جوال أو بريد إلكتروني مسجَّل مطابق لهذا الرقم' }, 404);
   }
+
+  const { data: existingOtpRows } = await admin.rpc('rpc_get_password_reset_otp', { p_national_id: nationalId });
+  const cooldownError = otpCooldownMessage(existingOtpRows?.[0]?.created_at);
+  if (cooldownError) return jsonResponse({ error: cooldownError }, 429);
 
   const code = generateOtpCode();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();

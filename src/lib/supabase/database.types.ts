@@ -957,10 +957,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      login_email_for_national_id: {
-        Args: { p_national_id: string }
-        Returns: string
-      }
       preview_discount_code: {
         Args: { p_code: string; p_party_count: number }
         Returns: {
@@ -1009,6 +1005,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      rpc_check_login_rate_limit: {
+        Args: { p_national_id: string }
+        Returns: boolean
       }
       rpc_delete_password_reset_otp: {
         Args: { p_national_id: string }
@@ -1091,6 +1091,10 @@ export type Database = {
       }
       rpc_mark_signing_otp_verified: {
         Args: { p_party_id: string }
+        Returns: undefined
+      }
+      rpc_reset_login_rate_limit: {
+        Args: { p_national_id: string }
         Returns: undefined
       }
       rpc_upsert_password_reset_otp: {
@@ -1339,9 +1343,3 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
-
-export const Constants = {
-  public: {
-    Enums: {},
-  },
-} as const
