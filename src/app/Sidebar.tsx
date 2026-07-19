@@ -19,14 +19,19 @@ import {
   Send,
   Printer,
   Mail,
+  Stamp,
 } from 'lucide-react';
 import type { Profile } from '@/features/auth';
 import { hasAdminPermission } from '@/features/auth/types';
+import { setPendingContractIntent } from '@/features/contracts/lib/pendingIntent';
 
 interface SidebarLink {
   to: string;
   label: string;
   icon: typeof User;
+  // تنفَّذ قبل الانتقال (مثال: حفظ نية إنشاء تفويض في sessionStorage كي
+  // يقرأها معالج إنشاء العقد بعد فتح نفس مسار "/app/contracts/new" المشترك).
+  onClick?: () => void;
 }
 
 interface SidebarGroup {
@@ -46,7 +51,7 @@ function buildUserGroups(templateCount: number): SidebarGroup[] {
   const mainLinks: SidebarLink[] = [
     { to: '/app', label: 'لوحة التحكم', icon: Home },
     { to: '/app/contracts', label: 'عقودي', icon: FolderOpen },
-    { to: '/app/contracts/new', label: 'توثيق العقود', icon: FileSignature },
+    { to: '/app/contracts/new', label: 'إنشاء عقد', icon: FileSignature },
     { to: '/verify', label: 'التحقق من وثيقة موثقة', icon: ShieldCheck },
   ];
   if (templateCount > 0) {
@@ -54,6 +59,17 @@ function buildUserGroups(templateCount: number): SidebarGroup[] {
   }
   return [
     { title: null, links: mainLinks },
+    {
+      title: 'التفويض',
+      links: [
+        {
+          to: '/app/contracts/new',
+          label: 'إنشاء تفويض',
+          icon: Stamp,
+          onClick: () => setPendingContractIntent({ documentType: 'power_of_attorney', partyCount: 1, verificationDefault: 'manual' }),
+        },
+      ],
+    },
     {
       title: 'حسابي',
       links: [
@@ -119,7 +135,10 @@ function NavItem({ link, active, onNavigate }: { link: SidebarLink; active: bool
   return (
     <Link
       to={link.to}
-      onClick={onNavigate}
+      onClick={() => {
+        link.onClick?.();
+        onNavigate?.();
+      }}
       className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-bold leading-tight transition sm:gap-2.5 sm:px-3 sm:text-sm lg:gap-3 lg:px-3.5 lg:py-2.5 lg:text-[15px] ${
         active ? 'bg-sealLight text-seal' : 'text-sealMuted hover:bg-sealLight hover:text-seal'
       }`}

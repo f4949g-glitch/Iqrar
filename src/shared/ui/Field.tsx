@@ -66,13 +66,21 @@ export function Field({
     };
     return (
       <label className="block text-sm">
-        <span className="mb-1 block font-bold text-ink">{label}</span>
+        <span className="mb-1 block font-bold text-ink">
+          {label}
+          {required && (
+            <span className="text-clay" aria-hidden="true">
+              {' '}
+              *
+            </span>
+          )}
+        </span>
         <div
-          className="flex items-center overflow-hidden rounded-lg border bg-card focus-within:border-seal"
+          className="flex items-center overflow-hidden rounded-lg border bg-paper shadow-sm focus-within:border-seal"
           style={{ borderColor: error ? '#B5533C' : '#E5E1D6' }}
           dir="ltr"
         >
-          <span className="border-l border-line bg-paper px-3 py-2 text-sm font-bold text-slate">966</span>
+          <span className="border-l border-line bg-card px-3 py-2 text-sm font-bold text-slate">966</span>
           <input
             type="text"
             inputMode="numeric"
@@ -111,7 +119,7 @@ export function Field({
             list={type === 'email' ? datalistId : undefined}
             autoComplete={type === 'email' ? 'off' : undefined}
             onChange={(e) => handleChange(e.target.value)}
-            className="w-full rounded-lg border bg-card px-3 py-2 text-ink outline-none focus:border-seal disabled:cursor-not-allowed disabled:bg-paper disabled:text-slate"
+            className="w-full rounded-lg border bg-paper px-3 py-2 text-ink shadow-sm outline-none focus:border-seal disabled:cursor-not-allowed disabled:bg-card disabled:text-slate disabled:shadow-none"
             style={{ borderColor: error ? '#B5533C' : '#E5E1D6' }}
           />
           {type === 'email' && (

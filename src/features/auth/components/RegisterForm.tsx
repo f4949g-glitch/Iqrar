@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FileSignature } from 'lucide-react';
+import { Eye, EyeOff, FileSignature } from 'lucide-react';
 import { requestRegistrationOtp, verifyRegistrationOtp } from '../api/authApi';
 import { signIn } from '../api/authApi';
 import { GregorianDateInput } from '@/shared/ui/GregorianDateInput';
@@ -20,6 +20,7 @@ export function RegisterForm({ onRegistered }: RegisterFormProps) {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [code, setCode] = useState('');
   const [devCode, setDevCode] = useState('');
   const [error, setError] = useState('');
@@ -171,15 +172,25 @@ export function RegisterForm({ onRegistered }: RegisterFormProps) {
               </div>
               <div>
                 <label className="mb-1.5 block text-xs font-bold text-slate">كلمة المرور</label>
-                <input
-                  required
-                  type="password"
-                  placeholder="8-15 حرفًا: كبير وصغير ورقم ورمز"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={inputClass}
-                  style={{ direction: 'ltr' }}
-                />
+                <div className="relative">
+                  <input
+                    required
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="8-15 حرفًا: كبير وصغير ورقم ورمز"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={`${inputClass} pl-10`}
+                    style={{ direction: 'ltr' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                    className="absolute inset-y-0 left-0 flex w-10 items-center justify-center text-slate hover:text-ink"
+                  >
+                    {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
                 <p className="mt-1 text-xs text-slate">8-15 حرفًا، ويجب أن تحتوي على حرف كبير وحرف صغير ورقم ورمز خاص</p>
               </div>
               {error && (

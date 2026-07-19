@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FileSignature } from 'lucide-react';
+import { Eye, EyeOff, FileSignature } from 'lucide-react';
 import { signInWithNationalId } from '../api/authApi';
 import { nationalIdError } from '@/shared/lib/validation';
 
@@ -11,6 +11,7 @@ interface LoginFormProps {
 export function LoginForm({ onSignedIn }: LoginFormProps) {
   const [nationalId, setNationalId] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -75,19 +76,29 @@ export function LoginForm({ onSignedIn }: LoginFormProps) {
                 نسيت كلمة المرور؟
               </Link>
             </div>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoCapitalize="none"
-              autoCorrect="off"
-              autoComplete="current-password"
-              spellCheck={false}
-              placeholder="••••••••"
-              className={inputClass}
-              style={{ direction: 'ltr' }}
-            />
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoCapitalize="none"
+                autoCorrect="off"
+                autoComplete="current-password"
+                spellCheck={false}
+                placeholder="••••••••"
+                className={`${inputClass} pl-10`}
+                style={{ direction: 'ltr' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+                className="absolute inset-y-0 left-0 flex w-10 items-center justify-center text-slate hover:text-ink"
+              >
+                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
+            </div>
           </div>
           {error && (
             <p role="alert" className="text-sm font-bold text-clay">

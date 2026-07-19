@@ -70,7 +70,7 @@ export function VerifyPage() {
         </div>
 
         <form onSubmit={submit} className="space-y-4 rounded-2xl bg-card p-6 shadow-sm">
-          <Field label="رقم التوثيق" value={verificationNumber} onChange={setVerificationNumber} required />
+          <Field label="رقم التوثيق" value={verificationNumber} onChange={setVerificationNumber} required digitsOnly maxLength={10} />
 
           <div className="flex gap-1.5 rounded-lg bg-paper p-1">
             <button

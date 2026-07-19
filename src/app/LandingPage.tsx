@@ -339,6 +339,7 @@ export function LandingPage() {
   const logoUrl = siteSettings?.logo_data_url ?? null;
 
   const handleLogout = async () => {
+    if (!window.confirm('هل تريد تسجيل الخروج؟')) return;
     await signOut();
     await refresh();
   };

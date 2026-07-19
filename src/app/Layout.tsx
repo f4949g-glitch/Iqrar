@@ -19,6 +19,7 @@ export function Layout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = async () => {
+    if (!window.confirm('هل تريد تسجيل الخروج؟')) return;
     await signOut();
     window.location.href = '/';
   };
@@ -76,11 +77,16 @@ export function Layout({
           </div>
         </div>
       </header>
-      <div className="mx-auto flex max-w-7xl">
+      {/* لا "mx-auto max-w-7xl" هنا عمدًا: الشريط الجانبي "sticky" يستقر عند حافة
+          هذا الحاوي نفسه، فلو كان محدود العرض ومُمركزًا لظهر الشريط عائمًا في
+          منتصف الشاشة على الشاشات العريضة بدل ملاصقة الحافة الفعلية للمتصفح. */}
+      <div className="flex">
         {profile && (
           <Sidebar profile={profile} templateCount={templateCount} mobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
         )}
-        <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
+        <main className="min-w-0 flex-1 p-4 md:p-8">
+          <div className="mx-auto max-w-7xl">{children}</div>
+        </main>
       </div>
       <div className="no-print">
         <WhatsAppButton />
