@@ -15,6 +15,15 @@ export interface FieldToRender {
 
 const IMAGE_FIELD_TYPES = new Set(['signature', 'image', 'logo', 'stamp']);
 
+// خط Helvetica القياسي المستخدم لقيم الحقول النصية لا يملك أي رموز عربية، فكان
+// نص عربي يكتبه طرف في حقل نصي بعقد PDF يظهر مفقودًا/مشوَّهًا في المستند
+// النهائي (لا مجرد "معكوس"). نتحقق من وجود حرف عربي واحد على الأقل ونحوّل
+// لخط عربي مُشكَّل (نفس المستخدَم في صفحة التوثيق) عند الحاجة فقط.
+const ARABIC_CHAR_RE = /[؀-ۿ]/;
+function containsArabic(text: string): boolean {
+  return ARABIC_CHAR_RE.test(text);
+}
+
 export interface VerificationStamp {
   number: string;
   dateLabel: string;
@@ -59,8 +68,16 @@ export async function generateFinalPdf(
   documentTitle?: string,
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(originalBytes);
+  pdfDoc.registerFontkit(fontkit);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const pages = pdfDoc.getPages();
+  // يُحمَّل الخط العربي مرة واحدة فقط وعند أول حاجة فعلية له (قيمة حقل تحوي
+  // حرفًا عربيًا)، لا لكل مستند بصرف النظر عن محتواه.
+  let arabicFieldFont: Awaited<ReturnType<typeof pdfDoc.embedFont>> | null = null;
+  const getArabicFieldFont = async () => {
+    if (!arabicFieldFont) arabicFieldFont = await pdfDoc.embedFont(await getArabicFontBytes(), { subset: false });
+    return arabicFieldFont;
+  };
 
   // شعار المنشأة (اختياري): يُرسَم بارزًا في الزاوية العلوية لكل صفحة من صفحات
   // المستند، كترويسة (letterhead) ثابتة على مدى المستند بأكمله.
@@ -123,14 +140,19 @@ export async function generateFinalPdf(
 
     const text = String(field.value);
     const fontSize = Math.max(7, Math.min(12, boxHeight * 0.6));
-    page.drawText(text, {
-      x: boxX + 2,
-      y: boxYFromBottom + boxHeight * 0.25,
-      size: fontSize,
-      font,
-      color: rgb(0, 0, 0),
-      maxWidth: boxWidth - 4,
-    });
+    if (containsArabic(text)) {
+      const arabicFont = await getArabicFieldFont();
+      drawArabicRightAligned(page, text, boxX + boxWidth - 2, boxYFromBottom + boxHeight * 0.25, fontSize, arabicFont, boxWidth - 4);
+    } else {
+      page.drawText(text, {
+        x: boxX + 2,
+        y: boxYFromBottom + boxHeight * 0.25,
+        size: fontSize,
+        font,
+        color: rgb(0, 0, 0),
+        maxWidth: boxWidth - 4,
+      });
+    }
   }
 
   if (verificationStamp) {
@@ -222,7 +244,6 @@ async function appendVerificationPages(
   logoImage: Awaited<ReturnType<typeof PDFDocument.prototype.embedPng>> | null,
   referencePage: PDFPage,
 ) {
-  pdfDoc.registerFontkit(fontkit);
   const arabicFontBytes = await getArabicFontBytes();
   // subset:true يُفسِد الحروف المركّبة (composite glyphs) في هذا الخط تحديدًا
   // (تظهر فارغة تمامًا) — تحقّقنا محليًا أن subset:false يُصلح ذلك، بتكلفة حجم

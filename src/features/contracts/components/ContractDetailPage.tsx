@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
   AlertTriangle,
   Bell,
@@ -8,6 +8,7 @@ import {
   Download,
   Eye,
   History,
+  Pencil,
   Plus,
   Printer,
   RefreshCw,
@@ -39,6 +40,7 @@ import { formatDate, formatDateTime } from '@/shared/lib/formatDate';
 import { parseUserAgent } from '@/shared/lib/parseUserAgent';
 import {
   CONTRACT_STATUS_LABEL,
+  DOCUMENT_TYPE_LABELS,
   PARTY_STATUS_LABEL,
   PARTY_ROLE_OPTIONS,
   TERM_UNIT_LABELS,
@@ -265,11 +267,13 @@ export function ContractDetailPage() {
   if (!contract) return null;
 
   const isDraft = contract.status === 'draft';
-  // عقد مرفوض من أحد الأطراف ليس نهاية المطاف: يمكن لمنشئ العقد تعديل بياناته
-  // (والأطراف التي لم توقّع بعد) ثم إعادة إرسال رابط التوقيع — زر "إعادة إرسال
-  // الرابط" الموجود أصلًا يُعيد حالة العقد نفسه إلى "بانتظار التوقيع" تلقائيًا.
+  // عقد مرفوض من أحد الأطراف أو منتهي الصلاحية ليس نهاية المطاف: يمكن لمنشئ
+  // العقد تعديل بياناته (والأطراف التي لم توقّع بعد) ثم إعادة إرسال رابط
+  // التوقيع — زر "إعادة إرسال الرابط" الموجود أصلًا يُعيد حالة العقد نفسه إلى
+  // "بانتظار التوقيع" تلقائيًا.
   const isRejected = contract.status === 'rejected';
-  const canEditMeta = isDraft || isRejected;
+  const isExpired = contract.status === 'expired';
+  const canEditMeta = isDraft || isRejected || isExpired;
   const info = CONTRACT_STATUS_LABEL[contract.status];
   const termLabel =
     contract.term_value && contract.term_unit
@@ -368,12 +372,25 @@ export function ContractDetailPage() {
 
       {canEditMeta && (
         <div className="rounded-xl border border-line bg-card p-5">
-          <h2 className="mb-3 font-display text-sm font-bold text-ink">{isRejected ? 'تعديل العقد قبل إعادة الإرسال' : 'تعديل العقد (مسودة)'}</h2>
+          <h2 className="mb-3 font-display text-sm font-bold text-ink">
+            {isRejected || isExpired ? 'تعديل العقد قبل إعادة الإرسال' : 'تعديل العقد (مسودة)'}
+          </h2>
           {isRejected && (
             <p className="mb-3 text-xs text-slate">
               رفض أحد الأطراف هذا العقد. يمكنك تعديل بياناته وبيانات الأطراف التي لم توقّع بعد أدناه، ثم الضغط على "إعادة إرسال الرابط" أعلى الصفحة.
             </p>
           )}
+          {isExpired && (
+            <p className="mb-3 text-xs text-slate">
+              انتهت مدة صلاحية توثيق هذا العقد. يمكنك تعديل بياناته وبيانات الأطراف التي لم توقّع بعد أدناه، ثم الضغط على "إعادة إرسال الرابط" أعلى الصفحة.
+            </p>
+          )}
+          <Link
+            to={`/app/contracts/${contract.id}/edit`}
+            className="mb-3 inline-flex items-center gap-1.5 rounded-lg border border-seal px-3 py-1.5 text-xs font-bold text-seal hover:bg-sealLight"
+          >
+            <Pencil size={13} /> تعديل محتوى {DOCUMENT_TYPE_LABELS[contract.document_type]} (النص/الحقول) عبر المعالج
+          </Link>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="عنوان العقد" value={editTitle} onChange={setEditTitle} required />
             <Field label="صلاحية التوثيق (أيام)" value={editDuration} onChange={setEditDuration} type="number" min={1} max={14} placeholder="من 1 إلى 14" />
@@ -470,7 +487,7 @@ export function ContractDetailPage() {
         <h2 className="mb-3 font-display text-sm font-bold text-ink">الأطراف {!isDraft && 'وسجل التوقيعات'}</h2>
         <div className="space-y-3">
           {parties.map((p) =>
-            isDraft || (isRejected && p.status !== 'signed') ? (
+            isDraft || ((isRejected || isExpired) && p.status !== 'signed') ? (
               <div key={p.id} className="rounded-lg border border-line p-3">
                 <div className="mb-2 flex items-center justify-between">
                   <select

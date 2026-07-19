@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { JSONContent } from '@tiptap/react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import { useSession } from '@/features/auth/hooks/useSession';
 import { PartiesStep, emptyParty, type DraftParty, type TermMode } from './wizard/PartiesStep';
@@ -12,12 +12,14 @@ import { ReviewStep } from './wizard/ReviewStep';
 import {
   addParty,
   createDraftContract,
+  getContractDetail,
   getOriginalPdfUrl,
   updateContractMeta,
   updateParty,
   uploadCompanyLogo,
   uploadOriginalPdf,
 } from '../api/contractsApi';
+import { NATIONALITIES } from '@/shared/lib/nationalities';
 import { createFieldsFromScratch } from '../lib/syncEditorContent';
 import { consumePendingContractIntent } from '../lib/pendingIntent';
 import { saveGuestDraft, consumeGuestDraft, type GuestResumeStep } from '../lib/guestDraft';
@@ -42,6 +44,10 @@ const STEP_ORDER_EDITOR: Step[] = ['parties', 'method', 'editor', 'review'];
 export function NewContractWizard() {
   const { profile, loading: sessionLoading } = useSession();
   const isGuest = !sessionLoading && !profile;
+  // استكمال مسودة/عقد مرفوض أو منتهٍ محفوظ فعليًا في القاعدة (بدلًا من عقد جديد
+  // أو مسودة زائر في sessionStorage) — يصل عبر رابط "متابعة التحرير" في صفحة
+  // تفاصيل العقد أو قائمة المسودات، ويحمل معرّف العقد الحقيقي في المسار.
+  const { id: resumeContractId } = useParams<{ id?: string }>();
 
   // نُقرأ نية الدخول المحفوظة من الصفحة الرئيسية (نوع الوثيقة، عدد الأطراف، وطريقة
   // التصديق الافتراضية) مرة واحدة فقط عند فتح المعالج، ثم تُمسح من sessionStorage.
@@ -56,7 +62,9 @@ export function NewContractWizard() {
   );
   const [resuming, setResuming] = useState(Boolean(guestDraft));
 
-  const [step, setStep] = useState<Step>(guestDraft ? 'resuming' : (wizardProgress?.step as Step | undefined) ?? 'parties');
+  const [step, setStep] = useState<Step>(
+    resumeContractId || guestDraft ? 'resuming' : (wizardProgress?.step as Step | undefined) ?? 'parties',
+  );
   // زر رجوع المتصفح كان يخرج من المعالج بالكامل بدل الرجوع لخطوة سابقة داخله، لأن
   // التنقّل بين الخطوات كان يعتمد على حالة React فقط بلا أي أثر في history. نُسجّل
   // كل خطوة كإدخال منفصل في history (بنفس رابط الصفحة) عبر goToStep بدل setStep
@@ -78,7 +86,9 @@ export function NewContractWizard() {
   }, []);
   const [method, setMethod] = useState<'pdf' | 'editor' | null>(guestDraft?.method ?? wizardProgress?.method ?? null);
   const [title, setTitle] = useState(guestDraft?.title ?? wizardProgress?.title ?? pendingIntent?.templateTitle ?? '');
-  const [documentType] = useState<DocumentType>(guestDraft?.documentType ?? wizardProgress?.documentType ?? pendingIntent?.documentType ?? 'contract');
+  const [documentType, setDocumentType] = useState<DocumentType>(
+    guestDraft?.documentType ?? wizardProgress?.documentType ?? pendingIntent?.documentType ?? 'contract',
+  );
   const poaMode = documentType === 'power_of_attorney';
   // مدة توثيق التفويض ثابتة عند 7 أيام ولا تُعرض للاختيار؛ مدة توثيق العقد تبدأ
   // بـ3 أيام افتراضيًا وتبقى قابلة للتعديل زيادةً أو نقصانًا (1-14 يومًا).
@@ -322,6 +332,75 @@ export function NewContractWizard() {
     setBody(remapped);
     setFields(createdFields);
   };
+
+  // استكمال مسودة/عقد مرفوض أو منتهٍ حقيقي من القاعدة: يُحمَّل العقد وأطرافه
+  // وحقوله كاملةً (بدل الاكتفاء ببيانات وصفية محدودة كما في صفحة تفاصيل العقد)،
+  // ثم يُنقَل المستخدم مباشرةً لخطوة المراجعة حيث يمكنه الرجوع خطوة بخطوة عبر
+  // أزرار "السابق" المعتادة في المعالج للوصول لأي خطوة سابقة (الحقول/المحرر...)
+  // وتعديل محتوى العقد فعليًا — وهو ما كان مستحيلًا تمامًا خارج المعالج.
+  const dbResumeStartedRef = useRef(false);
+  useEffect(() => {
+    if (!resumeContractId || dbResumeStartedRef.current) return;
+    dbResumeStartedRef.current = true;
+    (async () => {
+      try {
+        const { contract: fetched, parties: fetchedParties, fields: fetchedFields } = await getContractDetail(resumeContractId);
+        setDocumentType(fetched.document_type);
+        setTitle(fetched.title ?? '');
+        setDurationDays(fetched.duration_days ? String(fetched.duration_days) : fetched.document_type === 'power_of_attorney' ? '7' : '3');
+        setCompanyName(fetched.company_name ?? '');
+        setCompanyCrNumber(fetched.company_cr_number ?? '');
+        if (fetched.term_value && fetched.term_unit) {
+          setTermMode('duration');
+          setTermValue(String(fetched.term_value));
+          setTermUnit(fetched.term_unit);
+        } else if (fetched.term_end_date) {
+          setTermMode('date');
+          setTermEndDate(fetched.term_end_date);
+        }
+        setDraftParties(
+          fetchedParties.map((p) => ({
+            partyId: p.id,
+            party_type: p.party_type,
+            entity_name: p.entity_name ?? '',
+            entity_cr_number: p.entity_cr_number ?? '',
+            role_label: p.role_label,
+            custom_role: '',
+            full_name: p.full_name ?? '',
+            national_id: p.national_id ?? '',
+            nationality: p.nationality ?? NATIONALITIES[0],
+            address: p.address ?? '',
+            email: p.email ?? '',
+            phone: p.phone ?? '',
+            verification_method: p.verification_method,
+            date_of_birth: p.date_of_birth ?? '',
+            nafathState: 'idle',
+            nafathMessage: '',
+            randomCode: '',
+            is_self: Boolean(profile) && p.user_id === profile?.id,
+          })),
+        );
+        setContract(fetched);
+        setParties(fetchedParties);
+        setFields(fetchedFields);
+        if (fetched.source_type === 'editor') {
+          setMethod('editor');
+          setBody((fetched.body_json as JSONContent) ?? null);
+        } else {
+          setMethod('pdf');
+          setPageCount(fetched.page_count ?? 0);
+          if (fetched.original_file_path) {
+            const url = await getOriginalPdfUrl(fetched.original_file_path);
+            setPdfUrl(url);
+          }
+        }
+        goToStep('review');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'تعذّر تحميل العقد');
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeContractId]);
 
   // استكمال مسودة زائر بعد تسجيل الدخول: يُنشئ العقد والأطراف فعليًا، ثم إن كان
   // قد ألّف محتوى العقد بالمحرر يُنشئ حقوله أيضًا (بعد استبدال معرّفات الأطراف

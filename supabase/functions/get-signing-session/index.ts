@@ -109,14 +109,13 @@ Deno.serve(async (req: Request) => {
     pdfUrl = signed?.signedUrl ?? null;
   }
 
-  let allParties: unknown[] | null = null;
-  if (contract.source_type === 'editor') {
-    const { data } = await admin
-      .from('contract_parties')
-      .select('id, role_label, full_name, national_id, email, phone')
-      .eq('contract_id', contract.id);
-    allParties = data ?? [];
-  }
+  // بيانات كل أطراف العقد (اسم/صفة) تُعرَض لكل طرف موقِّع مهما كان نوع مصدر
+  // العقد (محرر أو PDF)، بدل الاقتصار على الأطراف عبر المحرر فقط.
+  const { data: allPartiesData } = await admin
+    .from('contract_parties')
+    .select('id, role_label, full_name, national_id, email, phone')
+    .eq('contract_id', contract.id);
+  const allParties = allPartiesData ?? [];
 
   return jsonResponse({
     contract: {

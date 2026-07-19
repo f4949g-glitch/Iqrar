@@ -91,6 +91,9 @@ function AppShell() {
           {/* يُتاح المعالج للزائر أيضًا: يمكنه تعبئة الأطراف وكتابة محتوى العقد محليًا،
               ولا يُطلب منه تسجيل الدخول إلا قبل المراجعة والدفع مباشرة (انظر NewContractWizard). */}
           <Route path="/contracts/new" element={<NewContractWizard />} />
+          {/* متابعة تحرير مسودة، أو عقد مرفوض/منتهٍ قبل إعادة إرساله — يُحمِّل المعالج
+              العقد الحقيقي بمعرّفه بدل بدء عقد جديد فارغ (انظر resumeContractId). */}
+          <Route path="/contracts/:id/edit" element={profile ? <NewContractWizard /> : <AuthGate />} />
           <Route path="/contracts/:id" element={profile ? <ContractDetailPage /> : <AuthGate />} />
           <Route path="/balance" element={profile ? <BalancePage /> : <AuthGate />} />
           <Route path="/templates" element={profile ? <MyTemplatesPage /> : <AuthGate />} />

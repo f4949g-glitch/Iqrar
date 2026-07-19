@@ -22,15 +22,32 @@ import '@/lib/pdf/setupWorker';
 
 // يتيح للطرف الموقّع استخدام توقيعه المحفوظ مسبقًا في ملفه الشخصي بدل الرسم من
 // جديد، لكن فقط بعد التحقق برمز يُرسل لجواله المسجَّل عند طلبه هنا تحديدًا —
-// التوقيع المحفوظ وحده لا يُستخدم تلقائيًا أبدًا.
-function SavedSignatureField({ token, onChange }: { token: string; onChange: (dataUrl: string | null) => void }) {
-  const [mode, setMode] = useState<'choice' | 'otp' | 'done' | 'draw'>('choice');
+// التوقيع المحفوظ وحده لا يُستخدم تلقائيًا أبدًا. التحقق يتم مرة واحدة فقط لكل
+// جلسة توقيع: القيمة المُتحقَّق منها تُخزَّن أعلى المستوى (SigningPage) وتُمرَّر
+// كـcachedDataUrl، فإن وُجدت تُستخدم مباشرة بلا إعادة طلب رمز لكل حقل توقيع لاحق.
+function SavedSignatureField({
+  token,
+  onChange,
+  cachedDataUrl,
+  onVerified,
+}: {
+  token: string;
+  onChange: (dataUrl: string | null) => void;
+  cachedDataUrl: string | null;
+  onVerified: (dataUrl: string) => void;
+}) {
+  const [mode, setMode] = useState<'choice' | 'otp' | 'done' | 'draw'>(cachedDataUrl ? 'done' : 'choice');
   const [requesting, setRequesting] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [code, setCode] = useState('');
   const [phoneHint, setPhoneHint] = useState('');
   const [devCode, setDevCode] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (cachedDataUrl) onChange(cachedDataUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const requestOtp = async () => {
     setRequesting(true);
@@ -53,6 +70,7 @@ function SavedSignatureField({ token, onChange }: { token: string; onChange: (da
     try {
       const res = await verifySigningOtp(token, code.trim());
       onChange(res.signature_data_url);
+      onVerified(res.signature_data_url);
       setMode('done');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'تعذّر التحقق من الرمز');
@@ -149,6 +167,8 @@ function FieldInput({
   hasSavedSignature,
   signatureMethod,
   onChooseSignatureMethod,
+  savedSignatureDataUrl,
+  onSavedSignatureVerified,
 }: {
   field: SigningFullSession['fields'][number];
   value: unknown;
@@ -157,11 +177,20 @@ function FieldInput({
   hasSavedSignature: boolean;
   signatureMethod: 'draw' | 'upload' | null;
   onChooseSignatureMethod: (method: 'draw' | 'upload') => void;
+  savedSignatureDataUrl: string | null;
+  onSavedSignatureVerified: (dataUrl: string) => void;
 }) {
   switch (field.field_type) {
     case 'signature': {
       if (hasSavedSignature) {
-        return <SavedSignatureField token={token} onChange={(dataUrl) => onChange(dataUrl)} />;
+        return (
+          <SavedSignatureField
+            token={token}
+            onChange={(dataUrl) => onChange(dataUrl)}
+            cachedDataUrl={savedSignatureDataUrl}
+            onVerified={onSavedSignatureVerified}
+          />
+        );
       }
       if (signatureMethod === null) {
         return <SignatureMethodChoice onChoose={onChooseSignatureMethod} />;
@@ -290,6 +319,9 @@ export function SigningPage() {
   // تُختار مرة واحدة عند أول حقل توقيع ثم تُطبَّق تلقائيًا على أي حقل توقيع آخر
   // لنفس الطرف، بدل السماح بخلط الطريقتين داخل العقد الواحد.
   const [signatureMethod, setSignatureMethod] = useState<'draw' | 'upload' | null>(null);
+  // توقيع محفوظ مُتحقَّق منه مرة واحدة عبر رمز SMS لهذه الجلسة — يُعاد استخدامه
+  // تلقائيًا لأي حقل توقيع لاحق لنفس الطرف بلا إعادة طلب الرمز.
+  const [savedSignatureDataUrl, setSavedSignatureDataUrl] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -458,6 +490,21 @@ export function SigningPage() {
       </header>
 
       <main className="mx-auto max-w-3xl space-y-6 p-4">
+        {/* أطراف هذا المستند وعددهم يظهران لكل طرف موقِّع، لا للمنشئ فقط، بصرف
+            النظر عن مصدر العقد (محرر أو PDF). */}
+        {session.all_parties && session.all_parties.length > 0 && (
+          <div className="rounded-xl border border-line bg-card p-4">
+            <p className="mb-2 text-xs font-bold text-slate">أطراف هذا المستند ({session.all_parties.length})</p>
+            <div className="flex flex-wrap gap-2">
+              {session.all_parties.map((p) => (
+                <span key={p.id} className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink">
+                  {p.full_name || 'غير محدد'} — {p.role_label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {session.contract.source_type === 'editor' && Boolean(session.contract.body_json) && session.all_parties && (
           <div className="rounded-xl border border-line bg-card p-6">
             {/* بيضاء دائمًا: محتوى العقد الرسمي نصّه أسود ثابت عبر .prose (انظر
@@ -513,6 +560,8 @@ export function SigningPage() {
                             hasSavedSignature={session.party.has_saved_signature}
                             signatureMethod={signatureMethod}
                             onChooseSignatureMethod={setSignatureMethod}
+                            savedSignatureDataUrl={savedSignatureDataUrl}
+                            onSavedSignatureVerified={setSavedSignatureDataUrl}
                           />
                         </div>
                       </div>
@@ -545,6 +594,8 @@ export function SigningPage() {
                   hasSavedSignature={session.party.has_saved_signature}
                   signatureMethod={signatureMethod}
                   onChooseSignatureMethod={setSignatureMethod}
+                  savedSignatureDataUrl={savedSignatureDataUrl}
+                  onSavedSignatureVerified={setSavedSignatureDataUrl}
                 />
               </div>
               );

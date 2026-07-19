@@ -30,7 +30,7 @@ function ContractCard({ contract, onDelete }: { contract: ContractListItem; onDe
   const info = CONTRACT_STATUS_LABEL[contract.status];
   return (
     <Link
-      to={`/app/contracts/${contract.id}`}
+      to={contract.status === 'draft' ? `/app/contracts/${contract.id}/edit` : `/app/contracts/${contract.id}`}
       className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-card p-4 shadow-sm transition hover:shadow-md"
     >
       <div>
