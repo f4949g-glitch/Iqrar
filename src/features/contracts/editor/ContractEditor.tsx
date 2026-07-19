@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useEditor, EditorContent, type JSONContent } from '@tiptap/react';
+import { useEditor, EditorContent, type Editor, type JSONContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { TableKit } from '@tiptap/extension-table';
 import TextAlign from '@tiptap/extension-text-align';
@@ -31,6 +31,21 @@ const PARTY_COLORS = ['#C9922B', '#4C7A6B', '#B5533C', '#5B6B82', '#8B5CF6', '#0
 function colorForParty(parties: ContractParty[], partyId: string): string {
   const index = parties.findIndex((p) => p.id === partyId);
   return PARTY_COLORS[index % PARTY_COLORS.length] ?? PARTY_COLORS[0];
+}
+
+// إدراج حقل دمج/تعبئة ملاصقًا مباشرة للنص المجاور بلا مسافة كان يُنتج عند
+// الحفظ نصًا ملتصقًا بلا فواصل (مثل "فلانالنص"). نتحقق من الحرف قبل/بعد نقطة
+// الإدراج ونضيف مسافة تلقائيًا فقط إن لم تكن موجودة أصلًا، بدل مسافة ثابتة قد
+// تُضاعِف مسافة كتبها المستخدم بنفسه.
+function insertNodeWithSpacing(editor: Editor, node: JSONContent) {
+  const { from } = editor.state.selection;
+  const before = from > 0 ? editor.state.doc.textBetween(from - 1, from) : '';
+  const after = from < editor.state.doc.content.size ? editor.state.doc.textBetween(from, from + 1) : '';
+  const content: JSONContent[] = [];
+  if (before && !/\s/.test(before)) content.push({ type: 'text', text: ' ' });
+  content.push(node);
+  if (after && !/\s/.test(after)) content.push({ type: 'text', text: ' ' });
+  editor.chain().focus().insertContent(content).run();
 }
 
 interface ContractEditorProps {
@@ -80,40 +95,32 @@ export function ContractEditor({ parties, content, onChange }: ContractEditorPro
   const insertMergeField = (fieldKey: MergeFieldKey) => {
     const party = parties.find((p) => p.id === mergeParty);
     if (!party) return;
-    editor
-      .chain()
-      .focus()
-      .insertContent({
-        type: 'mergeField',
-        attrs: {
-          partyId: party.id,
-          partyLabel: `${party.role_label} — ${party.full_name}`,
-          fieldKey,
-          partyColor: colorForParty(parties, party.id),
-        },
-      })
-      .run();
+    insertNodeWithSpacing(editor, {
+      type: 'mergeField',
+      attrs: {
+        partyId: party.id,
+        partyLabel: `${party.role_label} — ${party.full_name}`,
+        fieldKey,
+        partyColor: colorForParty(parties, party.id),
+      },
+    });
   };
 
   const insertFillField = () => {
     const party = parties.find((p) => p.id === fillParty);
     if (!party) return;
-    editor
-      .chain()
-      .focus()
-      .insertContent({
-        type: 'fillField',
-        attrs: {
-          anchorId: crypto.randomUUID(),
-          partyId: party.id,
-          partyLabel: `${party.role_label} — ${party.full_name}`,
-          fieldType: fillType,
-          label: FIELD_TYPE_LABELS[fillType],
-          required: true,
-          partyColor: colorForParty(parties, party.id),
-        },
-      })
-      .run();
+    insertNodeWithSpacing(editor, {
+      type: 'fillField',
+      attrs: {
+        anchorId: crypto.randomUUID(),
+        partyId: party.id,
+        partyLabel: `${party.role_label} — ${party.full_name}`,
+        fieldType: fillType,
+        label: FIELD_TYPE_LABELS[fillType],
+        required: true,
+        partyColor: colorForParty(parties, party.id),
+      },
+    });
   };
 
   return (

@@ -122,17 +122,18 @@ export function renderContractHtml(
       case 'fillField': {
         const anchorId = String(node.attrs?.anchorId ?? '');
         const label = String(node.attrs?.label ?? '');
+        const anchorAttr = anchorId ? ` data-anchor-id="${escapeHtml(anchorId)}"` : '';
         const fillValue = fillValues[anchorId];
         if (!fillValue || fillValue.value == null || fillValue.value === '') {
-          return `<span class="fill-placeholder">[${escapeHtml(label)}]</span>`;
+          return `<span class="fill-placeholder"${anchorAttr}>[${escapeHtml(label)}]</span>`;
         }
         if (fillValue.resolvedImageUrl) {
-          return `<img class="fill-image" src="${fillValue.resolvedImageUrl}" alt="${escapeHtml(label)}" />`;
+          return `<img class="fill-image"${anchorAttr} src="${fillValue.resolvedImageUrl}" alt="${escapeHtml(label)}" />`;
         }
         if (fillValue.fieldType === 'checkbox') {
-          return fillValue.value === true ? '☑' : '☐';
+          return `<span${anchorAttr}>${fillValue.value === true ? '☑' : '☐'}</span>`;
         }
-        return `<span class="fill-value">${escapeHtml(String(fillValue.value))}</span>`;
+        return `<span class="fill-value"${anchorAttr}>${escapeHtml(String(fillValue.value))}</span>`;
       }
       default:
         return children();

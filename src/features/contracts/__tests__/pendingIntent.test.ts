@@ -17,7 +17,7 @@ describe('pendingIntent', () => {
   });
 
   it('يمسح النية بعد قراءتها مرة واحدة (استهلاك لمرة واحدة)', () => {
-    setPendingContractIntent({ documentType: 'power_of_attorney', partyCount: 1, verificationDefault: 'manual' });
+    setPendingContractIntent({ documentType: 'power_of_attorney', partyCount: 2, verificationDefault: 'manual' });
     consumePendingContractIntent();
     expect(consumePendingContractIntent()).toBeNull();
   });

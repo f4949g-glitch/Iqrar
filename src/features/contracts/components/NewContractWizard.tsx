@@ -124,22 +124,23 @@ export function NewContractWizard() {
         verification_method: pendingIntent.verificationDefault,
       }));
     }
-    // العقد يتطلب طرفين على الأقل (تفويض هو الاستثناء الوحيد بطرف واحد)، فتُهيَّأ
-    // خانتان افتراضيًا بدل واحدة كي لا يفاجَأ المستخدم بخطأ التحقق لاحقًا.
-    if (!pendingIntent) return poaMode ? [emptyParty()] : [emptyParty(0), emptyParty(1)];
-    const count = pendingIntent.documentType === 'power_of_attorney' ? 1 : Math.max(pendingIntent.partyCount, 2);
+    // العقد والتفويض كلاهما يتطلبان طرفين بالضبط: الطرف الأول صاحب الحساب
+    // (الموكِّل في التفويض)، والثاني يُملأ بياناته المُنشئ بالكامل (الموكَّل له).
+    if (!pendingIntent) return [emptyParty(0), emptyParty(1)];
+    const count = Math.max(pendingIntent.partyCount, 2);
     return Array.from({ length: count }, (_, i) => ({
       ...emptyParty(i),
       verification_method: pendingIntent.verificationDefault,
-      role_label: pendingIntent.documentType === 'power_of_attorney' ? 'الموكِّل' : emptyParty(i).role_label,
+      role_label:
+        pendingIntent.documentType === 'power_of_attorney' ? (i === 0 ? 'الموكِّل' : 'الموكَّل له') : emptyParty(i).role_label,
     }));
   });
-  // الطرف الوحيد في التفويض يمثّل صاحب الحساب نفسه (الموكِّل/مُصدِر التفويض)،
-  // فتُملأ بياناته الشخصية تلقائيًا من الحساب فور توفّرها ويكون هو من يستلم رابط
-  // التوقيع — لا الشخص المفوَّض له (اسمه يُذكَر داخل نص الوثيقة فقط، فهو لا يوقّع).
-  // نفس المنطق يسري على الطرف الأول لعقد عادي (مرة واحدة فقط كي لا تُطمَس
+  // الطرف الأول يمثّل صاحب الحساب نفسه (الموكِّل/مُصدِر التفويض في حالة
+  // التفويض)، فتُملأ بياناته الشخصية تلقائيًا من الحساب فور توفّرها ويكون هو
+  // من يستلم رابط التوقيع أولًا. الطرف الثاني (الموكَّل له في التفويض) يُملأ
+  // المُنشئ بياناته بالكامل يدويًا في PartiesStep. مرة واحدة فقط كي لا تُطمَس
   // تعديلات لاحقة على الجوال/البريد، والاسم/الهوية/الجنسية مقفلة أصلًا في
-  // PartiesStep فلا تُعدَّل يدويًا).
+  // PartiesStep فلا تُعدَّل يدويًا.
   const profileAppliedToPartyOneRef = useRef(false);
   useEffect(() => {
     if (!profile || profileAppliedToPartyOneRef.current) return;

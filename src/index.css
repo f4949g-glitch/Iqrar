@@ -188,6 +188,11 @@ body {
   color: var(--color-slate);
   font-style: italic;
 }
+[data-anchor-id] {
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
 .verification-footer {
   display: flex;
   align-items: center;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Document, Page } from 'react-pdf';
 import { CheckCircle2, Clock, FileSignature, ShieldCheck, XCircle } from 'lucide-react';
@@ -13,7 +13,9 @@ import {
   type SigningSession,
   type SigningFullSession,
 } from '../api/signingApi';
-import { renderContractHtml, renderPartiesHeaderHtml, type JsonNode } from '@/features/contracts/editor/renderContractHtml';
+import { renderContractHtml, renderPartiesHeaderHtml, type FillValue, type JsonNode } from '@/features/contracts/editor/renderContractHtml';
+import { FIELD_TYPE_ICONS } from '@/features/contracts/lib/fieldTypeIcons';
+import { FIELD_TYPE_LABELS } from '@/features/contracts/types';
 import { fileToDataUrl } from '@/shared/lib/fileToDataUrl';
 import { SigningIdentityGate } from './SigningIdentityGate';
 import '@/lib/pdf/setupWorker';
@@ -230,7 +232,19 @@ function FieldInput({
     default:
       return (
         <input
-          type={field.field_type === 'date' ? 'date' : field.field_type === 'time' ? 'time' : field.field_type === 'number' ? 'number' : 'text'}
+          type={
+            field.field_type === 'date'
+              ? 'date'
+              : field.field_type === 'time'
+                ? 'time'
+                : field.field_type === 'number'
+                  ? 'number'
+                  : field.field_type === 'email'
+                    ? 'email'
+                    : field.field_type === 'phone'
+                      ? 'tel'
+                      : 'text'
+          }
           value={(value as string) ?? ''}
           onChange={(e) => onChange(e.target.value)}
           className="w-full rounded-lg border border-line bg-card px-3 py-2 text-sm text-ink outline-none focus:border-seal"
@@ -250,6 +264,26 @@ export function SigningPage() {
   const [rejected, setRejected] = useState(false);
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+
+  // مزامنة حيّة لما يكتبه الطرف في لوحة تعبئة الحقول أسفل المستند مع معاينة
+  // العقد نفسها أعلاه، بدل بقاء المعاينة عند العنصر النائب الفارغ حتى التوقيع
+  // النهائي. تُبنى فقط للحقول ذات anchor_id (المرتبطة بموضع داخل نص العقد).
+  const liveFillValues = useMemo(() => {
+    if (!session || !('fields' in session)) return {};
+    const result: Record<string, FillValue> = {};
+    for (const f of session.fields) {
+      if (!f.anchor_id) continue;
+      const v = values[f.id];
+      if (v === undefined || v === null || v === '') continue;
+      const isImageType = f.field_type === 'signature' || f.field_type === 'image' || f.field_type === 'logo' || f.field_type === 'stamp';
+      result[f.anchor_id] = {
+        fieldType: f.field_type,
+        value: v,
+        resolvedImageUrl: isImageType && typeof v === 'string' ? v : undefined,
+      };
+    }
+    return result;
+  }, [session, values]);
   const [rejecting, setRejecting] = useState(false);
   const [agreedToDeclaration, setAgreedToDeclaration] = useState(false);
   // طريقة توقيع واحدة لكامل حقول التوقيع في هذا العقد (رسم أو صورة مرفقة) —
@@ -285,6 +319,24 @@ export function SigningPage() {
     if (missing) {
       setError(`الحقل "${missing.label}" مطلوب`);
       return;
+    }
+    // تحقق من تنسيق كل حقل مُعبَّأ حسب نوعه، برسالة تحدِّد اسم الحقل والمشكلة
+    // بالضبط بدل رسالة عامة واحدة لكل أنواع الأخطاء.
+    for (const f of session.fields) {
+      const v = values[f.id];
+      if (v === undefined || v === null || v === '') continue;
+      if (f.field_type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v))) {
+        setError(`الحقل "${f.label}" يجب أن يكون بريدًا إلكترونيًا صحيحًا`);
+        return;
+      }
+      if (f.field_type === 'phone' && !/^\d{9,15}$/.test(String(v).replace(/\D/g, ''))) {
+        setError(`الحقل "${f.label}" يجب أن يكون رقم جوال صحيحًا`);
+        return;
+      }
+      if (f.field_type === 'number' && Number.isNaN(Number(v))) {
+        setError(`الحقل "${f.label}" يجب أن يكون رقمًا`);
+        return;
+      }
     }
     setSubmitting(true);
     setError('');
@@ -409,11 +461,25 @@ export function SigningPage() {
         {session.contract.source_type === 'editor' && Boolean(session.contract.body_json) && session.all_parties && (
           <div className="rounded-xl border border-line bg-card p-6">
             {/* بيضاء دائمًا: محتوى العقد الرسمي نصّه أسود ثابت عبر .prose (انظر
-                index.css)، بصرف النظر عن وضع الموقع لدى الطرف الموقِّع. */}
+                index.css)، بصرف النظر عن وضع الموقع لدى الطرف الموقِّع. النقر على
+                أي حقل تعبئة داخل المعاينة (مُعلَّم بـdata-anchor-id) يمرِّر
+                ويُركِّز مباشرةً على مدخله المقابل في لوحة التعبئة أسفل الصفحة،
+                لربط موضع الحقل داخل النص بمكان تعبئته. */}
             <div
               className="prose max-w-none rounded-lg bg-white p-4 text-sm text-ink"
+              onClick={(e) => {
+                const target = (e.target as HTMLElement).closest('[data-anchor-id]');
+                const anchorId = target?.getAttribute('data-anchor-id');
+                if (!anchorId) return;
+                const row = document.getElementById(`field-${anchorId}`);
+                if (!row) return;
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                row.querySelector<HTMLElement>('input, textarea, select, button')?.focus();
+              }}
               dangerouslySetInnerHTML={{
-                __html: renderPartiesHeaderHtml(session.all_parties) + renderContractHtml(session.contract.body_json as JsonNode, session.all_parties),
+                __html:
+                  renderPartiesHeaderHtml(session.all_parties) +
+                  renderContractHtml(session.contract.body_json as JsonNode, session.all_parties, liveFillValues),
               }}
             />
           </div>
@@ -460,10 +526,16 @@ export function SigningPage() {
         <div className="rounded-xl border border-line bg-card p-5">
           <h3 className="mb-4 font-display text-sm font-bold text-ink">تعبئة الحقول المطلوبة</h3>
           <div className="space-y-4">
-            {session.fields.map((f) => (
-              <div key={f.id}>
-                <p className="mb-1 text-xs font-bold text-slate">
+            {session.fields.map((f) => {
+              const FieldIcon = FIELD_TYPE_ICONS[f.field_type] ?? FIELD_TYPE_ICONS.text;
+              return (
+              <div key={f.id} id={f.anchor_id ? `field-${f.anchor_id}` : undefined}>
+                <p className="mb-1 flex items-center gap-1.5 text-xs font-bold text-slate">
+                  <FieldIcon size={13} className="shrink-0 text-sealMuted" aria-hidden="true" />
                   {f.label} {f.required && <span className="text-clay">*</span>}
+                  <span className="rounded-full bg-paper px-1.5 py-0.5 text-[10px] font-bold text-sealMuted">
+                    {FIELD_TYPE_LABELS[f.field_type]}
+                  </span>
                 </p>
                 <FieldInput
                   field={f}
@@ -475,7 +547,8 @@ export function SigningPage() {
                   onChooseSignatureMethod={setSignatureMethod}
                 />
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

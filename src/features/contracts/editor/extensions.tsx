@@ -1,6 +1,7 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper, type NodeViewProps } from '@tiptap/react';
 import { MERGE_FIELD_LABELS, FIELD_TYPE_LABELS, type FieldType, type MergeFieldKey } from '../types';
+import { FIELD_TYPE_ICONS } from '../lib/fieldTypeIcons';
 
 export interface MergeFieldAttrs {
   partyId: string;
@@ -67,13 +68,14 @@ export interface FillFieldAttrs {
 function FillFieldView({ node }: NodeViewProps) {
   const { partyLabel, fieldType, label, required, partyColor } = node.attrs as unknown as FillFieldAttrs;
   const color = partyColor || '#1F7A5C';
+  const Icon = FIELD_TYPE_ICONS[fieldType] ?? FIELD_TYPE_ICONS.text;
   return (
     <NodeViewWrapper
       as="span"
       className="mx-0.5 inline-flex items-center gap-1 rounded border border-dashed px-1.5 py-0.5 text-xs font-bold"
       style={{ borderColor: color, background: `${color}1a`, color }}
     >
-      [{label || FIELD_TYPE_LABELS[fieldType]} — {partyLabel}
+      <Icon size={11} className="shrink-0" aria-hidden="true" />[{label || FIELD_TYPE_LABELS[fieldType]} — {partyLabel}
       {required ? '*' : ''}]
     </NodeViewWrapper>
   );

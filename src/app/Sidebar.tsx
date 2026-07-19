@@ -66,7 +66,7 @@ function buildUserGroups(templateCount: number): SidebarGroup[] {
           to: '/app/contracts/new',
           label: 'إنشاء تفويض',
           icon: Stamp,
-          onClick: () => setPendingContractIntent({ documentType: 'power_of_attorney', partyCount: 1, verificationDefault: 'manual' }),
+          onClick: () => setPendingContractIntent({ documentType: 'power_of_attorney', partyCount: 2, verificationDefault: 'manual' }),
         },
       ],
     },
