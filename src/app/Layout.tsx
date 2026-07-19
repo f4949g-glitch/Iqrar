@@ -1,11 +1,12 @@
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { FileSignature, LogOut, Menu } from 'lucide-react';
+import { FileSignature, Menu } from 'lucide-react';
 import { signOut, type Profile } from '@/features/auth';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { WhatsAppButton } from '@/shared/ui/WhatsAppButton';
 import { Sidebar } from './Sidebar';
 import { NotificationsBell } from './NotificationsBell';
+import { AccountMenu } from './AccountMenu';
 
 export function Layout({
   profile,
@@ -54,15 +55,7 @@ export function Layout({
             {profile ? (
               <>
                 <NotificationsBell profile={profile} />
-                <span className="hidden text-sm font-bold text-ink sm:inline">أهلاً بك يا {profile.full_name || profile.email}</span>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-bold text-clay hover:bg-clayLight"
-                >
-                  <LogOut size={16} />
-                  خروج
-                </button>
+                <AccountMenu profile={profile} onLogout={handleLogout} />
               </>
             ) : (
               <>

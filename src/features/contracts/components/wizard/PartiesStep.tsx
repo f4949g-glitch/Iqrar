@@ -410,7 +410,13 @@ export function PartiesStep({
   const invoice = pricing ? calculateInvoice(parties.length, pricing) : null;
 
   return (
-    <div className="space-y-6">
+    <form
+      className="space-y-6"
+      onSubmit={(e) => {
+        e.preventDefault();
+        submit();
+      }}
+    >
       {error && (
         <div role="alert" className="flex items-start gap-2 rounded-xl border-2 border-clay bg-clayLight p-4 text-sm font-bold text-clay">
           <AlertTriangle size={18} className="mt-0.5 shrink-0" />
@@ -1029,9 +1035,9 @@ export function PartiesStep({
       )}
 
       <div className="flex justify-end">
-        <Button onClick={submit}>التالي: طريقة إنشاء {docLabel}</Button>
+        <Button type="submit">التالي: طريقة إنشاء {docLabel}</Button>
       </div>
-    </div>
+    </form>
   );
 }
 

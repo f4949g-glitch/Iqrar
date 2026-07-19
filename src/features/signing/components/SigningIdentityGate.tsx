@@ -72,7 +72,13 @@ export function SigningIdentityGate({
         )}
 
         {step === 'otp' && (
-          <div className="space-y-2 text-right">
+          <form
+            className="space-y-2 text-right"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!verifying && code.trim().length >= 4) verify();
+            }}
+          >
             <p className="text-xs font-bold text-ink">أُرسل رمز تحقق إلى جوالك ({phoneHint})</p>
             {devCode && <p className="text-xs text-slate">رمز الاختبار (بوابة SMS غير مُفعَّلة بعد): {devCode}</p>}
             <input
@@ -80,16 +86,16 @@ export function SigningIdentityGate({
               onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               inputMode="numeric"
               placeholder="رمز التحقق"
-              className="w-full rounded-lg border border-line bg-card px-3 py-2 text-center text-sm text-ink outline-none focus:border-seal"
+              className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-center text-sm text-ink shadow-sm outline-none focus:border-seal"
             />
             {error && <p className="text-xs font-bold text-clay">{error}</p>}
-            <Button onClick={verify} disabled={verifying || code.trim().length < 4} className="w-full">
+            <Button type="submit" disabled={verifying || code.trim().length < 4} className="w-full">
               {verifying ? 'جارِ التحقق...' : 'تحقق ومتابعة'}
             </Button>
             <button type="button" onClick={requestOtp} disabled={requesting} className="w-full text-center text-xs font-bold text-slate hover:text-ink">
               {requesting ? 'جارِ الإرسال...' : 'إعادة إرسال الرمز'}
             </button>
-          </div>
+          </form>
         )}
       </div>
     </div>
