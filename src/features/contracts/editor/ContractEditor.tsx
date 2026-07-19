@@ -18,6 +18,9 @@ import {
   AlignCenter,
   AlignLeft,
   AlignJustify,
+  Rows3,
+  Columns3,
+  Trash2,
 } from 'lucide-react';
 import Underline from '@tiptap/extension-underline';
 import { MergeFieldNode, FillFieldNode } from './extensions';
@@ -150,6 +153,28 @@ export function ContractEditor({ parties, content, onChange }: ContractEditorPro
         <ToolbarButton title="إدراج جدول" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
           <TableIcon size={16} />
         </ToolbarButton>
+        {editor.isActive('table') && (
+          <>
+            <ToolbarButton title="إضافة صف" onClick={() => editor.chain().focus().addRowAfter().run()}>
+              <Rows3 size={16} />
+            </ToolbarButton>
+            <ToolbarButton title="حذف صف" onClick={() => editor.chain().focus().deleteRow().run()}>
+              <span className="relative">
+                <Rows3 size={16} />
+                <Trash2 size={9} className="absolute -bottom-1 -left-1" />
+              </span>
+            </ToolbarButton>
+            <ToolbarButton title="إضافة عمود" onClick={() => editor.chain().focus().addColumnAfter().run()}>
+              <Columns3 size={16} />
+            </ToolbarButton>
+            <ToolbarButton title="حذف عمود" onClick={() => editor.chain().focus().deleteColumn().run()}>
+              <span className="relative">
+                <Columns3 size={16} />
+                <Trash2 size={9} className="absolute -bottom-1 -left-1" />
+              </span>
+            </ToolbarButton>
+          </>
+        )}
         <span className="mx-1 h-5 w-px shrink-0 bg-line" aria-hidden="true" />
         <ToolbarButton title="محاذاة لليمين" active={editor.isActive({ textAlign: 'right' })} onClick={() => editor.chain().focus().setTextAlign('right').run()}>
           <AlignRight size={16} />
