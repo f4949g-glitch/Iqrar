@@ -119,7 +119,7 @@ function Nav({ profile, onLogout, orgName, logoUrl }: { profile: Profile | null;
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-card">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 md:px-8">
-        <div className="flex items-center gap-2.5">
+        <Link to="/" className="flex items-center gap-2.5">
           {logoUrl ? (
             <img src={logoUrl} alt={orgName} className="h-9 w-9 rounded-md object-contain" />
           ) : (
@@ -131,7 +131,7 @@ function Nav({ profile, onLogout, orgName, logoUrl }: { profile: Profile | null;
             <span className="sm:hidden">إقرار</span>
             <span className="hidden sm:inline">{orgName}</span>
           </span>
-        </div>
+        </Link>
         <NavLinks className="hidden items-center gap-0.5 text-sm font-bold lg:flex" />
         <div className="flex items-center gap-0.5 text-xs font-bold sm:gap-1 sm:text-sm">
           {!profile && (

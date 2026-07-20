@@ -101,7 +101,15 @@ export function Field({
 
   return (
     <label className="block text-sm">
-      <span className="mb-1 block font-bold text-ink">{label}</span>
+      <span className="mb-1 block font-bold text-ink">
+        {label}
+        {required && (
+          <span className="text-clay" aria-hidden="true">
+            {' '}
+            *
+          </span>
+        )}
+      </span>
       {type === 'date' ? (
         <GregorianDateInput value={value} onChange={onChange} required={required} />
       ) : (

@@ -432,7 +432,13 @@ export function PartiesStep({
           </div>
         ) : (
           <label className="block text-sm">
-            <span className="mb-1.5 block text-xs font-bold text-slate">صلاحية التوثيق (أيام)</span>
+            <span className="mb-1.5 block text-xs font-bold text-slate">
+              صلاحية التوثيق (أيام)
+              <span className="text-clay" aria-hidden="true">
+                {' '}
+                *
+              </span>
+            </span>
             <select
               value={durationDays}
               onChange={(e) => onDurationChange(e.target.value)}

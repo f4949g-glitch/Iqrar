@@ -40,7 +40,7 @@ export function Layout({
                 <Menu size={20} />
               </button>
             )}
-            <Link to="/app" className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-2">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-seal">
                 <FileSignature size={18} className="text-white" />
               </div>

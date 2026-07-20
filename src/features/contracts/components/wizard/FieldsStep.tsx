@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Document, Page } from 'react-pdf';
-import { ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, Trash2, X } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { addField, deleteField, updateField, type NewFieldInput } from '../../api/contractsApi';
 import { FIELD_TYPE_LABELS, type ContractField, type ContractParty, type FieldType } from '../../types';
@@ -52,6 +52,13 @@ export function FieldsStep({ contractId, pdfUrl, pageCount, parties, fields, onF
     startHeight: number;
   } | null>(null);
   const [error, setError] = useState('');
+  // محرِّر خيارات حقل "قائمة منسدلة": بلا هذا لا توجد أي وسيلة لتحديد خيارات
+  // الحقل، فيبقى دائمًا فارغًا وغير قابل للتعبئة عند التوقيع رغم كونه إلزاميًا،
+  // ما يمنع إتمام التوقيع نهائيًا. يُفتح تلقائيًا فور إفلات/وضع حقل جديد من
+  // هذا النوع، ويمكن إعادة فتحه بالنقر على أي حقل قائمة منسدلة موضوع سابقًا.
+  const [editingOptionsFieldId, setEditingOptionsFieldId] = useState<string | null>(null);
+  const [optionsDraft, setOptionsDraft] = useState('');
+  const editingOptionsField = fields.find((f) => f.id === editingOptionsFieldId) ?? null;
   const MIN_FIELD_SIZE = 2;
   // يمنع "النقرة" التي تُنهي عملية سحب حقل موجود (تحريك/تحجيم) من إنشاء حقل
   // جديد بالخطأ: تُرفَع فقط أثناء سحب فعلي، ويُستهلَك مرة واحدة عند أول نقرة تالية.
@@ -82,8 +89,27 @@ export function FieldsStep({ contractId, pdfUrl, pageCount, parties, fields, onF
     try {
       const created = await addField(contractId, input);
       onFieldsChange([...fields, created]);
+      if (type === 'select') {
+        setEditingOptionsFieldId(created.id);
+        setOptionsDraft('');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'تعذّرت إضافة الحقل');
+    }
+  };
+
+  const saveFieldOptions = async () => {
+    if (!editingOptionsFieldId) return;
+    const options = optionsDraft
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    try {
+      await updateField(editingOptionsFieldId, { options });
+      onFieldsChange(fields.map((f) => (f.id === editingOptionsFieldId ? { ...f, options } : f)));
+      setEditingOptionsFieldId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'تعذّر حفظ خيارات القائمة');
     }
   };
 
@@ -316,7 +342,13 @@ export function FieldsStep({ contractId, pdfUrl, pageCount, parties, fields, onF
             <div
               key={field.id}
               onMouseDown={(e) => startDrag(field, e)}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (field.field_type === 'select') {
+                  setEditingOptionsFieldId(field.id);
+                  setOptionsDraft((field.options ?? []).join('\n'));
+                }
+              }}
               className="group absolute flex cursor-move items-center justify-center rounded border-2 text-[10px] font-bold"
               style={{
                 left: `${field.pos_x}%`,
@@ -337,6 +369,14 @@ export function FieldsStep({ contractId, pdfUrl, pageCount, parties, fields, onF
                   </span>
                 );
               })()}
+              {field.field_type === 'select' && (field.options?.length ?? 0) === 0 && (
+                <span
+                  title="لم تُحدَّد خيارات لهذه القائمة بعد — انقر على الحقل لإضافتها"
+                  className="absolute -top-2 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-white"
+                >
+                  <AlertTriangle size={10} />
+                </span>
+              )}
               <button
                 type="button"
                 onMouseDown={(e) => e.stopPropagation()}
@@ -373,6 +413,42 @@ export function FieldsStep({ contractId, pdfUrl, pageCount, parties, fields, onF
         التالي: المراجعة والإرسال
       </Button>
     </div>
+
+    {editingOptionsField && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4"
+        dir="rtl"
+        onClick={() => setEditingOptionsFieldId(null)}
+      >
+        <div className="w-full max-w-md rounded-md border border-line bg-card p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="font-display text-sm font-bold text-ink">خيارات القائمة المنسدلة</h3>
+            <button
+              type="button"
+              onClick={() => setEditingOptionsFieldId(null)}
+              aria-label="إغلاق"
+              className="text-slate hover:text-ink"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <p className="mb-2 text-xs text-slate">اكتب كل خيار في سطر منفصل — ستظهر هذه الخيارات للطرف المسؤول عن تعبئة الحقل عند التوقيع.</p>
+          <textarea
+            value={optionsDraft}
+            onChange={(e) => setOptionsDraft(e.target.value)}
+            rows={6}
+            placeholder={'مثال:\nخيار أول\nخيار ثانٍ\nخيار ثالث'}
+            className="w-full resize-none rounded-lg border border-line bg-paper px-3 py-2.5 text-sm text-ink outline-none focus:border-seal"
+          />
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setEditingOptionsFieldId(null)}>
+              إلغاء
+            </Button>
+            <Button onClick={saveFieldOptions}>حفظ</Button>
+          </div>
+        </div>
+      </div>
+    )}
     </>
   );
 }

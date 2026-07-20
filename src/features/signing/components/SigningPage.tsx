@@ -44,10 +44,17 @@ function SavedSignatureField({
   const [devCode, setDevCode] = useState('');
   const [error, setError] = useState('');
 
+  // كل حقول التوقيع تُركَّب دفعة واحدة قبل أي تحقق OTP، فتكون cachedDataUrl فارغة
+  // عند التركيب دائمًا — لذا يعتمد الأثر على قيمتها لا على مصفوفة تبعيات فارغة،
+  // كي ينعكس التحقق الذي تم لأول حقل توقيع فورًا على بقية الحقول (mode أيضًا،
+  // لا onChange فقط) دون إعادة طلب رمز SMS لكل حقل توقيع منفصل.
   useEffect(() => {
-    if (cachedDataUrl) onChange(cachedDataUrl);
+    if (cachedDataUrl) {
+      onChange(cachedDataUrl);
+      setMode('done');
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [cachedDataUrl]);
 
   const requestOtp = async () => {
     setRequesting(true);

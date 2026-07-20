@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useSession } from '@/features/auth/hooks/useSession';
 import {
   AlertTriangle,
   Bell,
@@ -91,6 +92,7 @@ function emptyDraftParty(orderIndex: number): NewPartyInput {
 
 export function ContractDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { profile } = useSession();
   const [contract, setContract] = useState<Contract | null>(null);
   const [parties, setParties] = useState<ContractParty[]>([]);
   const [events, setEvents] = useState<ContractEvent[]>([]);
@@ -270,10 +272,14 @@ export function ContractDetailPage() {
   // عقد مرفوض من أحد الأطراف أو منتهي الصلاحية ليس نهاية المطاف: يمكن لمنشئ
   // العقد تعديل بياناته (والأطراف التي لم توقّع بعد) ثم إعادة إرسال رابط
   // التوقيع — زر "إعادة إرسال الرابط" الموجود أصلًا يُعيد حالة العقد نفسه إلى
-  // "بانتظار التوقيع" تلقائيًا.
+  // "بانتظار التوقيع" تلقائيًا. صلاحية التعديل وإعادة الإرسال مقصورة على
+  // منشئ العقد فقط (طرف آخر له حساب مرتبط قد يصل لهذه الصفحة عبر RLS التي
+  // تُظهر العقد لكل أطرافه، لا لمنشئه فقط) — الخادم يرفض التعديل/الإرسال
+  // لغير المنشئ فعليًا، لكن الواجهة كانت تُظهر أزرارًا لن تعمل بلا داعٍ.
+  const isCreator = contract.created_by === profile?.id;
   const isRejected = contract.status === 'rejected';
   const isExpired = contract.status === 'expired';
-  const canEditMeta = isDraft || isRejected || isExpired;
+  const canEditMeta = isCreator && (isDraft || isRejected || isExpired);
   const info = CONTRACT_STATUS_LABEL[contract.status];
   const termLabel =
     contract.term_value && contract.term_unit
@@ -303,7 +309,7 @@ export function ContractDetailPage() {
         </div>
         <div className="flex items-center gap-3">
           <StatusPill label={info.label} bg={info.bg} fg={info.fg} />
-          {!isDraft && eligibleResendParties.length > 0 && (
+          {isCreator && !isDraft && eligibleResendParties.length > 0 && (
             <button
               type="button"
               onClick={openResendPicker}
@@ -487,7 +493,7 @@ export function ContractDetailPage() {
         <h2 className="mb-3 font-display text-sm font-bold text-ink">الأطراف {!isDraft && 'وسجل التوقيعات'}</h2>
         <div className="space-y-3">
           {parties.map((p) =>
-            isDraft || ((isRejected || isExpired) && p.status !== 'signed') ? (
+            isCreator && (isDraft || ((isRejected || isExpired) && p.status !== 'signed')) ? (
               <div key={p.id} className="rounded-lg border border-line p-3">
                 <div className="mb-2 flex items-center justify-between">
                   <select

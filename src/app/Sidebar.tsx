@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   User,
@@ -32,6 +33,10 @@ interface SidebarLink {
   // تنفَّذ قبل الانتقال (مثال: حفظ نية إنشاء تفويض في sessionStorage كي
   // يقرأها معالج إنشاء العقد بعد فتح نفس مسار "/app/contracts/new" المشترك).
   onClick?: () => void;
+  // معرِّف اختياري للروابط التي تشارك نفس "to" (إنشاء عقد/تفويض يفتحان
+  // المسار نفسه بنيّة مختلفة) — يميّز أيهما نُقر عليه فعليًا كي لا يُظلَّل
+  // كلاهما معًا اعتمادًا على المسار وحده (انظر activeLinkId في Sidebar).
+  id?: string;
 }
 
 interface SidebarGroup {
@@ -51,7 +56,7 @@ function buildUserGroups(templateCount: number): SidebarGroup[] {
   const mainLinks: SidebarLink[] = [
     { to: '/app', label: 'لوحة التحكم', icon: Home },
     { to: '/app/contracts', label: 'عقودي', icon: FolderOpen },
-    { to: '/app/contracts/new', label: 'إنشاء عقد', icon: FileSignature },
+    { to: '/app/contracts/new', label: 'إنشاء عقد', icon: FileSignature, id: 'new-contract' },
     { to: '/verify', label: 'التحقق من وثيقة موثقة', icon: ShieldCheck },
   ];
   if (templateCount > 0) {
@@ -66,6 +71,7 @@ function buildUserGroups(templateCount: number): SidebarGroup[] {
           to: '/app/contracts/new',
           label: 'إنشاء تفويض',
           icon: Stamp,
+          id: 'new-poa',
           onClick: () => setPendingContractIntent({ documentType: 'power_of_attorney', partyCount: 2, verificationDefault: 'manual' }),
         },
       ],
@@ -130,13 +136,24 @@ function buildAdminGroups(profile: Profile): SidebarGroup[] {
   return groups;
 }
 
-function NavItem({ link, active, onNavigate }: { link: SidebarLink; active: boolean; onNavigate?: () => void }) {
+function NavItem({
+  link,
+  active,
+  onNavigate,
+  onSelect,
+}: {
+  link: SidebarLink;
+  active: boolean;
+  onNavigate?: () => void;
+  onSelect?: (id: string) => void;
+}) {
   const Icon = link.icon;
   return (
     <Link
       to={link.to}
       onClick={() => {
         link.onClick?.();
+        if (link.id) onSelect?.(link.id);
         onNavigate?.();
       }}
       className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-bold leading-tight transition sm:gap-2.5 sm:px-3 sm:text-sm lg:gap-3 lg:px-3.5 lg:py-2.5 lg:text-[15px] ${
@@ -149,13 +166,23 @@ function NavItem({ link, active, onNavigate }: { link: SidebarLink; active: bool
   );
 }
 
-function NavGroup({ group, isActive, onNavigate }: { group: SidebarGroup; isActive: (to: string) => boolean; onNavigate?: () => void }) {
+function NavGroup({
+  group,
+  isActive,
+  onNavigate,
+  onSelect,
+}: {
+  group: SidebarGroup;
+  isActive: (link: SidebarLink) => boolean;
+  onNavigate?: () => void;
+  onSelect?: (id: string) => void;
+}) {
   return (
     <div className="mb-4 last:mb-0">
       {group.title && <p className="mb-1 px-3 text-[11px] font-bold text-sealMuted lg:text-xs">{group.title}</p>}
       <nav className="space-y-1">
         {group.links.map((link) => (
-          <NavItem key={link.to} link={link} active={isActive(link.to)} onNavigate={onNavigate} />
+          <NavItem key={link.id ?? link.to} link={link} active={isActive(link)} onNavigate={onNavigate} onSelect={onSelect} />
         ))}
       </nav>
     </div>
@@ -177,7 +204,12 @@ interface SidebarProps {
 export function Sidebar({ profile, templateCount = 0, mobileOpen = false, onMobileClose }: SidebarProps) {
   const location = useLocation();
   const currentPath = `${location.pathname}${location.search}`;
-  const isActive = (to: string) => currentPath === to || (!to.includes('?') && location.pathname === to);
+  // روابط "إنشاء عقد" و"إنشاء تفويض" تفتحان المسار المشترك نفسه بنيّة مختلفة
+  // (محفوظة في sessionStorage)، فلا يكفي مطابقة المسار وحده لتمييز أيهما
+  // مُفعَّل — نتتبّع آخر رابط بمعرِّف (id) نُقر عليه صراحة بدلًا من ذلك.
+  const [selectedLinkId, setSelectedLinkId] = useState<string | null>(null);
+  const isActive = (link: SidebarLink) =>
+    link.id ? selectedLinkId === link.id : currentPath === link.to || (!link.to.includes('?') && location.pathname === link.to);
 
   return (
     <>
@@ -191,11 +223,11 @@ export function Sidebar({ profile, templateCount = 0, mobileOpen = false, onMobi
       >
         <div>
           {buildUserGroups(templateCount).map((group) => (
-            <NavGroup key={group.title ?? 'main'} group={group} isActive={isActive} onNavigate={onMobileClose} />
+            <NavGroup key={group.title ?? 'main'} group={group} isActive={isActive} onNavigate={onMobileClose} onSelect={setSelectedLinkId} />
           ))}
 
           {buildAdminGroups(profile).map((group) => (
-            <NavGroup key={group.title} group={group} isActive={isActive} onNavigate={onMobileClose} />
+            <NavGroup key={group.title} group={group} isActive={isActive} onNavigate={onMobileClose} onSelect={setSelectedLinkId} />
           ))}
         </div>
       </aside>
