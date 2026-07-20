@@ -69,6 +69,21 @@ export async function toggleDiscountCode(id: string, isActive: boolean): Promise
   if (error) throw new Error(translateErrorMessage(error.message));
 }
 
+export interface DiscountCodeUpdateInput {
+  discount_percent: number;
+  max_uses: number | null;
+  max_uses_per_user: number | null;
+  starts_at: string | null;
+  ends_at: string | null;
+}
+
+// تعديل شروط كود خصم قائم (نسبة الخصم، حدود الاستخدام، تمديد/تغيير تاريخ
+// الانتهاء) — مقصور على الأدمن الرئيسي فقط عبر سياسة discount_codes_update.
+export async function updateDiscountCode(id: string, input: DiscountCodeUpdateInput): Promise<void> {
+  const { error } = await supabase.from('discount_codes').update(input).eq('id', id);
+  if (error) throw new Error(translateErrorMessage(error.message));
+}
+
 export async function deleteDiscountCode(id: string): Promise<void> {
   const { error } = await supabase.from('discount_codes').delete().eq('id', id);
   if (error) throw new Error(translateErrorMessage(error.message));
