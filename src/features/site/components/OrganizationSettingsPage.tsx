@@ -60,7 +60,13 @@ export function OrganizationSettingsPage() {
   if (loading || !form) return <p className="text-sm text-slate">جارِ التحميل...</p>;
 
   return (
-    <div className="space-y-6">
+    <form
+      className="space-y-6"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!saving) save();
+      }}
+    >
       <div className="flex items-center gap-3">
         <div className="flex h-11 w-11 items-center justify-center rounded-md bg-sealLight">
           <Building2 size={20} className="text-seal" />
@@ -153,9 +159,9 @@ export function OrganizationSettingsPage() {
 
       {error && <p className="text-sm font-bold text-clay">{error}</p>}
       {saved && <p className="text-sm font-bold text-sage">تم الحفظ بنجاح</p>}
-      <Button onClick={save} disabled={saving}>
+      <Button type="submit" disabled={saving}>
         {saving ? 'جارِ الحفظ...' : 'حفظ الإعدادات'}
       </Button>
-    </div>
+    </form>
   );
 }

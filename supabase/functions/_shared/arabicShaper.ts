@@ -12,6 +12,11 @@
 // قيد معروف: النص الناتج يستخدم رموز Presentation Forms بدل الحروف الأصلية،
 // فسيظهر بشكل صحيح بصريًا عند العرض/الطباعة، لكن نسخه من الـ PDF (Ctrl+C) لن
 // يُنتج نصًا عربيًا عاديًا قابلاً لإعادة الاستخدام مباشرة.
+//
+// الأرقام المُضمَّنة داخل نص عربي (مثال: اسم جهة يحتوي رقمًا) تُعامَل كوحدة
+// واحدة عند العكس النهائي فلا ينقلب ترتيبها الداخلي (انظر تجميع "tokens" في
+// reshapeArabicText) — الحروف اللاتينية المُضمَّنة لا تزال غير مدعومة وتُستبدَل
+// بمسافة (خارج SAFE_OTHER).
 
 type JoinType = 'D' | 'R' | 'N'; // dual-joining / right-joining-only / non-joining
 
@@ -89,6 +94,7 @@ export function reshapeArabicText(input: string): string {
     .join('');
   const chars = Array.from(sanitized).filter((c) => !TASHKEEL.has(c));
   const out: string[] = [];
+  const isDigit: boolean[] = [];
 
   for (let i = 0; i < chars.length; i++) {
     const ch = chars[i];
@@ -96,6 +102,7 @@ export function reshapeArabicText(input: string): string {
 
     if (!entry) {
       out.push(ch);
+      isDigit.push(ch >= '0' && ch <= '9');
       continue;
     }
 
@@ -103,6 +110,7 @@ export function reshapeArabicText(input: string): string {
       const prevConnects = i > 0 && joinType(chars[i - 1]) === 'D';
       const [isolated, final] = LAM_ALEF[chars[i + 1]];
       out.push(prevConnects ? final : isolated);
+      isDigit.push(false);
       i += 1;
       continue;
     }
@@ -118,7 +126,21 @@ export function reshapeArabicText(input: string): string {
     else formIndex = 0;
 
     out.push(entry.forms[formIndex] ?? entry.forms[0]);
+    isDigit.push(false);
   }
 
-  return out.reverse().join('');
+  // عكس السلسلة بالكامل حرفًا حرفًا صحيح للحروف العربية (كل حرف وحدة بصرية
+  // مستقلة)، لكنه يقلب ترتيب أي رقم متعدد الخانات مضمَّن داخل النص (مثال:
+  // "2024" تصبح "4202"). الحل: تجميع خانات الأرقام المتتالية في "رمز" واحد
+  // يبقى ترتيبه الداخلي كما هو، ثم عكس ترتيب الرموز (لا الأحرف) ككل.
+  const tokens: string[] = [];
+  for (let i = 0; i < out.length; i++) {
+    if (isDigit[i] && tokens.length > 0 && isDigit[i - 1]) {
+      tokens[tokens.length - 1] += out[i];
+    } else {
+      tokens.push(out[i]);
+    }
+  }
+
+  return tokens.reverse().join('');
 }

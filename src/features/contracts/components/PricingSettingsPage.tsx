@@ -137,7 +137,13 @@ export function PricingSettingsPage() {
 
       {tab === 'settings' ? (
         <>
-          <div className="rounded-xl border border-line bg-card p-5">
+          <form
+            className="rounded-xl border border-line bg-card p-5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!saving) save();
+            }}
+          >
             {canRequest && (
               <p className="mb-3 rounded-lg bg-clayLight p-3 text-xs font-bold text-clay">
                 لا تملك صلاحية التعديل المباشر — سيُرسَل التغيير لموافقة الأدمن الرئيسي قبل تطبيقه.
@@ -167,11 +173,11 @@ export function PricingSettingsPage() {
             {error && <p className="mt-3 text-sm font-bold text-clay">{error}</p>}
             {saved && <p className="mt-3 text-sm font-bold text-sage">{canRequest ? 'تم إرسال الطلب لموافقة الأدمن الرئيسي' : 'تم الحفظ بنجاح'}</p>}
             <div className="mt-4">
-              <Button onClick={save} disabled={saving}>
+              <Button type="submit" disabled={saving}>
                 {saving ? 'جارِ الحفظ...' : canRequest ? 'إرسال للموافقة' : 'حفظ الإعدادات'}
               </Button>
             </div>
-          </div>
+          </form>
 
           <div className="rounded-xl border border-line bg-card p-5">
             <h2 className="mb-3 font-display text-sm font-bold text-ink">معاينة التكلفة</h2>

@@ -68,7 +68,13 @@ function NameChangeRequest({ profile }: { profile: Profile }) {
   }
 
   return (
-    <div className="mt-3 w-full rounded-lg border border-dashed border-seal bg-sealLight/30 p-3 sm:absolute sm:w-72">
+    <form
+      className="mt-3 w-full rounded-lg border border-dashed border-seal bg-sealLight/30 p-3 sm:absolute sm:w-72"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!submitting) submit();
+      }}
+    >
       <p className="mb-2 text-xs text-slate">لا يمكن تعديل الاسم مباشرة — يُرسَل طلبك للأدمن ليراجعه ويطبّقه.</p>
       <Field label="الاسم الجديد المطلوب" value={newName} onChange={setNewName} required />
       <div className="mt-2">
@@ -76,14 +82,14 @@ function NameChangeRequest({ profile }: { profile: Profile }) {
       </div>
       {error && <p className="mt-2 text-xs font-bold text-clay">{error}</p>}
       <div className="mt-3 flex items-center gap-2">
-        <Button onClick={submit} disabled={submitting}>
+        <Button type="submit" disabled={submitting}>
           {submitting ? 'جارِ الإرسال...' : 'إرسال الطلب'}
         </Button>
-        <Button variant="secondary" onClick={() => setOpen(false)} disabled={submitting}>
+        <Button type="button" variant="secondary" onClick={() => setOpen(false)} disabled={submitting}>
           إلغاء
         </Button>
       </div>
-    </div>
+    </form>
   );
 }
 
@@ -163,17 +169,24 @@ function ChangeWithOtpFlow({
   }
 
   return (
-    <div className="mt-3 w-full rounded-lg border border-dashed border-seal bg-sealLight/30 p-3 sm:absolute sm:w-72">
+    <form
+      className="mt-3 w-full rounded-lg border border-dashed border-seal bg-sealLight/30 p-3 sm:absolute sm:w-72"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (step === 'enterNew' && !requesting) requestOtp();
+        else if (step === 'enterCode' && !confirming) confirm();
+      }}
+    >
       {step === 'enterNew' && (
         <>
           <Field label={label} value={newValue} onChange={setNewValue} placeholder={placeholder} required />
           <p className="mt-1.5 text-xs text-slate">{currentHint}</p>
           {error && <p className="mt-2 text-xs font-bold text-clay">{error}</p>}
           <div className="mt-3 flex items-center gap-2">
-            <Button onClick={requestOtp} disabled={requesting}>
+            <Button type="submit" disabled={requesting}>
               {requesting ? 'جارِ الإرسال...' : 'إرسال رمز التحقق'}
             </Button>
-            <Button variant="secondary" onClick={() => setStep('closed')} disabled={requesting}>
+            <Button type="button" variant="secondary" onClick={() => setStep('closed')} disabled={requesting}>
               إلغاء
             </Button>
           </div>
@@ -186,16 +199,16 @@ function ChangeWithOtpFlow({
           <Field label="رمز التحقق" value={code} onChange={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))} placeholder="6 أرقام" />
           {error && <p className="mt-2 text-xs font-bold text-clay">{error}</p>}
           <div className="mt-3 flex items-center gap-2">
-            <Button onClick={confirm} disabled={confirming}>
+            <Button type="submit" disabled={confirming}>
               {confirming ? 'جارِ التأكيد...' : 'تأكيد التغيير'}
             </Button>
-            <Button variant="secondary" onClick={() => setStep('closed')} disabled={confirming}>
+            <Button type="button" variant="secondary" onClick={() => setStep('closed')} disabled={confirming}>
               إلغاء
             </Button>
           </div>
         </>
       )}
-    </div>
+    </form>
   );
 }
 
@@ -288,7 +301,13 @@ function ProfileDetailsSection({ profile, onUpdated }: { profile: Profile; onUpd
       <Row label="تاريخ الميلاد" value={displayProfile.date_of_birth ? formatDate(displayProfile.date_of_birth) : '—'} />
 
       {editing && (
-        <div className="mt-4 rounded-lg border border-dashed border-seal bg-sealLight/30 p-3">
+        <form
+          className="mt-4 rounded-lg border border-dashed border-seal bg-sealLight/30 p-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!saving) save();
+          }}
+        >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm">
               <span className="mb-1 block font-bold text-ink">الجنسية</span>
@@ -308,14 +327,14 @@ function ProfileDetailsSection({ profile, onUpdated }: { profile: Profile; onUpd
           </div>
           {error && <p className="mt-3 text-sm font-bold text-clay">{error}</p>}
           <div className="mt-3 flex items-center gap-2">
-            <Button onClick={save} disabled={saving}>
+            <Button type="submit" disabled={saving}>
               {saving ? 'جارِ الحفظ...' : 'حفظ التغييرات'}
             </Button>
-            <Button variant="secondary" onClick={() => setEditing(false)} disabled={saving}>
+            <Button type="button" variant="secondary" onClick={() => setEditing(false)} disabled={saving}>
               إلغاء
             </Button>
           </div>
-        </div>
+        </form>
       )}
     </div>
   );

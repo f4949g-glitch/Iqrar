@@ -94,7 +94,13 @@ function SavedSignatureField({
 
   if (mode === 'otp') {
     return (
-      <div className="space-y-2 rounded-lg border border-dashed border-seal bg-sealLight p-3">
+      <form
+        className="space-y-2 rounded-lg border border-dashed border-seal bg-sealLight p-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!verifying && code.trim().length >= 4) verify();
+        }}
+      >
         <p className="text-xs font-bold text-ink">أُرسل رمز تحقق إلى جوالك ({phoneHint})</p>
         {devCode && <p className="text-xs text-slate">رمز الاختبار (بوابة SMS غير مُفعَّلة بعد): {devCode}</p>}
         <input
@@ -105,10 +111,10 @@ function SavedSignatureField({
           className="w-full rounded-lg border border-line bg-card px-3 py-2 text-center text-sm text-ink outline-none focus:border-seal"
         />
         {error && <p className="text-xs font-bold text-clay">{error}</p>}
-        <Button onClick={verify} disabled={verifying || code.trim().length < 4}>
+        <Button type="submit" disabled={verifying || code.trim().length < 4}>
           {verifying ? 'جارِ التحقق...' : 'تحقق واستخدم التوقيع'}
         </Button>
-      </div>
+      </form>
     );
   }
 

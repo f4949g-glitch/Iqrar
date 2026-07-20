@@ -377,7 +377,13 @@ export function ContractDetailPage() {
       )}
 
       {canEditMeta && (
-        <div className="rounded-xl border border-line bg-card p-5">
+        <form
+          className="rounded-xl border border-line bg-card p-5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!savingMeta) saveMeta();
+          }}
+        >
           <h2 className="mb-3 font-display text-sm font-bold text-ink">
             {isRejected || isExpired ? 'تعديل العقد قبل إعادة الإرسال' : 'تعديل العقد (مسودة)'}
           </h2>
@@ -460,11 +466,11 @@ export function ContractDetailPage() {
           </div>
 
           <div className="mt-4">
-            <Button variant="secondary" onClick={saveMeta} disabled={savingMeta}>
+            <Button type="submit" variant="secondary" disabled={savingMeta}>
               {savingMeta ? 'جارِ الحفظ...' : 'حفظ التعديلات'}
             </Button>
           </div>
-        </div>
+        </form>
       )}
 
       {!isDraft && (

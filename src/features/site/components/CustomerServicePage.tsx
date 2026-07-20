@@ -70,18 +70,24 @@ function NameChangeAction({ message, onApplied }: { message: ContactMessage; onA
   }
 
   return (
-    <div className="mt-3 max-w-sm rounded-lg border border-dashed border-seal bg-sealLight/30 p-3">
+    <form
+      className="mt-3 max-w-sm rounded-lg border border-dashed border-seal bg-sealLight/30 p-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!applying) apply();
+      }}
+    >
       <Field label="الاسم الجديد" value={newName} onChange={setNewName} required />
       {error && <p className="mt-2 text-xs font-bold text-clay">{error}</p>}
       <div className="mt-3 flex items-center gap-2">
-        <Button onClick={apply} disabled={applying}>
+        <Button type="submit" disabled={applying}>
           {applying ? 'جارِ التطبيق...' : 'تأكيد وتطبيق'}
         </Button>
-        <Button variant="secondary" onClick={() => setOpen(false)} disabled={applying}>
+        <Button type="button" variant="secondary" onClick={() => setOpen(false)} disabled={applying}>
           إلغاء
         </Button>
       </div>
-    </div>
+    </form>
   );
 }
 

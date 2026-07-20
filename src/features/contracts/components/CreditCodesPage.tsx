@@ -120,7 +120,13 @@ export function CreditCodesPage() {
       </div>
 
       {canCreate && tab === 'codes' && (
-        <div className="rounded-xl border border-line bg-card p-5">
+        <form
+          className="rounded-xl border border-line bg-card p-5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!creating) create();
+          }}
+        >
           <h2 className="mb-4 font-display text-sm font-bold text-ink">إنشاء كود شحن جديد</h2>
           {needsApproval && (
             <p className="mb-3 rounded-lg bg-clayLight p-3 text-xs font-bold text-clay">
@@ -134,13 +140,13 @@ export function CreditCodesPage() {
           </div>
           {error && <p className="mt-3 text-sm font-bold text-clay">{error}</p>}
           <div className="mt-4">
-            <Button onClick={create} disabled={creating}>
+            <Button type="submit" disabled={creating}>
               <span className="flex items-center gap-1.5">
                 <Plus size={16} /> {creating ? 'جارِ الإنشاء...' : needsApproval ? 'إرسال للموافقة' : 'إنشاء الكود'}
               </span>
             </Button>
           </div>
-        </div>
+        </form>
       )}
 
       <div className="rounded-xl border border-line bg-card p-5">

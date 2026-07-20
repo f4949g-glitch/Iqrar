@@ -67,7 +67,13 @@ export function SendEmailPage() {
         <p className="mt-1 text-sm text-slate">إرسال بريد إلكتروني مباشر لأي عنوان عبر بوابة البريد، مع سجل الرسائل السابقة.</p>
       </div>
 
-      <div className="rounded-xl border border-line bg-card p-5">
+      <form
+        className="rounded-xl border border-line bg-card p-5"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!sending) send();
+        }}
+      >
         <h2 className="mb-4 font-display text-sm font-bold text-ink">رسالة جديدة</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="البريد الإلكتروني" value={email} onChange={setEmail} type="email" required />
@@ -87,13 +93,13 @@ export function SendEmailPage() {
         {error && <p className="mt-3 text-sm font-bold text-clay">{error}</p>}
         {success && <p className="mt-3 text-sm font-bold text-sage">{success}</p>}
         <div className="mt-4">
-          <Button onClick={send} disabled={sending}>
+          <Button type="submit" disabled={sending}>
             <span className="flex items-center gap-1.5">
               <Send size={16} /> {sending ? 'جارِ الإرسال...' : 'إرسال'}
             </span>
           </Button>
         </div>
-      </div>
+      </form>
 
       <div className="rounded-xl border border-line bg-card p-5">
         <h2 className="mb-4 font-display text-sm font-bold text-ink">سجل الرسائل السابقة</h2>

@@ -184,7 +184,13 @@ function UserEditRow({ user, onSaved, onDeleted }: { user: Profile; onSaved: (up
   }
 
   return (
-    <div className="rounded-lg border border-line p-3">
+    <form
+      className="rounded-lg border border-line p-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!saving) save();
+      }}
+    >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="الاسم" value={fields.full_name} onChange={(v) => setFields((f) => ({ ...f, full_name: v }))} required />
         <Field
@@ -216,14 +222,14 @@ function UserEditRow({ user, onSaved, onDeleted }: { user: Profile; onSaved: (up
       </div>
       {error && <p className="mt-3 text-sm font-bold text-clay">{error}</p>}
       <div className="mt-3 flex items-center gap-2">
-        <Button onClick={save} disabled={saving}>
+        <Button type="submit" disabled={saving}>
           {saving ? 'جارِ الحفظ...' : 'حفظ التغييرات'}
         </Button>
-        <Button variant="secondary" onClick={() => setEditing(false)} disabled={saving}>
+        <Button type="button" variant="secondary" onClick={() => setEditing(false)} disabled={saving}>
           إلغاء
         </Button>
       </div>
-    </div>
+    </form>
   );
 }
 
@@ -330,7 +336,13 @@ export function AdminUsersPage() {
         <p className="mt-1 text-sm text-slate">أنشئ حسابات أدمن فرعي وحدّد صلاحياتها بدقة (اطلاع على التقارير، إنشاء أكواد خصم بموافقة أو مباشرة).</p>
       </div>
 
-      <div className="rounded-xl border border-line bg-card p-5">
+      <form
+        className="rounded-xl border border-line bg-card p-5"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!creating) create();
+        }}
+      >
         <h2 className="mb-4 font-display text-sm font-bold text-ink">إنشاء أدمن فرعي جديد</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="الاسم" value={form.full_name} onChange={(v) => setForm((f) => ({ ...f, full_name: v }))} required />
@@ -350,13 +362,13 @@ export function AdminUsersPage() {
           </div>
         )}
         <div className="mt-4">
-          <Button onClick={create} disabled={creating}>
+          <Button type="submit" disabled={creating}>
             <span className="flex items-center gap-1.5">
               <UserPlus size={16} /> {creating ? 'جارِ الإنشاء...' : 'إنشاء الحساب'}
             </span>
           </Button>
         </div>
-      </div>
+      </form>
 
       <div className="rounded-xl border border-line bg-card p-5">
         <h2 className="mb-4 font-display text-sm font-bold text-ink">مستخدمو الإدارة الحاليون</h2>
