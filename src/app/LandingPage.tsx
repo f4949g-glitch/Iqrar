@@ -187,7 +187,8 @@ function CreateEntryFlow({ documentType, onClose }: { documentType: DocumentType
   // لمعالج إنشاء العقد إن كان المستخدم مسجَّل دخوله بالفعل (بدل سؤاله تسجيل
   // الدخول مجددًا وهو مسجَّل)، أو يعرض خطوة الدخول/التسجيل/الاستمرار كضيف.
   const proceedToWizard = (verification: VerificationMethod) => {
-    setPendingContractIntent({ documentType, partyCount: 2, verificationDefault: verification });
+    // التفويض بطرف واحد فقط (الموكِّل)؛ العقد بطرفين على الأقل.
+    setPendingContractIntent({ documentType, partyCount: isPoa ? 1 : 2, verificationDefault: verification });
     if (profile) {
       navigate('/app/contracts/new');
     } else {

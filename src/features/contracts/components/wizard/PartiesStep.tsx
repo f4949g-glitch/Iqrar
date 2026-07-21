@@ -355,8 +355,8 @@ export function PartiesStep({
       return;
     }
     if (poaMode) {
-      if (parties.length !== 2) {
-        setError('يلزم طرفان بالضبط لإنشاء تفويض: الموكِّل والموكَّل له');
+      if (parties.length !== 1) {
+        setError('التفويض يكون بطرف واحد فقط (الموكِّل، صاحب الحساب) — ويُذكَر اسم الموكَّل له داخل نص الوثيقة');
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
@@ -716,7 +716,7 @@ export function PartiesStep({
                 <ChevronDown size={16} className={`shrink-0 text-sealMuted transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 <div>
                   <p className="font-display text-sm font-bold text-ink">
-                    {poaMode ? (index === 0 ? 'بياناتك (الموكِّل)' : 'بيانات الموكَّل له') : `الطرف ${index + 1}`}
+                    {poaMode ? 'بياناتك (الموكِّل)' : `الطرف ${index + 1}`}
                   </p>
                   {!isOpen && <p className="mt-0.5 text-xs text-slate">{summary}</p>}
                 </div>
