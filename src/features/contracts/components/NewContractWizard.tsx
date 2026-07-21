@@ -55,10 +55,13 @@ export function NewContractWizard() {
   // مسودة زائر عاد للتو من تسجيل الدخول/إنشاء الحساب لإكمال عقد بدأه دون حساب.
   const [guestDraft] = useState(() => consumeGuestDraft());
   // تقدّم محفوظ من نفس المعالج إن غادره المستخدم لصفحة أخرى وعاد إليه — يُتجاهل
-  // إن كان قادمًا من استكمال مسودة زائر أو قالب جاهز (كلاهما نية "بداية جديدة"
-  // أوضح من أي تقدّم قديم متروك في sessionStorage).
+  // إن كان قادمًا من استكمال مسودة زائر أو من أي اختيار جديد صريح في نافذة الصفحة
+  // الرئيسية (pendingIntent): سواء عبر قالب جاهز أو باختيار "إنشاء عقد"/"إنشاء
+  // تفويض"، فكل هذه نية "بداية جديدة بهذه الخدمة تحديدًا" تُلغي أي تقدّم قديم متروك
+  // في sessionStorage — وإلا بقي المعالج معلّقًا على الخدمة السابقة عند التبديل
+  // بين العقد والتفويض.
   const [wizardProgress] = useState<WizardProgressState | null>(() =>
-    guestDraft || pendingIntent?.templateId ? null : loadWizardProgress(),
+    guestDraft || pendingIntent ? null : loadWizardProgress(),
   );
   const [resuming, setResuming] = useState(Boolean(guestDraft));
 
