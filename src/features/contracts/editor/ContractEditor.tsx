@@ -127,94 +127,40 @@ export function ContractEditor({ parties, content, onChange }: ContractEditorPro
   };
 
   return (
-    <div className="rounded-xl border border-line bg-card">
-      <div className="flex flex-wrap items-center gap-1 border-b border-line p-2">
-        <ToolbarButton title="عريض" active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
-          <Bold size={16} />
-        </ToolbarButton>
-        <ToolbarButton title="مائل" active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}>
-          <Italic size={16} />
-        </ToolbarButton>
-        <ToolbarButton title="تسطير" active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}>
-          <UnderlineIcon size={16} />
-        </ToolbarButton>
-        <ToolbarButton title="عنوان كبير" active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>
-          <Heading1 size={16} />
-        </ToolbarButton>
-        <ToolbarButton title="عنوان فرعي" active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
-          <Heading2 size={16} />
-        </ToolbarButton>
-        <ToolbarButton title="قائمة نقطية" active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>
-          <List size={16} />
-        </ToolbarButton>
-        <ToolbarButton title="قائمة مرقّمة" active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
-          <ListOrdered size={16} />
-        </ToolbarButton>
-        <ToolbarButton title="إدراج جدول" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
-          <TableIcon size={16} />
-        </ToolbarButton>
-        {editor.isActive('table') && (
-          <>
-            <ToolbarButton title="إضافة صف" onClick={() => editor.chain().focus().addRowAfter().run()}>
-              <Rows3 size={16} />
-            </ToolbarButton>
-            <ToolbarButton title="حذف صف" onClick={() => editor.chain().focus().deleteRow().run()}>
-              <span className="relative">
-                <Rows3 size={16} />
-                <Trash2 size={9} className="absolute -bottom-1 -left-1" />
-              </span>
-            </ToolbarButton>
-            <ToolbarButton title="إضافة عمود" onClick={() => editor.chain().focus().addColumnAfter().run()}>
-              <Columns3 size={16} />
-            </ToolbarButton>
-            <ToolbarButton title="حذف عمود" onClick={() => editor.chain().focus().deleteColumn().run()}>
-              <span className="relative">
-                <Columns3 size={16} />
-                <Trash2 size={9} className="absolute -bottom-1 -left-1" />
-              </span>
-            </ToolbarButton>
-          </>
-        )}
-        <span className="mx-1 h-5 w-px shrink-0 bg-line" aria-hidden="true" />
-        <ToolbarButton title="محاذاة لليمين" active={editor.isActive({ textAlign: 'right' })} onClick={() => editor.chain().focus().setTextAlign('right').run()}>
-          <AlignRight size={16} />
-        </ToolbarButton>
-        <ToolbarButton title="توسيط" active={editor.isActive({ textAlign: 'center' })} onClick={() => editor.chain().focus().setTextAlign('center').run()}>
-          <AlignCenter size={16} />
-        </ToolbarButton>
-        <ToolbarButton title="محاذاة لليسار" active={editor.isActive({ textAlign: 'left' })} onClick={() => editor.chain().focus().setTextAlign('left').run()}>
-          <AlignLeft size={16} />
-        </ToolbarButton>
-        <ToolbarButton title="ضبط" active={editor.isActive({ textAlign: 'justify' })} onClick={() => editor.chain().focus().setTextAlign('justify').run()}>
-          <AlignJustify size={16} />
-        </ToolbarButton>
-      </div>
-
-      {/* قسمان منفصلان بعنوان وأيقونة واضحين بدل عناصر متجاورة بلا تمييز، ليسهل
-          التفريق بين "حقل دمج" (يُستبدَل ببيانات الطرف تلقائيًا) و"حقل تعبئة"
-          (يملؤه الطرف بنفسه عند التوقيع). نقطة اللون بجانب كل قائمة أطراف تطابق
-          لون شارات الحقول المُدرَجة لنفس الطرف داخل المستند. */}
-      <div className="grid grid-cols-1 gap-2 border-b border-line p-2 sm:grid-cols-2">
-        <div className="rounded-lg bg-sealLight p-2">
-          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-seal">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      {/* شريط جانبي ثابت (sticky) لحقول الدمج والتعبئة بدل شريط أعلى المحرر كان
+          يتطلب الرجوع للأعلى بشكل متكرر عند العمل في أسفل مستند طويل — نفس
+          نمط الشريط الجانبي المستخدم في خطوة وضع حقول PDF الجاهز. آلية
+          الإدراج نفسها (اختيار طرف/نوع ثم إدراج عند موضع المؤشر الحالي) بلا
+          أي تغيير، فقط مكانها على الصفحة تغيّر ليبقى متاحًا من أي مكان داخل
+          المستند دون تمرير. */}
+      <div className="space-y-3 lg:sticky lg:top-4 lg:w-72 lg:shrink-0">
+        <div className="rounded-lg bg-sealLight p-3">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-seal">
             <Braces size={14} /> حقل دمج (يُستبدَل تلقائيًا ببيانات الطرف)
           </p>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorForParty(parties, mergeParty) }} aria-hidden="true" />
-            <select value={mergeParty} onChange={(e) => setMergeParty(e.target.value)} className="rounded-lg border border-line bg-card px-2 py-1 text-xs text-ink">
-              {parties.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.role_label} — {p.full_name || 'بلا اسم'}
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorForParty(parties, mergeParty) }} aria-hidden="true" />
+              <select
+                value={mergeParty}
+                onChange={(e) => setMergeParty(e.target.value)}
+                className="w-full rounded-lg border border-line bg-card px-2 py-1 text-xs text-ink"
+              >
+                {parties.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.role_label} — {p.full_name || 'بلا اسم'}
+                  </option>
+                ))}
+              </select>
+            </div>
             <select
               defaultValue=""
               onChange={(e) => {
                 if (e.target.value) insertMergeField(e.target.value as MergeFieldKey);
                 e.target.value = '';
               }}
-              className="rounded-lg border border-seal bg-card px-2 py-1 text-xs font-bold text-seal"
+              className="w-full rounded-lg border border-seal bg-card px-2 py-1 text-xs font-bold text-seal"
             >
               <option value="" disabled>
                 + إدراج حقل دمج
@@ -228,40 +174,115 @@ export function ContractEditor({ parties, content, onChange }: ContractEditorPro
           </div>
         </div>
 
-        <div className="rounded-lg bg-sageLight p-2">
-          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-sage">
+        <div className="rounded-lg bg-sageLight p-3">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-sage">
             <PenLine size={14} /> حقل تعبئة (يملؤه الطرف بنفسه عند التوقيع)
           </p>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorForParty(parties, fillParty) }} aria-hidden="true" />
-            <select value={fillParty} onChange={(e) => setFillParty(e.target.value)} className="rounded-lg border border-line bg-card px-2 py-1 text-xs text-ink">
-              {parties.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.role_label} — {p.full_name || 'بلا اسم'}
-                </option>
-              ))}
-            </select>
-            <select value={fillType} onChange={(e) => setFillType(e.target.value as FieldType)} className="rounded-lg border border-line bg-card px-2 py-1 text-xs text-ink">
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorForParty(parties, fillParty) }} aria-hidden="true" />
+              <select
+                value={fillParty}
+                onChange={(e) => setFillParty(e.target.value)}
+                className="w-full rounded-lg border border-line bg-card px-2 py-1 text-xs text-ink"
+              >
+                {parties.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.role_label} — {p.full_name || 'بلا اسم'}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <select
+              value={fillType}
+              onChange={(e) => setFillType(e.target.value as FieldType)}
+              className="w-full rounded-lg border border-line bg-card px-2 py-1 text-xs text-ink"
+            >
               {FILLABLE_TYPES.map((t) => (
                 <option key={t} value={t}>
                   {FIELD_TYPE_LABELS[t]}
                 </option>
               ))}
             </select>
-            <button type="button" onClick={insertFillField} className="rounded-lg border border-sage bg-card px-2 py-1 text-xs font-bold text-sage">
+            <button type="button" onClick={insertFillField} className="w-full rounded-lg border border-sage bg-card px-2 py-1 text-xs font-bold text-sage">
               + إدراج
             </button>
           </div>
         </div>
       </div>
-      {/* سطح التحرير أبيض دائمًا بصرف النظر عن وضع الموقع (فاتح/داكن): محتواه
-          مستند رسمي (نص أسود ثابت عبر .prose، انظر index.css) يُطبَع/يُنزَّل
-          بهذا الشكل تمامًا، فبقاؤه كورقة بيضاء أوضح للمستخدم من تتبّع تبديل
-          الوضع الداكن، ويتفادى نصًا أسود غير مقروء فوق خلفية داكنة. */}
-      <EditorContent
-        editor={editor}
-        className="prose max-w-none rounded-b-xl bg-white p-4 text-ink [&_.ProseMirror]:min-h-[300px] [&_.ProseMirror]:outline-none"
-      />
+
+      <div className="min-w-0 flex-1 rounded-xl border border-line bg-card">
+        <div className="flex flex-wrap items-center gap-1 border-b border-line p-2">
+          <ToolbarButton title="عريض" active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
+            <Bold size={16} />
+          </ToolbarButton>
+          <ToolbarButton title="مائل" active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}>
+            <Italic size={16} />
+          </ToolbarButton>
+          <ToolbarButton title="تسطير" active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}>
+            <UnderlineIcon size={16} />
+          </ToolbarButton>
+          <ToolbarButton title="عنوان كبير" active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>
+            <Heading1 size={16} />
+          </ToolbarButton>
+          <ToolbarButton title="عنوان فرعي" active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
+            <Heading2 size={16} />
+          </ToolbarButton>
+          <ToolbarButton title="قائمة نقطية" active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>
+            <List size={16} />
+          </ToolbarButton>
+          <ToolbarButton title="قائمة مرقّمة" active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+            <ListOrdered size={16} />
+          </ToolbarButton>
+          <ToolbarButton title="إدراج جدول" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
+            <TableIcon size={16} />
+          </ToolbarButton>
+          {editor.isActive('table') && (
+            <>
+              <ToolbarButton title="إضافة صف" onClick={() => editor.chain().focus().addRowAfter().run()}>
+                <Rows3 size={16} />
+              </ToolbarButton>
+              <ToolbarButton title="حذف صف" onClick={() => editor.chain().focus().deleteRow().run()}>
+                <span className="relative">
+                  <Rows3 size={16} />
+                  <Trash2 size={9} className="absolute -bottom-1 -left-1" />
+                </span>
+              </ToolbarButton>
+              <ToolbarButton title="إضافة عمود" onClick={() => editor.chain().focus().addColumnAfter().run()}>
+                <Columns3 size={16} />
+              </ToolbarButton>
+              <ToolbarButton title="حذف عمود" onClick={() => editor.chain().focus().deleteColumn().run()}>
+                <span className="relative">
+                  <Columns3 size={16} />
+                  <Trash2 size={9} className="absolute -bottom-1 -left-1" />
+                </span>
+              </ToolbarButton>
+            </>
+          )}
+          <span className="mx-1 h-5 w-px shrink-0 bg-line" aria-hidden="true" />
+          <ToolbarButton title="محاذاة لليمين" active={editor.isActive({ textAlign: 'right' })} onClick={() => editor.chain().focus().setTextAlign('right').run()}>
+            <AlignRight size={16} />
+          </ToolbarButton>
+          <ToolbarButton title="توسيط" active={editor.isActive({ textAlign: 'center' })} onClick={() => editor.chain().focus().setTextAlign('center').run()}>
+            <AlignCenter size={16} />
+          </ToolbarButton>
+          <ToolbarButton title="محاذاة لليسار" active={editor.isActive({ textAlign: 'left' })} onClick={() => editor.chain().focus().setTextAlign('left').run()}>
+            <AlignLeft size={16} />
+          </ToolbarButton>
+          <ToolbarButton title="ضبط" active={editor.isActive({ textAlign: 'justify' })} onClick={() => editor.chain().focus().setTextAlign('justify').run()}>
+            <AlignJustify size={16} />
+          </ToolbarButton>
+        </div>
+
+        {/* سطح التحرير أبيض دائمًا بصرف النظر عن وضع الموقع (فاتح/داكن): محتواه
+            مستند رسمي (نص أسود ثابت عبر .prose، انظر index.css) يُطبَع/يُنزَّل
+            بهذا الشكل تمامًا، فبقاؤه كورقة بيضاء أوضح للمستخدم من تتبّع تبديل
+            الوضع الداكن، ويتفادى نصًا أسود غير مقروء فوق خلفية داكنة. */}
+        <EditorContent
+          editor={editor}
+          className="prose max-w-none rounded-b-xl bg-white p-4 text-ink [&_.ProseMirror]:min-h-[300px] [&_.ProseMirror]:outline-none"
+        />
+      </div>
     </div>
   );
 }
