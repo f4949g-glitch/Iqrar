@@ -48,12 +48,13 @@ Deno.serve(async (req: Request) => {
   }
 
   // إن كان صاحب هذا الطرف (بمطابقة رقم الهوية) قد حفظ توقيعًا في ملفه الشخصي من
-  // قبل، نتيح له خيار استخدامه بعد تحقق عبر رمز يُرسل لجواله المسجَّل (انظر
-  // request-signing-otp/verify-signing-otp)، دون كشف رقم الجوال أو التوقيع هنا.
-  let hasSavedSignature = false;
+  // قبل، يُتاح له مباشرة بلا رمز تحقق إضافي — هويته أصلًا مُتحقَّق منها للوصول
+  // لهذه النقطة (رمز SMS لبوابة فتح الرابط لطرف "يدوي"، أو نفاذ الحكومي لطرف
+  // "نفاذ")، فطلب رمز SMS ثانٍ خاص بالتوقيع المحفوظ تحقق مكرِّر لا داعي له.
+  let savedSignatureDataUrl: string | null = null;
   if (party.national_id) {
-    const { data: ownerProfile } = await admin.from('profiles').select('signature_data_url, phone').eq('national_id', party.national_id).maybeSingle();
-    hasSavedSignature = Boolean(ownerProfile?.signature_data_url && ownerProfile.phone);
+    const { data: ownerProfile } = await admin.from('profiles').select('signature_data_url').eq('national_id', party.national_id).maybeSingle();
+    savedSignatureDataUrl = ownerProfile?.signature_data_url ?? null;
   }
 
   const { data: contract, error: contractError } = await admin
@@ -126,7 +127,7 @@ Deno.serve(async (req: Request) => {
       source_type: contract.source_type,
       body_json: contract.source_type === 'editor' ? contract.body_json : null,
     },
-    party: { id: party.id, role_label: party.role_label, full_name: party.full_name, status: party.status, has_saved_signature: hasSavedSignature },
+    party: { id: party.id, role_label: party.role_label, full_name: party.full_name, status: party.status, saved_signature_data_url: savedSignatureDataUrl },
     fields,
     pdf_url: pdfUrl,
     all_parties: allParties,

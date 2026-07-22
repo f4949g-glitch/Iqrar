@@ -4,15 +4,7 @@ import { Document, Page } from 'react-pdf';
 import { CheckCircle2, Clock, FileSignature, ShieldCheck, XCircle } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { SignaturePad } from '@/shared/ui/SignaturePad';
-import {
-  fetchSigningSession,
-  submitSignature,
-  rejectSignature,
-  requestSigningOtp,
-  verifySigningOtp,
-  type SigningSession,
-  type SigningFullSession,
-} from '../api/signingApi';
+import { fetchSigningSession, submitSignature, rejectSignature, type SigningSession, type SigningFullSession } from '../api/signingApi';
 import { renderContractHtml, renderPartiesHeaderHtml, type FillValue, type JsonNode } from '@/features/contracts/editor/renderContractHtml';
 import { FIELD_TYPE_ICONS } from '@/features/contracts/lib/fieldTypeIcons';
 import { FIELD_TYPE_LABELS } from '@/features/contracts/types';
@@ -20,115 +12,34 @@ import { fileToDataUrl } from '@/shared/lib/fileToDataUrl';
 import { SigningIdentityGate } from './SigningIdentityGate';
 import '@/lib/pdf/setupWorker';
 
-// يتيح للطرف الموقّع استخدام توقيعه المحفوظ مسبقًا في ملفه الشخصي بدل الرسم من
-// جديد، لكن فقط بعد التحقق برمز يُرسل لجواله المسجَّل عند طلبه هنا تحديدًا —
-// التوقيع المحفوظ وحده لا يُستخدم تلقائيًا أبدًا. التحقق يتم مرة واحدة فقط لكل
-// جلسة توقيع: القيمة المُتحقَّق منها تُخزَّن أعلى المستوى (SigningPage) وتُمرَّر
-// كـcachedDataUrl، فإن وُجدت تُستخدم مباشرة بلا إعادة طلب رمز لكل حقل توقيع لاحق.
-function SavedSignatureField({
-  token,
-  onChange,
-  cachedDataUrl,
-  onVerified,
-}: {
-  token: string;
-  onChange: (dataUrl: string | null) => void;
-  cachedDataUrl: string | null;
-  onVerified: (dataUrl: string) => void;
-}) {
-  const [mode, setMode] = useState<'choice' | 'otp' | 'done' | 'draw'>(cachedDataUrl ? 'done' : 'choice');
-  const [requesting, setRequesting] = useState(false);
-  const [verifying, setVerifying] = useState(false);
-  const [code, setCode] = useState('');
-  const [phoneHint, setPhoneHint] = useState('');
-  const [devCode, setDevCode] = useState('');
-  const [error, setError] = useState('');
+// يتيح للطرف الموقّع استخدام توقيعه المحفوظ مسبقًا في ملفه الشخصي بدل الرسم
+// من جديد. لا يُطلَب أي رمز تحقق إضافي هنا — هوية الطرف مُتحقَّق منها أصلًا
+// للوصول لهذه الصفحة (رمز SMS عند فتح رابط التوثيق لطرف "يدوي"، أو نفاذ
+// الحكومي لطرف "نفاذ")، فطلب رمز ثانٍ خاص بالتوقيع المحفوظ كان تحقّقًا
+// مكرِّرًا لا داعي له.
+function SavedSignatureField({ dataUrl, onChange }: { dataUrl: string; onChange: (dataUrl: string | null) => void }) {
+  const [mode, setMode] = useState<'saved' | 'draw'>('saved');
 
-  // كل حقول التوقيع تُركَّب دفعة واحدة قبل أي تحقق OTP، فتكون cachedDataUrl فارغة
-  // عند التركيب دائمًا — لذا يعتمد الأثر على قيمتها لا على مصفوفة تبعيات فارغة،
-  // كي ينعكس التحقق الذي تم لأول حقل توقيع فورًا على بقية الحقول (mode أيضًا،
-  // لا onChange فقط) دون إعادة طلب رمز SMS لكل حقل توقيع منفصل.
   useEffect(() => {
-    if (cachedDataUrl) {
-      onChange(cachedDataUrl);
-      setMode('done');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cachedDataUrl]);
+    if (mode === 'saved') onChange(dataUrl);
+  }, [mode, dataUrl, onChange]);
 
-  const requestOtp = async () => {
-    setRequesting(true);
-    setError('');
-    try {
-      const res = await requestSigningOtp(token);
-      setPhoneHint(res.phone_hint);
-      setDevCode(res.sms_configured ? '' : res.dev_code ?? '');
-      setMode('otp');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذّر إرسال رمز التحقق');
-    } finally {
-      setRequesting(false);
-    }
-  };
-
-  const verify = async () => {
-    setVerifying(true);
-    setError('');
-    try {
-      const res = await verifySigningOtp(token, code.trim());
-      onChange(res.signature_data_url);
-      onVerified(res.signature_data_url);
-      setMode('done');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'تعذّر التحقق من الرمز');
-    } finally {
-      setVerifying(false);
-    }
-  };
-
-  if (mode === 'draw') return <SignaturePad onChange={onChange} />;
-
-  if (mode === 'done') {
-    return <p className="text-xs font-bold text-sage">✓ تم استخدام توقيعك المحفوظ بعد التحقق من رقم جوالك</p>;
-  }
-
-  if (mode === 'otp') {
+  if (mode === 'draw') {
     return (
-      <form
-        className="space-y-2 rounded-lg border border-dashed border-seal bg-sealLight p-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!verifying && code.trim().length >= 4) verify();
-        }}
-      >
-        <p className="text-xs font-bold text-ink">أُرسل رمز تحقق إلى جوالك ({phoneHint})</p>
-        {devCode && <p className="text-xs text-slate">رمز الاختبار (بوابة SMS غير مُفعَّلة بعد): {devCode}</p>}
-        <input
-          value={code}
-          onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-          inputMode="numeric"
-          placeholder="رمز التحقق"
-          className="w-full rounded-lg border border-line bg-card px-3 py-2 text-center text-sm text-ink outline-none focus:border-seal"
-        />
-        {error && <p className="text-xs font-bold text-clay">{error}</p>}
-        <Button type="submit" disabled={verifying || code.trim().length < 4}>
-          {verifying ? 'جارِ التحقق...' : 'تحقق واستخدم التوقيع'}
-        </Button>
-      </form>
+      <div className="space-y-2">
+        <SignaturePad onChange={onChange} />
+        <button type="button" onClick={() => setMode('saved')} className="w-full text-center text-xs font-bold text-slate hover:text-ink">
+          استخدام توقيعي المحفوظ بدلًا من ذلك
+        </button>
+      </div>
     );
   }
 
   return (
     <div className="space-y-2">
-      <button
-        type="button"
-        onClick={requestOtp}
-        disabled={requesting}
-        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-seal bg-sealLight px-3 py-2 text-xs font-bold text-seal"
-      >
-        <ShieldCheck size={14} /> {requesting ? 'جارِ الإرسال...' : 'استخدام توقيعي المحفوظ (تحقق عبر الجوال)'}
-      </button>
-      {error && <p className="text-xs font-bold text-clay">{error}</p>}
+      <p className="flex items-center justify-center gap-1.5 rounded-lg border border-seal bg-sealLight px-3 py-2 text-xs font-bold text-seal">
+        <ShieldCheck size={14} /> سيُستخدم توقيعك المحفوظ في ملفك الشخصي
+      </p>
       <button type="button" onClick={() => setMode('draw')} className="w-full text-center text-xs font-bold text-slate hover:text-ink">
         أو ارسم توقيعًا جديدًا
       </button>
@@ -176,34 +87,21 @@ function FieldInput({
   field,
   value,
   onChange,
-  token,
-  hasSavedSignature,
+  savedSignatureDataUrl,
   signatureMethod,
   onChooseSignatureMethod,
-  savedSignatureDataUrl,
-  onSavedSignatureVerified,
 }: {
   field: SigningFullSession['fields'][number];
   value: unknown;
   onChange: (v: unknown) => void;
-  token: string;
-  hasSavedSignature: boolean;
+  savedSignatureDataUrl: string | null;
   signatureMethod: 'draw' | 'upload' | null;
   onChooseSignatureMethod: (method: 'draw' | 'upload') => void;
-  savedSignatureDataUrl: string | null;
-  onSavedSignatureVerified: (dataUrl: string) => void;
 }) {
   switch (field.field_type) {
     case 'signature': {
-      if (hasSavedSignature) {
-        return (
-          <SavedSignatureField
-            token={token}
-            onChange={(dataUrl) => onChange(dataUrl)}
-            cachedDataUrl={savedSignatureDataUrl}
-            onVerified={onSavedSignatureVerified}
-          />
-        );
+      if (savedSignatureDataUrl) {
+        return <SavedSignatureField dataUrl={savedSignatureDataUrl} onChange={(dataUrl) => onChange(dataUrl)} />;
       }
       if (signatureMethod === null) {
         return <SignatureMethodChoice onChoose={onChooseSignatureMethod} />;
@@ -332,9 +230,6 @@ export function SigningPage() {
   // تُختار مرة واحدة عند أول حقل توقيع ثم تُطبَّق تلقائيًا على أي حقل توقيع آخر
   // لنفس الطرف، بدل السماح بخلط الطريقتين داخل العقد الواحد.
   const [signatureMethod, setSignatureMethod] = useState<'draw' | 'upload' | null>(null);
-  // توقيع محفوظ مُتحقَّق منه مرة واحدة عبر رمز SMS لهذه الجلسة — يُعاد استخدامه
-  // تلقائيًا لأي حقل توقيع لاحق لنفس الطرف بلا إعادة طلب الرمز.
-  const [savedSignatureDataUrl, setSavedSignatureDataUrl] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -569,12 +464,9 @@ export function SigningPage() {
                             field={f}
                             value={values[f.id]}
                             onChange={(v) => setValues((prev) => ({ ...prev, [f.id]: v }))}
-                            token={token ?? ''}
-                            hasSavedSignature={session.party.has_saved_signature}
                             signatureMethod={signatureMethod}
                             onChooseSignatureMethod={setSignatureMethod}
-                            savedSignatureDataUrl={savedSignatureDataUrl}
-                            onSavedSignatureVerified={setSavedSignatureDataUrl}
+                            savedSignatureDataUrl={session.party.saved_signature_data_url}
                           />
                         </div>
                       </div>
@@ -603,12 +495,9 @@ export function SigningPage() {
                   field={f}
                   value={values[f.id]}
                   onChange={(v) => setValues((prev) => ({ ...prev, [f.id]: v }))}
-                  token={token ?? ''}
-                  hasSavedSignature={session.party.has_saved_signature}
                   signatureMethod={signatureMethod}
                   onChooseSignatureMethod={setSignatureMethod}
-                  savedSignatureDataUrl={savedSignatureDataUrl}
-                  onSavedSignatureVerified={setSavedSignatureDataUrl}
+                  savedSignatureDataUrl={session.party.saved_signature_data_url}
                 />
               </div>
               );
