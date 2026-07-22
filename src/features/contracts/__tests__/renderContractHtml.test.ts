@@ -76,4 +76,14 @@ describe('renderContractHtml', () => {
     expect(html).not.toContain('<script>');
     expect(html).toContain('&lt;script&gt;');
   });
+
+  it('يتجاهل قيمة محاذاة غير معروفة بدل حقنها في style', () => {
+    const doc: JsonNode = {
+      type: 'doc',
+      content: [{ type: 'paragraph', attrs: { textAlign: 'evil" onload="x' }, content: [{ type: 'text', text: 'نص' }] }],
+    };
+    const html = renderContractHtml(doc, parties);
+    expect(html).toContain('<p>نص</p>');
+    expect(html).not.toContain('onload');
+  });
 });
