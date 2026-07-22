@@ -53,7 +53,7 @@ export function UploadStep({ file, onFileChange, onBack, onNext }: UploadStepPro
             onLoadError={() => setError('تعذّر قراءة ملف PDF')}
             loading={<p className="p-6 text-sm text-slate">جارِ تحميل المعاينة...</p>}
           >
-            <Page pageNumber={1} width={480} />
+            <Page pageNumber={1} width={480} renderTextLayer={false} renderAnnotationLayer={false} />
           </Document>
           {pageCount !== null && <p className="border-t border-line p-3 text-center text-xs text-slate">عدد الصفحات: {pageCount}</p>}
         </div>

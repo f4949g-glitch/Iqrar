@@ -336,7 +336,7 @@ export function FieldsStep({ contractId, pdfUrl, pageCount, parties, fields, onF
             onDrop={onPageDrop}
           >
           <Document file={pdfUrl} loading={<p className="p-10 text-sm text-slate">جارِ تحميل المستند...</p>}>
-            <Page pageNumber={page} width={600} />
+            <Page pageNumber={page} width={600} renderTextLayer={false} renderAnnotationLayer={false} />
           </Document>
           {pageFields.map((field) => (
             <div

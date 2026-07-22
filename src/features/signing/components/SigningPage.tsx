@@ -550,7 +550,7 @@ export function SigningPage() {
             <Document file={session.pdf_url} loading={<p className="p-10 text-sm text-white">جارِ تحميل المستند...</p>}>
               {Array.from({ length: session.contract.page_count }, (_, i) => i + 1).map((pageNumber) => (
                 <div key={pageNumber} className="relative mb-3 bg-white shadow-lg">
-                  <Page pageNumber={pageNumber} width={600} />
+                  <Page pageNumber={pageNumber} width={600} renderTextLayer={false} renderAnnotationLayer={false} />
                   {session.fields
                     .filter((f) => f.page_number === pageNumber)
                     .map((f) => (
