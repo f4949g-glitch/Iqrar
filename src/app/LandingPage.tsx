@@ -190,7 +190,9 @@ function CreateEntryFlow({ documentType, onClose }: { documentType: DocumentType
     // التفويض بطرف واحد فقط (الموكِّل)؛ العقد بطرفين على الأقل.
     setPendingContractIntent({ documentType, partyCount: isPoa ? 1 : 2, verificationDefault: verification });
     if (profile) {
-      navigate('/app/contracts/new');
+      // ?type=... يوحّد الرابط مع روابط الشريط الجانبي (تظليل صحيح، وإعادة بناء
+      // المعالج بالمفتاح الصحيح عند التبديل بين الخدمتين لاحقًا).
+      navigate(`/app/contracts/new?type=${isPoa ? 'poa' : 'contract'}`);
     } else {
       setStep('auth');
     }
@@ -261,7 +263,7 @@ function CreateEntryFlow({ documentType, onClose }: { documentType: DocumentType
               <UserPlus size={16} /> إنشاء حساب
             </Link>
             <Link
-              to="/app/contracts/new"
+              to={`/app/contracts/new?type=${isPoa ? 'poa' : 'contract'}`}
               className="flex items-center gap-2 rounded-md px-4 py-3 text-sm font-bold text-seal hover:bg-sealLight"
             >
               <ArrowLeft size={16} /> استمرار كضيف

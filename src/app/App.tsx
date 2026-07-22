@@ -45,6 +45,15 @@ const ForgotPasswordForm = lazy(() =>
   import('@/features/auth/components/ForgotPasswordForm').then((m) => ({ default: m.ForgotPasswordForm })),
 );
 
+// يعيد بناء معالج الإنشاء بحالة نظيفة عند تغيّر نوع الخدمة في الرابط
+// (?type=contract/?type=poa): بدون هذا المفتاح يبقى المكوّن نفسه محمَّلًا عند
+// النقر على الخدمة الأخرى من الشريط الجانبي (نفس المسار)، فيظل المستخدم عالقًا
+// في الخدمة الأولى. مسودة كل خدمة تُحفَظ وتُستعاد من خانتها المستقلة داخل المعالج.
+function NewContractWizardByType() {
+  const [searchParams] = useSearchParams();
+  return <NewContractWizard key={searchParams.get('type') ?? 'default'} />;
+}
+
 function LoadingScreen() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-paper">
@@ -90,7 +99,7 @@ function AppShell() {
           <Route path="/contracts" element={profile ? <ContractsListPage /> : <AuthGate />} />
           {/* يُتاح المعالج للزائر أيضًا: يمكنه تعبئة الأطراف وكتابة محتوى العقد محليًا،
               ولا يُطلب منه تسجيل الدخول إلا قبل المراجعة والدفع مباشرة (انظر NewContractWizard). */}
-          <Route path="/contracts/new" element={<NewContractWizard />} />
+          <Route path="/contracts/new" element={<NewContractWizardByType />} />
           {/* متابعة تحرير مسودة، أو عقد مرفوض/منتهٍ قبل إعادة إرساله — يُحمِّل المعالج
               العقد الحقيقي بمعرّفه بدل بدء عقد جديد فارغ (انظر resumeContractId). */}
           <Route path="/contracts/:id/edit" element={profile ? <NewContractWizard /> : <AuthGate />} />

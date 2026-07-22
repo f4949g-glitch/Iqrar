@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { JSONContent } from '@tiptap/react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import { useSession } from '@/features/auth/hooks/useSession';
 import { PartiesStep, emptyParty, type DraftParty, type TermMode } from './wizard/PartiesStep';
@@ -49,19 +49,29 @@ export function NewContractWizard() {
   // تفاصيل العقد أو قائمة المسودات، ويحمل معرّف العقد الحقيقي في المسار.
   const { id: resumeContractId } = useParams<{ id?: string }>();
 
+  // نوع الخدمة المطلوبة صراحةً من الرابط نفسه (?type=contract أو ?type=poa):
+  // روابط الشريط الجانبي "إنشاء عقد"/"إنشاء تفويض" ونافذة الصفحة الرئيسية تمرّره،
+  // وهو ما يتيح التبديل الحر بين الخدمتين في أي وقت — كل نقرة على الخدمة الأخرى
+  // تعيد بناء المعالج (عبر key في App.tsx) فيُحمَّل تقدّم تلك الخدمة المحفوظ.
+  const [searchParams] = useSearchParams();
+  const urlType: DocumentType | null =
+    searchParams.get('type') === 'poa' ? 'power_of_attorney' : searchParams.get('type') === 'contract' ? 'contract' : null;
+
   // نُقرأ نية الدخول المحفوظة من الصفحة الرئيسية (نوع الوثيقة، عدد الأطراف، وطريقة
   // التصديق الافتراضية) مرة واحدة فقط عند فتح المعالج، ثم تُمسح من sessionStorage.
   const [pendingIntent] = useState(() => consumePendingContractIntent());
   // مسودة زائر عاد للتو من تسجيل الدخول/إنشاء الحساب لإكمال عقد بدأه دون حساب.
   const [guestDraft] = useState(() => consumeGuestDraft());
-  // تقدّم محفوظ من نفس المعالج إن غادره المستخدم لصفحة أخرى وعاد إليه — يُتجاهل
-  // إن كان قادمًا من استكمال مسودة زائر أو من أي اختيار جديد صريح في نافذة الصفحة
-  // الرئيسية (pendingIntent): سواء عبر قالب جاهز أو باختيار "إنشاء عقد"/"إنشاء
-  // تفويض"، فكل هذه نية "بداية جديدة بهذه الخدمة تحديدًا" تُلغي أي تقدّم قديم متروك
-  // في sessionStorage — وإلا بقي المعالج معلّقًا على الخدمة السابقة عند التبديل
-  // بين العقد والتفويض.
+  // نوع الخدمة الفعلي لهذه الجلسة من المعالج، بأولوية أوضح مصدر نيّة:
+  // مسودة زائر عائد ← نافذة الصفحة الرئيسية ← رابط الشريط الجانبي ← عقد افتراضيًا.
+  const initialDocumentType: DocumentType =
+    guestDraft?.documentType ?? pendingIntent?.documentType ?? urlType ?? 'contract';
+  // تقدّم محفوظ لهذه الخدمة تحديدًا (لكل خدمة خانة مستقلة) إن غادرها المستخدم
+  // وعاد إليها — يُتجاهل عند استكمال مسودة زائر أو البدء من قالب جاهز أو فتح
+  // عقد حقيقي من القاعدة للتحرير، وكذلك عند القدوم من نافذة الصفحة الرئيسية
+  // (اختيار عدد أطراف وطريقة تصديق جديدة = نية بداية جديدة صريحة).
   const [wizardProgress] = useState<WizardProgressState | null>(() =>
-    guestDraft || pendingIntent ? null : loadWizardProgress(),
+    guestDraft || pendingIntent || resumeContractId ? null : loadWizardProgress(initialDocumentType),
   );
   const [resuming, setResuming] = useState(Boolean(guestDraft));
 
@@ -89,9 +99,7 @@ export function NewContractWizard() {
   }, []);
   const [method, setMethod] = useState<'pdf' | 'editor' | null>(guestDraft?.method ?? wizardProgress?.method ?? null);
   const [title, setTitle] = useState(guestDraft?.title ?? wizardProgress?.title ?? pendingIntent?.templateTitle ?? '');
-  const [documentType, setDocumentType] = useState<DocumentType>(
-    guestDraft?.documentType ?? wizardProgress?.documentType ?? pendingIntent?.documentType ?? 'contract',
-  );
+  const [documentType, setDocumentType] = useState<DocumentType>(initialDocumentType);
   const poaMode = documentType === 'power_of_attorney';
   // مدة توثيق التفويض ثابتة عند 7 أيام ولا تُعرض للاختيار؛ مدة توثيق العقد تبدأ
   // بـ3 أيام افتراضيًا وتبقى قابلة للتعديل زيادةً أو نقصانًا (1-14 يومًا).
@@ -189,11 +197,13 @@ export function NewContractWizard() {
   const [busy, setBusy] = useState(false);
   const syncInFlightRef = useRef(false);
 
-  // حفظ مستمر لتقدّم المعالج كي لا يُفقَد إن غادر المستخدم لصفحة أخرى (مثل الملف
-  // الشخصي) ثم عاد؛ يُتجاهل أثناء شاشتي الاستكمال/تسجيل الدخول (لا تقدّم حقيقي
-  // بعد)، ويُمسَح صراحةً في ReviewStep بعد إرسال العقد بنجاح.
+  // حفظ مستمر لتقدّم المعالج (في خانة الخدمة الحالية: عقد أو تفويض) كي لا يُفقَد
+  // إن غادر المستخدم لصفحة أخرى أو بدّل إلى الخدمة الأخرى ثم عاد؛ يُتجاهل أثناء
+  // شاشتي الاستكمال/تسجيل الدخول (لا تقدّم حقيقي بعد) وأثناء تحرير عقد حقيقي
+  // محفوظ في القاعدة (بياناته في القاعدة نفسها، وحفظه هنا كان سيسحق مسودة
+  // الإنشاء الجديد)، ويُمسَح صراحةً في ReviewStep بعد الإرسال بنجاح.
   useEffect(() => {
-    if (step === 'resuming' || step === 'authGate') return;
+    if (resumeContractId || step === 'resuming' || step === 'authGate') return;
     saveWizardProgress({
       step: step as WizardProgressState['step'],
       method,

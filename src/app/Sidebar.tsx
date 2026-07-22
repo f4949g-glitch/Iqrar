@@ -24,18 +24,16 @@ import {
 } from 'lucide-react';
 import type { Profile } from '@/features/auth';
 import { hasAdminPermission } from '@/features/auth/types';
-import { setPendingContractIntent } from '@/features/contracts/lib/pendingIntent';
 
 interface SidebarLink {
   to: string;
   label: string;
   icon: typeof User;
-  // تنفَّذ قبل الانتقال (مثال: حفظ نية إنشاء تفويض في sessionStorage كي
-  // يقرأها معالج إنشاء العقد بعد فتح نفس مسار "/app/contracts/new" المشترك).
+  // تنفَّذ قبل الانتقال إن احتاج رابط ما تهيئة حالة قبل فتح وجهته.
   onClick?: () => void;
-  // معرِّف اختياري للروابط التي تشارك نفس "to" (إنشاء عقد/تفويض يفتحان
-  // المسار نفسه بنيّة مختلفة) — يميّز أيهما نُقر عليه فعليًا كي لا يُظلَّل
-  // كلاهما معًا اعتمادًا على المسار وحده (انظر activeLinkId في Sidebar).
+  // معرِّف اختياري لرابط يشارك رابطًا آخر نفس "to" حرفيًا (بما فيه الاستعلام)
+  // ويحتاج تمييز أيهما نُقر فعليًا للتظليل — روابط إنشاء عقد/تفويض لم تعد
+  // بحاجته بعد تمييزهما بـ ?type في الرابط نفسه.
   id?: string;
 }
 
@@ -56,7 +54,11 @@ function buildUserGroups(templateCount: number): SidebarGroup[] {
   const mainLinks: SidebarLink[] = [
     { to: '/app', label: 'لوحة التحكم', icon: Home },
     { to: '/app/contracts', label: 'عقودي', icon: FolderOpen },
-    { to: '/app/contracts/new', label: 'إنشاء عقد', icon: FileSignature, id: 'new-contract' },
+    // ?type=... يميّز الخدمتين اللتين تتشاركان مسار المعالج نفسه: النقر على
+    // الخدمة الأخرى وأنت داخل المعالج يبدّل إليها فورًا (يُعاد بناء المعالج
+    // بمفتاح النوع في App.tsx) مع حفظ ما أدخلته في الخدمة الحالية كمسودة
+    // تُستعاد تلقائيًا عند العودة إليها — لكل خدمة خانة حفظ مستقلة.
+    { to: '/app/contracts/new?type=contract', label: 'إنشاء عقد', icon: FileSignature },
     { to: '/verify', label: 'التحقق من وثيقة موثقة', icon: ShieldCheck },
   ];
   if (templateCount > 0) {
@@ -67,13 +69,7 @@ function buildUserGroups(templateCount: number): SidebarGroup[] {
     {
       title: 'التفويض',
       links: [
-        {
-          to: '/app/contracts/new',
-          label: 'إنشاء تفويض',
-          icon: Stamp,
-          id: 'new-poa',
-          onClick: () => setPendingContractIntent({ documentType: 'power_of_attorney', partyCount: 2, verificationDefault: 'manual' }),
-        },
+        { to: '/app/contracts/new?type=poa', label: 'إنشاء تفويض', icon: Stamp },
       ],
     },
     {

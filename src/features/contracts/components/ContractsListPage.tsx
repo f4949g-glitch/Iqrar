@@ -190,7 +190,7 @@ export function ContractsListPage() {
             </button>
           </div>
         )}
-        <Link to="/app/contracts/new">
+        <Link to="/app/contracts/new?type=contract">
           <Button className="w-full">
             <span className="flex items-center justify-center gap-1.5">
               <Plus size={16} /> عقد جديد

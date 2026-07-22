@@ -29,7 +29,7 @@ export function MyTemplatesPage() {
       templateBody: template.body_json,
       templateSequentialSigning: template.sequential_signing,
     });
-    navigate('/app/contracts/new');
+    navigate(`/app/contracts/new?type=${template.document_type === 'power_of_attorney' ? 'poa' : 'contract'}`);
   };
 
   return (

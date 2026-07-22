@@ -84,7 +84,7 @@ export function DashboardPage() {
           <h1 className="font-display text-2xl font-extrabold text-ink">لوحة التحكم</h1>
           <p className="mt-1 text-sm text-slate">أهلًا بك يا {profile?.full_name || profile?.email}، هذا ملخّص ما يحدث في حسابك</p>
         </div>
-        <Link to="/app/contracts/new">
+        <Link to="/app/contracts/new?type=contract">
           <Button>
             <span className="flex items-center gap-1.5">
               <Plus size={16} /> عقد جديد

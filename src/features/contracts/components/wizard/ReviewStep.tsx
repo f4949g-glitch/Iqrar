@@ -134,7 +134,7 @@ export function ReviewStep({
     setError('');
     try {
       await sendContract(contract.id);
-      clearWizardProgress();
+      clearWizardProgress(contract.document_type);
       navigate(`/app/contracts/${contract.id}`);
     } catch (err) {
       setError(getErrorMessage(err, `تعذّر إرسال ${docLabel}`));
