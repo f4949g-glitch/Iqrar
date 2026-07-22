@@ -55,6 +55,17 @@ function resolvePartyValue(party: PartyLike | undefined, key: MergeKey): string 
   return party[key] ?? '';
 }
 
+const ALIGN_VALUES = new Set(['left', 'right', 'center', 'justify']);
+
+// TextAlign (Tiptap) يخزّن المحاذاة كـ attrs.textAlign على عُقَد الفقرة/العنوان،
+// ولم تكن تُقرَأ هنا إطلاقًا — فتُفقَد المحاذاة/التوسيط عند تحويل المستند إلى
+// HTML (سواء لمعاينة المراجعة والتوقيع أو للمستند النهائي) رغم ظهورها بشكل
+// صحيح داخل محرر Tiptap نفسه أثناء الكتابة.
+function alignStyleAttr(node: JsonNode): string {
+  const align = node.attrs?.textAlign;
+  return typeof align === 'string' && ALIGN_VALUES.has(align) ? ` style="text-align: ${align}"` : '';
+}
+
 function renderMarks(text: string, marks: { type: string }[] = []): string {
   let html = escapeHtml(text);
   for (const mark of marks) {
@@ -86,10 +97,10 @@ export function renderContractHtml(
       case 'doc':
         return children();
       case 'paragraph':
-        return `<p>${children()}</p>`;
+        return `<p${alignStyleAttr(node)}>${children()}</p>`;
       case 'heading': {
         const level = Number(node.attrs?.level ?? 1);
-        return `<h${level}>${children()}</h${level}>`;
+        return `<h${level}${alignStyleAttr(node)}>${children()}</h${level}>`;
       }
       case 'bulletList':
         return `<ul>${children()}</ul>`;

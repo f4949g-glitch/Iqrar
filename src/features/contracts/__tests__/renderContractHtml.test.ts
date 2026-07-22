@@ -52,6 +52,21 @@ describe('renderContractHtml', () => {
     expect(html).not.toContain('[تاريخ]');
   });
 
+  it('يطبّق محاذاة/توسيط الفقرات والعناوين المحدَّدة في المحرر', () => {
+    const doc: JsonNode = {
+      type: 'doc',
+      content: [
+        { type: 'paragraph', attrs: { textAlign: 'center' }, content: [{ type: 'text', text: 'نص مُوسَّط' }] },
+        { type: 'heading', attrs: { level: 2, textAlign: 'left' }, content: [{ type: 'text', text: 'عنوان لليسار' }] },
+        { type: 'paragraph', content: [{ type: 'text', text: 'نص افتراضي بلا محاذاة صريحة' }] },
+      ],
+    };
+    const html = renderContractHtml(doc, parties);
+    expect(html).toContain('<p style="text-align: center">نص مُوسَّط</p>');
+    expect(html).toContain('<h2 style="text-align: left">عنوان لليسار</h2>');
+    expect(html).toContain('<p>نص افتراضي بلا محاذاة صريحة</p>');
+  });
+
   it('يهرب وسوم HTML داخل النصوص لمنع الحقن', () => {
     const doc: JsonNode = {
       type: 'doc',
