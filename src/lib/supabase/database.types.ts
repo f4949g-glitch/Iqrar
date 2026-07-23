@@ -369,6 +369,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           created_by: string
+          credit_used: number
           discount_code_id: string | null
           document_type: string
           duration_days: number | null
@@ -398,6 +399,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           created_by: string
+          credit_used?: number
           discount_code_id?: string | null
           document_type?: string
           duration_days?: number | null
@@ -427,6 +429,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           created_by?: string
+          credit_used?: number
           discount_code_id?: string | null
           document_type?: string
           duration_days?: number | null
@@ -1027,6 +1030,7 @@ export type Database = {
         Returns: {
           attempts: number
           code: string
+          created_at: string
           expires_at: string
         }[]
       }
@@ -1044,6 +1048,7 @@ export type Database = {
         Returns: {
           attempts: number
           code: string
+          created_at: string
           expires_at: string
         }[]
       }
@@ -1052,6 +1057,7 @@ export type Database = {
         Returns: {
           attempts: number
           code: string
+          created_at: string
           expires_at: string
           verified: boolean
         }[]
@@ -1061,6 +1067,7 @@ export type Database = {
         Returns: {
           attempts: number
           code: string
+          created_at: string
           expires_at: string
           verified: boolean
         }[]
@@ -1124,7 +1131,7 @@ export type Database = {
         Returns: undefined
       }
       send_contract: {
-        Args: { p_contract_id: string }
+        Args: { p_contract_id: string; p_use_balance_amount?: number }
         Returns: {
           body_json: Json | null
           company_cr_number: string | null
@@ -1133,6 +1140,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           created_by: string
+          credit_used: number
           discount_code_id: string | null
           document_type: string
           duration_days: number | null
@@ -1171,6 +1179,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           created_by: string
+          credit_used: number
           discount_code_id: string | null
           document_type: string
           duration_days: number | null
@@ -1343,3 +1352,9 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const

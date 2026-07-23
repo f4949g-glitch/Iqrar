@@ -299,6 +299,7 @@ export function ContractDetailPage() {
             أُنشئ في {formatDateTime(contract.created_at)}
             {contract.expires_at && ` · ينتهي في ${formatDate(contract.expires_at)}`}
             {contract.invoice_amount !== null && ` · الفاتورة: ${contract.invoice_amount.toFixed(2)} ريال`}
+            {contract.credit_used > 0 && ` (منها ${contract.credit_used.toFixed(2)} ريال من الرصيد)`}
           </p>
           {termLabel && <p className="mt-1 text-xs text-slate">مدة سريان العقد: {termLabel}</p>}
           {contract.verification_number && (

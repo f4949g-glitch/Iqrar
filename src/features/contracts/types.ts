@@ -67,6 +67,7 @@ export interface Contract {
   term_end_date: string | null;
   discount_code_id: string | null;
   invoice_amount: number | null;
+  credit_used: number;
   company_name: string | null;
   company_cr_number: string | null;
   company_logo_path: string | null;

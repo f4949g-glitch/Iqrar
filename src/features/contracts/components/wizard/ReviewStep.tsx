@@ -9,6 +9,7 @@ import { sendContract, updateParty, type NewPartyInput } from '../../api/contrac
 import { clearWizardProgress } from '../../lib/wizardProgress';
 import { fetchPricingSettings, calculateInvoice, type PricingSettings } from '../../api/pricingApi';
 import { previewDiscountCode, setContractDiscountCode, type DiscountPreview } from '../../api/discountCodesApi';
+import { fetchMyBalance } from '../../api/creditCodesApi';
 import { renderContractHtml, renderPartiesHeaderHtml, renderTermLineHtml, escapeHtml, type JsonNode } from '../../editor/renderContractHtml';
 import { DOCUMENT_TYPE_DEFINITE_LABELS, FIELD_TYPE_LABELS, type Contract, type ContractField, type ContractParty } from '../../types';
 import type { Profile } from '@/features/auth';
@@ -55,15 +56,25 @@ export function ReviewStep({
   const [cardNumber] = useState('0000 0000 0000 0000');
   const [cardExpiry] = useState('00/00');
   const [cardCvv] = useState('000');
+  const [balance, setBalance] = useState<number | null>(null);
+  const [useBalance, setUseBalance] = useState(false);
+  const [balanceAmountInput, setBalanceAmountInput] = useState('0');
   const docLabel = DOCUMENT_TYPE_DEFINITE_LABELS[contract.document_type];
 
   useEffect(() => {
     fetchPricingSettings()
       .then(setPricing)
       .catch(() => setPricing(null));
+    fetchMyBalance()
+      .then(setBalance)
+      .catch(() => setBalance(null));
   }, []);
 
   const invoice = pricing ? calculateInvoice(parties.length, pricing) : null;
+  const invoiceTotal = discountPreview?.discount_code_id ? discountPreview.final_amount : (invoice ?? 0);
+  const maxUsableBalance = balance !== null ? Math.min(balance, invoiceTotal) : 0;
+  const balanceAmountToUse = useBalance ? Math.min(Math.max(parseFloat(balanceAmountInput) || 0, 0), maxUsableBalance) : 0;
+  const remainingAfterBalance = Math.max(invoiceTotal - balanceAmountToUse, 0);
 
   // الطرف الذي يمثّل صاحب الحساب الحالي (لا يوجد عمود "is_self" في القاعدة، فيُحدَّد
   // بمطابقة رقم الهوية مع بيانات الحساب) — يُسمح له بتصحيح بياناته هنا مباشرة بدل
@@ -133,7 +144,7 @@ export function ReviewStep({
     setSubmitting(true);
     setError('');
     try {
-      await sendContract(contract.id);
+      await sendContract(contract.id, balanceAmountToUse);
       clearWizardProgress(contract.document_type);
       navigate(`/app/contracts/${contract.id}`);
     } catch (err) {
@@ -251,7 +262,11 @@ export function ReviewStep({
             {discountPreview.discount_code_id ? `تم تطبيق الكود: خصم ${discountPreview.discount_percent}%` : discountPreview.message}
           </p>
         )}
-        <p className="mt-2 text-xs text-slate">سيُخصم مبلغ الفاتورة النهائي من رصيدك عند الإرسال.</p>
+        {balance !== null && (
+          <p className="mt-2 text-xs text-slate">
+            رصيدك المتاح: <span className="font-bold text-ink">{balance.toFixed(2)} ريال</span> — يمكنك استخدامه كليًا أو جزئيًا في بوابة الدفع.
+          </p>
+        )}
       </div>
 
       {error && <p className="text-sm font-bold text-clay">{error}</p>}
@@ -301,38 +316,92 @@ export function ReviewStep({
               <p className="mt-1 text-xs text-slate">بوابة الدفع الفعلية قيد الربط — البيانات أدناه تجريبية لأغراض الاختبار فقط</p>
             </div>
             <div className="space-y-3">
-              <div>
-                <label className="mb-1 block text-xs font-bold text-slate">رقم البطاقة</label>
-                <input
-                  value={cardNumber}
-                  readOnly
-                  dir="ltr"
-                  className="w-full rounded-lg border border-line bg-paper px-3 py-2.5 text-center text-ink outline-none"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-xs font-bold text-slate">تاريخ الانتهاء</label>
-                  <input
-                    value={cardExpiry}
-                    readOnly
-                    dir="ltr"
-                    className="w-full rounded-lg border border-line bg-paper px-3 py-2.5 text-center text-ink outline-none"
-                  />
+              {balance !== null && balance > 0 && (
+                <div className="rounded-lg border border-line bg-paper p-3">
+                  <label className="flex items-center gap-2 text-xs font-bold text-ink">
+                    <input
+                      type="checkbox"
+                      checked={useBalance}
+                      onChange={(e) => {
+                        setUseBalance(e.target.checked);
+                        if (e.target.checked) setBalanceAmountInput(maxUsableBalance.toFixed(2));
+                      }}
+                    />
+                    الخصم من رصيدي (المتاح: {balance.toFixed(2)} ريال)
+                  </label>
+                  {useBalance && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        max={maxUsableBalance}
+                        step="0.01"
+                        dir="ltr"
+                        value={balanceAmountInput}
+                        onChange={(e) => setBalanceAmountInput(e.target.value)}
+                        className="w-28 rounded-lg border border-line bg-white px-2 py-1.5 text-center text-sm text-ink outline-none"
+                      />
+                      <span className="text-xs text-slate">ريال</span>
+                      <button
+                        type="button"
+                        onClick={() => setBalanceAmountInput(maxUsableBalance.toFixed(2))}
+                        className="text-xs font-bold text-seal hover:underline"
+                      >
+                        استخدام الحد الأقصى
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-bold text-slate">رمز التحقق CVV</label>
-                  <input
-                    value={cardCvv}
-                    readOnly
-                    dir="ltr"
-                    className="w-full rounded-lg border border-line bg-paper px-3 py-2.5 text-center text-ink outline-none"
-                  />
-                </div>
-              </div>
+              )}
+              {remainingAfterBalance > 0 ? (
+                <>
+                  <div>
+                    <label className="mb-1 block text-xs font-bold text-slate">رقم البطاقة</label>
+                    <input
+                      value={cardNumber}
+                      readOnly
+                      dir="ltr"
+                      className="w-full rounded-lg border border-line bg-paper px-3 py-2.5 text-center text-ink outline-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-bold text-slate">تاريخ الانتهاء</label>
+                      <input
+                        value={cardExpiry}
+                        readOnly
+                        dir="ltr"
+                        className="w-full rounded-lg border border-line bg-paper px-3 py-2.5 text-center text-ink outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-bold text-slate">رمز التحقق CVV</label>
+                      <input
+                        value={cardCvv}
+                        readOnly
+                        dir="ltr"
+                        className="w-full rounded-lg border border-line bg-paper px-3 py-2.5 text-center text-ink outline-none"
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                useBalance && (
+                  <p className="rounded-lg bg-sageLight p-3 text-center text-xs font-bold text-sage">مغطى بالكامل من رصيدك، لا حاجة لبطاقة دفع</p>
+                )
+              )}
               {invoice !== null && (
                 <p className="rounded-lg bg-sealLight p-3 text-center text-sm font-bold text-seal">
-                  المبلغ المطلوب: {(discountPreview?.discount_code_id ? discountPreview.final_amount : invoice).toFixed(2)} ريال
+                  {balanceAmountToUse > 0 ? (
+                    <>
+                      المبلغ المطلوب عبر البطاقة: {remainingAfterBalance.toFixed(2)} ريال
+                      <span className="mt-1 block text-xs font-normal text-slate">
+                        (من إجمالي {invoiceTotal.toFixed(2)} ريال، بعد خصم {balanceAmountToUse.toFixed(2)} ريال من رصيدك)
+                      </span>
+                    </>
+                  ) : (
+                    <>المبلغ المطلوب: {invoiceTotal.toFixed(2)} ريال</>
+                  )}
                 </p>
               )}
               {error && <p className="text-sm font-bold text-clay">{error}</p>}

@@ -342,8 +342,11 @@ export async function listEvents(contractId: string): Promise<ContractEvent[]> {
   return data as ContractEvent[];
 }
 
-export async function sendContract(contractId: string): Promise<Contract> {
-  const { data, error } = await supabase.rpc('send_contract', { p_contract_id: contractId });
+export async function sendContract(contractId: string, useBalanceAmount = 0): Promise<Contract> {
+  const { data, error } = await supabase.rpc('send_contract', {
+    p_contract_id: contractId,
+    p_use_balance_amount: useBalanceAmount,
+  });
   if (error) throw new Error(translateErrorMessage(error.message));
 
   const { error: fnError } = await supabase.functions.invoke('send-contract-notifications', {

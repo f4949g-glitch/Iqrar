@@ -59,10 +59,15 @@ Deno.serve(async (req: Request) => {
   // القادمة مع الطلب — هذه الدالة تُستدعى برمز دخول مستخدم عادي عبر أي عميل HTTP
   // (وليس متصفحًا فقط)، فلا يجوز الوثوق بـ Origin لبناء روابط تُرسَل باسم المنصة
   // الموثوق به عبر SMS/بريد، وإلا أمكن توجيه أطراف العقد لرابط تصيّد مزوَّر.
+  // إرسال إشعارات كل الأطراف بالتوازي (بدل حلقة تسلسلية كانت تنتظر بريد+SMS+SMS
+  // الحساب التلقائي لكل طرف قبل حتى بدء طلب SMS الطرف التالي) — لعقد بعدة أطراف
+  // كان هذا يؤخر وصول رسالة الطرف الأخير ثوانٍ إضافية لكل طرف يسبقه، رغم أن كل
+  // الطلبات مستقلة تمامًا ولا داعي لانتظارها الواحد تلو الآخر. القناتان (بريد/SMS)
+  // لنفس الطرف مستقلتان أيضًا فتُرسَلان بالتوازي لا بالتتابع.
   const origin = Deno.env.get('APP_ORIGIN') ?? req.headers.get('origin') ?? '';
   let sent = 0;
 
-  for (const party of parties ?? []) {
+  const notifyParty = async (party: NonNullable<typeof parties>[number]) => {
     const link = `${origin}/sign/${party.token}`;
     const account = await ensurePartyAccount(admin, party);
 
@@ -70,37 +75,50 @@ Deno.serve(async (req: Request) => {
       ? `<p>كما تم إنشاء حساب لك على المنصة لمتابعة عقودك لاحقًا: <br/>البريد: ${party.email}<br/>كلمة المرور المؤقتة: ${account.tempPassword}</p>`
       : '';
 
+    const jobs: Promise<unknown>[] = [];
+
     if (party.email) {
-      await sendEmail(
-        party.email,
-        'لديك طلب توثيق جديد',
-        `<p>مرحباً ${party.full_name}،</p>
-         <p>لديك طلب توثيق جديد من (${creatorName})، يرجى الدخول إلى المنصة للاطلاع على العقد "${contract.title}" واستكمال إجراءات التوثيق.</p>
-         <p><a href="${link}">اضغط هنا لمراجعة العقد والتوقيع</a></p>
-         ${accountBlock}`,
+      jobs.push(
+        sendEmail(
+          party.email,
+          'لديك طلب توثيق جديد',
+          `<p>مرحباً ${party.full_name}،</p>
+           <p>لديك طلب توثيق جديد من (${creatorName})، يرجى الدخول إلى المنصة للاطلاع على العقد "${contract.title}" واستكمال إجراءات التوثيق.</p>
+           <p><a href="${link}">اضغط هنا لمراجعة العقد والتوقيع</a></p>
+           ${accountBlock}`,
+        ).then(() => {
+          sent += 1;
+        }),
       );
-      sent += 1;
     }
     if (party.phone) {
-      const requestText = await renderSmsTemplate(
-        admin,
-        'contract_request',
-        { creator: creatorName, link },
-        `لديك طلب توثيق جديد من (${creatorName}) عبر منصة إقرار. رابط العقد: ${link}`,
-      );
-      await sendSms(party.phone, requestText);
+      jobs.push(
+        (async () => {
+          const requestText = await renderSmsTemplate(
+            admin,
+            'contract_request',
+            { creator: creatorName, link },
+            `لديك طلب توثيق جديد من (${creatorName}) عبر منصة إقرار. رابط العقد: ${link}`,
+          );
+          await sendSms(party.phone, requestText);
 
-      if (account.created && party.email) {
-        const accountText = await renderSmsTemplate(
-          admin,
-          'auto_account',
-          { email: party.email, password: account.tempPassword ?? '' },
-          `تم فتح حساب تلقائي لك في منصة إقرار. البريد: ${party.email} — كلمة المرور المؤقتة: ${account.tempPassword}`,
-        );
-        await sendSms(party.phone, accountText);
-      }
+          if (account.created && party.email) {
+            const accountText = await renderSmsTemplate(
+              admin,
+              'auto_account',
+              { email: party.email, password: account.tempPassword ?? '' },
+              `تم فتح حساب تلقائي لك في منصة إقرار. البريد: ${party.email} — كلمة المرور المؤقتة: ${account.tempPassword}`,
+            );
+            await sendSms(party.phone, accountText);
+          }
+        })(),
+      );
     }
-  }
+
+    await Promise.all(jobs);
+  };
+
+  await Promise.allSettled((parties ?? []).map(notifyParty));
 
   return jsonResponse({ success: true, sent });
 });
