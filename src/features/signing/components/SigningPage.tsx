@@ -12,90 +12,6 @@ import { fileToDataUrl } from '@/shared/lib/fileToDataUrl';
 import { SigningIdentityGate } from './SigningIdentityGate';
 import '@/lib/pdf/setupWorker';
 
-// يتيح للطرف الموقّع استخدام توقيعه المحفوظ مسبقًا في ملفه الشخصي بدل الرسم
-// من جديد. لا يُطلَب أي رمز تحقق إضافي هنا — هوية الطرف مُتحقَّق منها أصلًا
-// للوصول لهذه الصفحة (رمز SMS عند فتح رابط التوثيق لطرف "يدوي"، أو نفاذ
-// الحكومي لطرف "نفاذ")، فطلب رمز ثانٍ خاص بالتوقيع المحفوظ كان تحقّقًا
-// مكرِّرًا لا داعي له. لا يُطبَّق التوقيع تلقائيًا عند فتح الصفحة — يظهر
-// كخيار صريح، وعند الضغط عليه يُرفَق التوقيع فورًا ويظهر بصورته الفعلية هنا
-// (وينعكس أيضًا في معاينة العقد الحيّة عبر نفس آلية أي حقل مُعبَّأ).
-function SavedSignatureField({ dataUrl, onChange }: { dataUrl: string; onChange: (dataUrl: string | null) => void }) {
-  const [mode, setMode] = useState<'choice' | 'saved' | 'draw'>('choice');
-
-  if (mode === 'draw') {
-    return (
-      <div className="space-y-2">
-        <SignaturePad onChange={onChange} />
-        <button
-          type="button"
-          onClick={() => {
-            setMode('choice');
-            onChange(null);
-          }}
-          className="w-full text-center text-xs font-bold text-slate hover:text-ink"
-        >
-          استخدام توقيعي المحفوظ بدلًا من ذلك
-        </button>
-      </div>
-    );
-  }
-
-  if (mode === 'saved') {
-    return (
-      <div className="space-y-2">
-        <img src={dataUrl} alt="توقيعك المحفوظ" className="mx-auto h-24 rounded-lg border border-line bg-white object-contain p-2" />
-        <p className="flex items-center justify-center gap-1.5 text-xs font-bold text-sage">
-          <CheckCircle2 size={14} /> تم إرفاق توقيعك المحفوظ
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            setMode('choice');
-            onChange(null);
-          }}
-          className="w-full text-center text-xs font-bold text-slate hover:text-ink"
-        >
-          تغيير طريقة التوقيع
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-      <button
-        type="button"
-        onClick={() => {
-          setMode('saved');
-          onChange(dataUrl);
-        }}
-        className="flex items-center gap-2 rounded-xl border-2 border-line bg-card p-3 text-start shadow-sm transition hover:border-sealMuted hover:shadow-md"
-      >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-paper text-sealMuted">
-          <ShieldCheck size={18} />
-        </span>
-        <span>
-          <span className="block text-sm font-bold text-ink">استخدام توقيعك المحفوظ</span>
-          <span className="block text-[11px] text-slate">توقيعك المحفوظ في ملفك الشخصي</span>
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={() => setMode('draw')}
-        className="flex items-center gap-2 rounded-xl border-2 border-line bg-card p-3 text-start shadow-sm transition hover:border-sealMuted hover:shadow-md"
-      >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-paper text-sealMuted">
-          <FileSignature size={18} />
-        </span>
-        <span>
-          <span className="block text-sm font-bold text-ink">رسم توقيع جديد</span>
-          <span className="block text-[11px] text-slate">وقّع بإصبعك أو الفأرة</span>
-        </span>
-      </button>
-    </div>
-  );
-}
-
 // بطاقتا اختيار طريقة التوقيع (رسم/صورة مرفقة) — تظهر مرة واحدة فقط لكل طرف
 // (عند أول حقل توقيع بلا توقيع محفوظ)، وتُطبَّق الطريقة المُختارة تلقائيًا على
 // أي حقل توقيع لاحق لنفس الطرف في هذا العقد.
@@ -132,44 +48,183 @@ function SignatureMethodChoice({ onChoose }: { onChoose: (method: 'draw' | 'uplo
   );
 }
 
+// زر مضغوط يحل محل خيارات التوقيع المعروضة سابقًا مباشرة داخل الصفحة (كانت
+// تشغل مساحة كبيرة خصوصًا فوق حقول PDF الصغيرة) — يعرض التوقيع المُرفَق فعليًا
+// إن وُجد، أو دعوة لإضافته، وفي الحالتين يفتح نافذة اختيار طريقة التوقيع
+// المنبثقة (SignatureModal) بدل عرض الخيارات نفسها هنا.
+function SignatureTrigger({ value, onOpen }: { value: unknown; onOpen: () => void }) {
+  const dataUrl = typeof value === 'string' ? value : null;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex h-full min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-line bg-card p-1 text-seal transition hover:border-sealMuted"
+    >
+      {dataUrl ? (
+        <img src={dataUrl} alt="التوقيع" className="max-h-full max-w-full object-contain" />
+      ) : (
+        <>
+          <FileSignature size={14} className="shrink-0" />
+          <span className="text-[11px] font-bold">إضافة التوقيع</span>
+        </>
+      )}
+    </button>
+  );
+}
+
+// نافذة منبثقة موحَّدة لكل طرق التوقيع (استخدام المحفوظ/رسم/إرفاق صورة) —
+// تُفتَح من زر التوقيع المضغوط لأي حقل، وتُرفِق التوقيع المختار داخل العقد
+// فقط بعد ضغط "تأكيد التوقيع" صراحة، لا فور اختيار الطريقة.
+function SignatureModal({
+  field,
+  currentValue,
+  savedSignatureDataUrl,
+  signatureMethod,
+  onChooseSignatureMethod,
+  onConfirm,
+  onClose,
+}: {
+  field: SigningFullSession['fields'][number];
+  currentValue: unknown;
+  savedSignatureDataUrl: string | null;
+  signatureMethod: 'draw' | 'upload' | null;
+  onChooseSignatureMethod: (method: 'draw' | 'upload') => void;
+  onConfirm: (dataUrl: string) => void;
+  onClose: () => void;
+}) {
+  const existing = typeof currentValue === 'string' ? currentValue : null;
+  type Step = 'choiceSaved' | 'choiceMethod' | 'draw' | 'upload' | 'preview';
+  const initialStep: Step = existing ? 'preview' : savedSignatureDataUrl ? 'choiceSaved' : (signatureMethod ?? 'choiceMethod');
+  const [step, setStep] = useState<Step>(initialStep);
+  const [draft, setDraft] = useState<string | null>(existing);
+
+  const backStep: Step = savedSignatureDataUrl ? 'choiceSaved' : (signatureMethod ?? 'choiceMethod');
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/50 p-4" dir="rtl" onClick={onClose}>
+      <div className="w-full max-w-sm rounded-2xl border border-line bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="font-display text-sm font-bold text-ink">{field.label}</h3>
+          <button type="button" onClick={onClose} aria-label="إغلاق" className="text-slate hover:text-ink">
+            <XCircle size={18} />
+          </button>
+        </div>
+
+        {step === 'choiceSaved' && savedSignatureDataUrl && (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => {
+                setDraft(savedSignatureDataUrl);
+                setStep('preview');
+              }}
+              className="flex items-center gap-2 rounded-xl border-2 border-line bg-card p-3 text-start shadow-sm transition hover:border-sealMuted hover:shadow-md"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-paper text-sealMuted">
+                <ShieldCheck size={18} />
+              </span>
+              <span>
+                <span className="block text-sm font-bold text-ink">استخدام توقيعك المحفوظ</span>
+                <span className="block text-[11px] text-slate">توقيعك المحفوظ في ملفك الشخصي</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep('draw')}
+              className="flex items-center gap-2 rounded-xl border-2 border-line bg-card p-3 text-start shadow-sm transition hover:border-sealMuted hover:shadow-md"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-paper text-sealMuted">
+                <FileSignature size={18} />
+              </span>
+              <span>
+                <span className="block text-sm font-bold text-ink">رسم توقيع جديد</span>
+                <span className="block text-[11px] text-slate">وقّع بإصبعك أو الفأرة</span>
+              </span>
+            </button>
+          </div>
+        )}
+
+        {step === 'choiceMethod' && (
+          <SignatureMethodChoice
+            onChoose={(m) => {
+              onChooseSignatureMethod(m);
+              setStep(m);
+            }}
+          />
+        )}
+
+        {step === 'draw' && (
+          <div className="space-y-3">
+            <SignaturePad onChange={setDraft} />
+            <button type="button" onClick={() => setStep(backStep)} className="w-full text-center text-xs font-bold text-slate hover:text-ink">
+              رجوع
+            </button>
+          </div>
+        )}
+
+        {step === 'upload' && (
+          <div className="space-y-3">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  setDraft(await fileToDataUrl(file));
+                  setStep('preview');
+                }
+              }}
+              className="w-full text-xs"
+            />
+            <button type="button" onClick={() => setStep('choiceMethod')} className="w-full text-center text-xs font-bold text-slate hover:text-ink">
+              رجوع
+            </button>
+          </div>
+        )}
+
+        {step === 'preview' && draft && (
+          <div className="space-y-3">
+            <img src={draft} alt={field.label} className="mx-auto h-28 w-full rounded-lg border border-line bg-white object-contain p-2" />
+            <button
+              type="button"
+              onClick={() => {
+                setDraft(null);
+                setStep(backStep);
+              }}
+              className="w-full text-center text-xs font-bold text-slate hover:text-ink"
+            >
+              تغيير التوقيع
+            </button>
+          </div>
+        )}
+
+        <div className="mt-5 flex gap-2">
+          <Button variant="secondary" onClick={onClose} className="flex-1">
+            إلغاء
+          </Button>
+          <Button onClick={() => draft && onConfirm(draft)} disabled={!draft} className="flex-1">
+            تأكيد التوقيع
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FieldInput({
   field,
   value,
   onChange,
-  savedSignatureDataUrl,
-  signatureMethod,
-  onChooseSignatureMethod,
+  onOpenSignatureModal,
 }: {
   field: SigningFullSession['fields'][number];
   value: unknown;
   onChange: (v: unknown) => void;
-  savedSignatureDataUrl: string | null;
-  signatureMethod: 'draw' | 'upload' | null;
-  onChooseSignatureMethod: (method: 'draw' | 'upload') => void;
+  onOpenSignatureModal: () => void;
 }) {
   switch (field.field_type) {
-    case 'signature': {
-      if (savedSignatureDataUrl) {
-        return <SavedSignatureField dataUrl={savedSignatureDataUrl} onChange={(dataUrl) => onChange(dataUrl)} />;
-      }
-      if (signatureMethod === null) {
-        return <SignatureMethodChoice onChoose={onChooseSignatureMethod} />;
-      }
-      if (signatureMethod === 'upload') {
-        return (
-          <input
-            type="file"
-            accept="image/*"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (file) onChange(await fileToDataUrl(file));
-            }}
-            className="w-full text-xs"
-          />
-        );
-      }
-      return <SignaturePad onChange={(dataUrl) => onChange(dataUrl)} />;
-    }
+    case 'signature':
+      return <SignatureTrigger value={value} onOpen={onOpenSignatureModal} />;
     case 'checkbox':
       return (
         <label className="flex items-center gap-2 text-sm text-ink">
@@ -279,6 +334,8 @@ export function SigningPage() {
   // تُختار مرة واحدة عند أول حقل توقيع ثم تُطبَّق تلقائيًا على أي حقل توقيع آخر
   // لنفس الطرف، بدل السماح بخلط الطريقتين داخل العقد الواحد.
   const [signatureMethod, setSignatureMethod] = useState<'draw' | 'upload' | null>(null);
+  // معرِّف حقل التوقيع المفتوحة نافذته المنبثقة حاليًا، إن وُجد.
+  const [signatureFieldId, setSignatureFieldId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -513,9 +570,7 @@ export function SigningPage() {
                             field={f}
                             value={values[f.id]}
                             onChange={(v) => setValues((prev) => ({ ...prev, [f.id]: v }))}
-                            signatureMethod={signatureMethod}
-                            onChooseSignatureMethod={setSignatureMethod}
-                            savedSignatureDataUrl={session.party.saved_signature_data_url}
+                            onOpenSignatureModal={() => setSignatureFieldId(f.id)}
                           />
                         </div>
                       </div>
@@ -544,9 +599,7 @@ export function SigningPage() {
                   field={f}
                   value={values[f.id]}
                   onChange={(v) => setValues((prev) => ({ ...prev, [f.id]: v }))}
-                  signatureMethod={signatureMethod}
-                  onChooseSignatureMethod={setSignatureMethod}
-                  savedSignatureDataUrl={session.party.saved_signature_data_url}
+                  onOpenSignatureModal={() => setSignatureFieldId(f.id)}
                 />
               </div>
               );
@@ -609,6 +662,26 @@ export function SigningPage() {
           </div>
         )}
       </main>
+
+      {signatureFieldId &&
+        (() => {
+          const activeField = session.fields.find((f) => f.id === signatureFieldId);
+          if (!activeField) return null;
+          return (
+            <SignatureModal
+              field={activeField}
+              currentValue={values[signatureFieldId]}
+              savedSignatureDataUrl={session.party.saved_signature_data_url}
+              signatureMethod={signatureMethod}
+              onChooseSignatureMethod={setSignatureMethod}
+              onConfirm={(dataUrl) => {
+                setValues((prev) => ({ ...prev, [signatureFieldId]: dataUrl }));
+                setSignatureFieldId(null);
+              }}
+              onClose={() => setSignatureFieldId(null)}
+            />
+          );
+        })()}
     </div>
   );
 }
