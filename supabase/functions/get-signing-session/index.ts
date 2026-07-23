@@ -22,6 +22,7 @@ Deno.serve(async (req: Request) => {
 
   const token = String(body.token ?? '').trim();
   if (!token) return jsonResponse({ error: 'رابط غير صالح' }, 400);
+  const sessionId = String(body.session_id ?? '').trim();
 
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
@@ -36,9 +37,14 @@ Deno.serve(async (req: Request) => {
   // طرف بطريقة "يدوي" يجب أن يتحقق من هويته برمز SMS (انظر
   // request-signing-identity-otp/verify-signing-identity-otp) قبل رؤية أي جزء
   // من محتوى العقد — طرف نفاذ معفى لأنه تحقَّق أصلًا عبر النظام الحكومي.
+  // التحقق مربوط بمعرِّف الجلسة (session_id) المُرسَل من المتصفح لا بالطرف
+  // وحده: فتح الرابط من جديد (تبويب جديد/متصفح آخر بعد إغلاق التبويب السابق)
+  // يعني معرِّف جلسة مختلف أو غائب، فيُعامَل التحقق كغير سارٍ ويُطلَب رمز جديد،
+  // بدل بقاء "verified" ساريًا للأبد بمجرد نجاحه مرة واحدة.
   if (party.verification_method === 'manual') {
     const { data: identityOtpRows } = await admin.rpc('rpc_get_signing_identity_otp', { p_party_id: party.id });
-    const identityVerified = Boolean(identityOtpRows?.[0]?.verified);
+    const identityRow = identityOtpRows?.[0];
+    const identityVerified = Boolean(identityRow?.verified) && Boolean(sessionId) && identityRow?.session_id === sessionId;
     if (!identityVerified) {
       return jsonResponse({
         party: { id: party.id, role_label: party.role_label, full_name: party.full_name, verification_method: party.verification_method },

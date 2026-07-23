@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase/client';
 import { extractFunctionError } from '@/shared/lib/errorMessage';
 import type { ContractField } from '@/features/contracts';
+import { newSigningSessionId, getSigningSessionId } from '../lib/signingSession';
 
 export interface SigningPartyData {
   id: string;
@@ -41,7 +42,7 @@ export type SigningSession = SigningIdentityGateSession | SigningWaitingTurnSess
 
 export async function fetchSigningSession(token: string): Promise<SigningSession> {
   const { data, error } = await supabase.functions.invoke<SigningSession | { error: string }>('get-signing-session', {
-    body: { token },
+    body: { token, session_id: getSigningSessionId(token) },
   });
   if (error) throw await extractFunctionError(error);
   if (data && 'error' in data) throw new Error(data.error);
@@ -68,13 +69,16 @@ export async function rejectSignature(token: string, reason: string): Promise<vo
 
 // يطلب رمز تحقق عبر SMS لإثبات هوية طرف بطريقة "يدوي" قبل تمكينه من رؤية
 // محتوى العقد أصلًا — بوابة منفصلة تمامًا عن requestSigningOtp (تلك خاصة
-// بإعادة استخدام توقيع محفوظ لاحقًا أثناء التوقيع نفسه).
+// بإعادة استخدام توقيع محفوظ لاحقًا أثناء التوقيع نفسه). يولّد معرِّف جلسة
+// جديدًا في كل طلب (بما فيها إعادة الإرسال)، فيبطل ضمنيًا أي تحقق سابق مرتبط
+// بمعرِّف جلسة قديم — انظر signingSession.ts.
 export async function requestSigningIdentityOtp(
   token: string,
 ): Promise<{ ok: boolean; required: boolean; sms_configured?: boolean; dev_code?: string; phone_hint?: string }> {
+  const sessionId = newSigningSessionId(token);
   const { data, error } = await supabase.functions.invoke<
     { ok: boolean; required: boolean; sms_configured?: boolean; dev_code?: string; phone_hint?: string } | { error: string }
-  >('request-signing-identity-otp', { body: { token } });
+  >('request-signing-identity-otp', { body: { token, session_id: sessionId } });
   if (error) throw await extractFunctionError(error);
   if (data && 'error' in data) throw new Error(data.error);
   return data as { ok: boolean; required: boolean; sms_configured?: boolean; dev_code?: string; phone_hint?: string };

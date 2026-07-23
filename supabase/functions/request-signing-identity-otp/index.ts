@@ -26,6 +26,8 @@ Deno.serve(async (req: Request) => {
 
   const token = String(body.token ?? '').trim();
   if (!token) return jsonResponse({ error: 'رابط غير صالح' }, 400);
+  const sessionId = String(body.session_id ?? '').trim();
+  if (!sessionId) return jsonResponse({ error: 'جلسة غير صالحة' }, 400);
 
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
@@ -52,7 +54,12 @@ Deno.serve(async (req: Request) => {
   const code = generateOtpCode();
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-  const { error: upsertError } = await admin.rpc('rpc_upsert_signing_identity_otp', { p_party_id: party.id, p_code: code, p_expires_at: expiresAt });
+  const { error: upsertError } = await admin.rpc('rpc_upsert_signing_identity_otp', {
+    p_party_id: party.id,
+    p_code: code,
+    p_expires_at: expiresAt,
+    p_session_id: sessionId,
+  });
   if (upsertError) return jsonResponse({ error: 'تعذّر إنشاء رمز التحقق' }, 500);
 
   const smsConfigured = isSmsConfigured();
