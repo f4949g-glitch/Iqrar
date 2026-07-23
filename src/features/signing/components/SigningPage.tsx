@@ -16,32 +16,81 @@ import '@/lib/pdf/setupWorker';
 // من جديد. لا يُطلَب أي رمز تحقق إضافي هنا — هوية الطرف مُتحقَّق منها أصلًا
 // للوصول لهذه الصفحة (رمز SMS عند فتح رابط التوثيق لطرف "يدوي"، أو نفاذ
 // الحكومي لطرف "نفاذ")، فطلب رمز ثانٍ خاص بالتوقيع المحفوظ كان تحقّقًا
-// مكرِّرًا لا داعي له.
+// مكرِّرًا لا داعي له. لا يُطبَّق التوقيع تلقائيًا عند فتح الصفحة — يظهر
+// كخيار صريح، وعند الضغط عليه يُرفَق التوقيع فورًا ويظهر بصورته الفعلية هنا
+// (وينعكس أيضًا في معاينة العقد الحيّة عبر نفس آلية أي حقل مُعبَّأ).
 function SavedSignatureField({ dataUrl, onChange }: { dataUrl: string; onChange: (dataUrl: string | null) => void }) {
-  const [mode, setMode] = useState<'saved' | 'draw'>('saved');
-
-  useEffect(() => {
-    if (mode === 'saved') onChange(dataUrl);
-  }, [mode, dataUrl, onChange]);
+  const [mode, setMode] = useState<'choice' | 'saved' | 'draw'>('choice');
 
   if (mode === 'draw') {
     return (
       <div className="space-y-2">
         <SignaturePad onChange={onChange} />
-        <button type="button" onClick={() => setMode('saved')} className="w-full text-center text-xs font-bold text-slate hover:text-ink">
+        <button
+          type="button"
+          onClick={() => {
+            setMode('choice');
+            onChange(null);
+          }}
+          className="w-full text-center text-xs font-bold text-slate hover:text-ink"
+        >
           استخدام توقيعي المحفوظ بدلًا من ذلك
         </button>
       </div>
     );
   }
 
+  if (mode === 'saved') {
+    return (
+      <div className="space-y-2">
+        <img src={dataUrl} alt="توقيعك المحفوظ" className="mx-auto h-24 rounded-lg border border-line bg-white object-contain p-2" />
+        <p className="flex items-center justify-center gap-1.5 text-xs font-bold text-sage">
+          <CheckCircle2 size={14} /> تم إرفاق توقيعك المحفوظ
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setMode('choice');
+            onChange(null);
+          }}
+          className="w-full text-center text-xs font-bold text-slate hover:text-ink"
+        >
+          تغيير طريقة التوقيع
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-2">
-      <p className="flex items-center justify-center gap-1.5 rounded-lg border border-seal bg-sealLight px-3 py-2 text-xs font-bold text-seal">
-        <ShieldCheck size={14} /> سيُستخدم توقيعك المحفوظ في ملفك الشخصي
-      </p>
-      <button type="button" onClick={() => setMode('draw')} className="w-full text-center text-xs font-bold text-slate hover:text-ink">
-        أو ارسم توقيعًا جديدًا
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <button
+        type="button"
+        onClick={() => {
+          setMode('saved');
+          onChange(dataUrl);
+        }}
+        className="flex items-center gap-2 rounded-xl border-2 border-line bg-card p-3 text-start shadow-sm transition hover:border-sealMuted hover:shadow-md"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-paper text-sealMuted">
+          <ShieldCheck size={18} />
+        </span>
+        <span>
+          <span className="block text-sm font-bold text-ink">استخدام توقيعك المحفوظ</span>
+          <span className="block text-[11px] text-slate">توقيعك المحفوظ في ملفك الشخصي</span>
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={() => setMode('draw')}
+        className="flex items-center gap-2 rounded-xl border-2 border-line bg-card p-3 text-start shadow-sm transition hover:border-sealMuted hover:shadow-md"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-paper text-sealMuted">
+          <FileSignature size={18} />
+        </span>
+        <span>
+          <span className="block text-sm font-bold text-ink">رسم توقيع جديد</span>
+          <span className="block text-[11px] text-slate">وقّع بإصبعك أو الفأرة</span>
+        </span>
       </button>
     </div>
   );
